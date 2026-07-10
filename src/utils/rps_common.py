@@ -368,14 +368,21 @@ SUMATIF_BUCKET_PATTERNS = [
     ("tugas", re.compile(r"tugas|laporan|refleksi|rekomendasi", re.I)),
     ("ujian", re.compile(r"ujian|\buts\b|\buas\b", re.I)),
     ("pjbl", re.compile(r"pjbl", re.I)),
+    # HANYA "pjbl" (Project Based Learning), BUKAN "pbl" (Problem Based
+    # Learning) -- dua istilah beda yang kebetulan mirip. Jangan pernah
+    # tambahkan "pbl" ke pattern ini; PBL harus tetap jatuh ke "lainnya".
+    # Terima juga varian salah eja umum "Persentasi" (tertukar dgn kata
+    # "persentase") -- beberapa dokumen RPS memang menulisnya begitu.
+    ("presentasi", re.compile(r"presentasi|persentasi", re.I)),
 ]
 
 
 def classify_sumatif_column(label_text):
     """Petakan nama kolom Sumatif dari dokumen ke salah satu bucket tetap
-    (Kuis/Tugas/Ujian/PjBL), atau 'lainnya' kalau tidak cocok satupun --
-    supaya PjBL/Presentasi/Studi Kasus/PBL/dst yang berbeda-beda per dokumen
-    tidak hilang, tapi tetap tertampung (di Lainnya) alih-alih dibuang."""
+    (Kuis/Tugas/Ujian/PjBL/Presentasi), atau 'lainnya' kalau tidak cocok
+    satupun -- supaya PBL/Studi Kasus/Proyek/Unjuk Kerja/Praktik/dst yang
+    berbeda-beda per dokumen tidak hilang, tapi tetap tertampung (di
+    Lainnya) alih-alih dibuang."""
     for bucket, pattern in SUMATIF_BUCKET_PATTERNS:
         if pattern.search(label_text):
             return bucket
@@ -464,7 +471,8 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                     (i, c) for i, c in enumerate(display_cells)
                     if c and re.search(
                         r"kuis|quiz|tugas|laporan|refleksi|rekomendasi|ujian|uts|uas|pjbl|"
-                        r"pe?rsentasi|studi\s*kasus|\bpbl\b|lainnya|tes\s*tertulis|unjuk\s*kerja",
+                        r"presentasi|persentasi|studi\s*kasus|\bpbl\b|lainnya|tes\s*tertulis|unjuk\s*kerja|"
+                        r"proyek|observasi|rubrik|portofolio|praktik|makalah|dokumentasi",
                         c, re.I,
                     )
                     and not re.search(r"formatif|sumatif|bentuk\s+asesmen", c, re.I)
@@ -492,10 +500,32 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                         range_end = None
                     elif bobot_total_hit is not None and bobot_total_hit > range_start:
                         range_end = bobot_total_hit
-                    elif hit_indices:
-                        range_end = max(hit_indices) + 1
                     else:
-                        range_end = range_start
+                        # JANGAN batasi range_end ke kata kunci terakhir yang
+                        # dikenali (hit_indices) -- kalau dokumen punya kategori
+                        # Sumatif yang namanya TIDAK ada di whitelist manapun
+                        # (mis. "Proyek", "Praktik", "Rubrik/Portofolio") dan
+                        # kebetulan diletakkan di ekor baris header, kolom itu
+                        # akan terpotong dari range dan datanya hilang total --
+                        # bukan cuma gagal diklasifikasi, TAPI SAMA SEKALI TIDAK
+                        # PERNAH DIBACA (bug yang dilaporkan: kategori selain
+                        # Kuis/Tugas/Ujian/PjBL/Presentasi tidak pernah masuk ke
+                        # Lainnya). Sebagai gantinya, cakup sampai sel BERLABEL
+                        # (bukan kosong, bukan penanda Formatif/Sumatif/Bobot,
+                        # bukan sel data berisi "angka%") TERAKHIR di baris ini --
+                        # apa pun nama kategorinya tetap tertampung, nanti
+                        # classify_sumatif_column yang menentukan bucket-nya
+                        # (atau "lainnya" kalau tidak cocok satupun).
+                        last_labelish = None
+                        for i in range(range_start, len(display_cells)):
+                            c = display_cells[i]
+                            if (
+                                c
+                                and not re.search(r"formatif|sumatif|bentuk\s+asesmen|bobot\s*(total|penilaian)?", c, re.I)
+                                and not re.search(r"\d\s*%", c)
+                            ):
+                                last_labelish = i
+                        range_end = (last_labelish + 1) if last_labelish is not None else range_start
                     cand_col_bucket = {}
                     cand_col_label = {}
                     if range_start is not None and range_end is not None:
@@ -564,7 +594,7 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                 continue
 
             entry = rows_out.setdefault(sub_num, {
-                "kuis": None, "tugas": None, "ujian": None, "pjbl": None, "lainnya": [],
+                "kuis": None, "tugas": None, "ujian": None, "pjbl": None, "presentasi": None, "lainnya": [],
                 "formatif": "", "formatif_bobot": "",
                 "bentuk_pembelajaran": "", "metode_pembelajaran": "",
             })
@@ -633,20 +663,39 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                         else:
                             bobot = ""
                             name_part = clean(val)
-                if bucket == "lainnya":
+                # Sebagian template pakai header kolom GENERIK "Lainnya" sebagai
+                # satu-satunya kolom "tampung semua", padahal ISI selnya per
+                # baris sebenarnya menyebutkan nama asesmen yang jelas (mis.
+                # header cuma "Lainnya" tapi isinya "Presentasi 1 (15%)").
+                # Kalau cuma percaya klasifikasi dari HEADER, item seperti itu
+                # akan SELALU nyangkut di 'lainnya' walau sebenarnya cocok
+                # bucket tetap (Presentasi/dst) -- bug nyata yang dilaporkan:
+                # bobot Presentasi tidak pernah masuk ke field Presentasi sama
+                # sekali walau kolomnya ADA dan datanya kebaca (cuma salah
+                # ditampung sebagai 'lainnya'). Jadi kalau bucket dari header
+                # adalah 'lainnya', coba klasifikasi ULANG dari nama itemnya
+                # sendiri -- yang lebih spesifik & lebih dipercaya di sini.
+                effective_bucket = bucket
+                if bucket == "lainnya" and name_part:
+                    refined = classify_sumatif_column(name_part)
+                    if refined != "lainnya":
+                        effective_bucket = refined
+
+                if effective_bucket == "lainnya":
                     entry["lainnya"].append({
                         "nama": name_part or col_label.get(i, "Lainnya"),
                         "bobot": bobot
                     })
                 else:
-                    prev = entry.get(bucket)
+                    prev = entry.get(effective_bucket)
                     if prev is None:
-                        entry[bucket] = {"nama": name_part, "bobot": bobot}
+                        entry[effective_bucket] = {"nama": name_part, "bobot": bobot}
                     else:
-                        # Dua kolom berbeda kebetulan diklasifikasi ke bucket
-                        # yang sama (mis. kolom "Tugas" DAN "Laporan" sama-sama
-                        # cocok bucket 'tugas') -- daripada kolom kedua diam-
-                        # diam hilang, taruh di Lainnya supaya tetap tertampung.
+                        # Dua kolom/baris berbeda kebetulan diklasifikasi ke
+                        # bucket yang sama (mis. kolom "Tugas" DAN "Laporan"
+                        # sama-sama cocok bucket 'tugas') -- daripada yang
+                        # kedua diam-diam hilang, taruh di Lainnya supaya
+                        # tetap tertampung.
                         entry["lainnya"].append({
                             "nama": name_part or col_label.get(i, "Lainnya"),
                             "bobot": bobot
@@ -689,7 +738,7 @@ def parse_embedded_assessment(text):
     """
     result = {
         "formatif": "", "formatif_bobot": "",
-        "kuis": None, "tugas": None, "ujian": None, "pjbl": None, "lainnya": [],
+        "kuis": None, "tugas": None, "ujian": None, "pjbl": None, "presentasi": None, "lainnya": [],
         "bobot_total": "",
     }
     if not text:

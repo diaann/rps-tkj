@@ -42,6 +42,19 @@
                 </div>
 
                 <% subCpmkList.forEach(function(sub, idx) { %>
+                    <%
+                        // Kolom sumatif tetap (Kuis/Tugas/Ujian/PjBL/Presentasi) cuma
+                        // ditampilkan kalau Sub-CPMK ini memang punya bobot untuk
+                        // kategori tsb -- kalau tidak, kolomnya cuma kosong percuma
+                        // (RPS-nya sendiri tidak memakai kategori itu di minggu ini).
+                        const sumatifCols = [
+                            { key: 'kuis', label: 'Kuis', nama: sub.kuisNama, bobot: sub.kuisBobot },
+                            { key: 'tugas', label: 'Tugas', nama: sub.tugasNama, bobot: sub.tugasBobot },
+                            { key: 'ujian', label: 'Ujian', nama: sub.ujianNama, bobot: sub.ujianBobot },
+                            { key: 'pjbl', label: 'PjBL', nama: sub.pjblNama, bobot: sub.pjblBobot },
+                            { key: 'presentasi', label: 'Presentasi', nama: sub.presentasiNama, bobot: sub.presentasiBobot }
+                        ].filter(function(col) { return col.bobot; });
+                    %>
                     <div id="tb-panel-<%= sub.globalNumber %>" class="penilaian-tab-panel <%= idx === 0 ? '' : 'hidden' %>">
 
                         <div class="mb-4 p-4 bg-gray-50 border rounded-lg">
@@ -51,20 +64,13 @@
                                 <span class="px-3 py-1 rounded-full bg-green-100 text-green-700">
                                     Formatif: <%= sub.formatifNama || '-' %><% if (sub.formatifBobot) { %> (<%= sub.formatifBobot %>%)<% } %>
                                 </span>
+                                <% sumatifCols.forEach(function(col) { %>
                                 <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-700">
-                                    Kuis: <%= sub.kuisNama || '-' %><% if (sub.kuisBobot) { %> (<%= sub.kuisBobot %>%)<% } %>
+                                    <%= col.label %>: <%= col.nama || '-' %> (<%= col.bobot %>%)
                                 </span>
-                                <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-700">
-                                    Tugas: <%= sub.tugasNama || '-' %><% if (sub.tugasBobot) { %> (<%= sub.tugasBobot %>%)<% } %>
-                                </span>
-                                <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-700">
-                                    Ujian: <%= sub.ujianNama || '-' %><% if (sub.ujianBobot) { %> (<%= sub.ujianBobot %>%)<% } %>
-                                </span>
-                                <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-700">
-                                    PjBL: <%= sub.pjblNama || '-' %><% if (sub.pjblBobot) { %> (<%= sub.pjblBobot %>%)<% } %>
-                                </span>
+                                <% }); %>
                                 <% (sub.lainnya || []).forEach(function(item) { %>
-                                <span class="px-3 py-1 rounded-full bg-purple-100 text-purple-700">
+                                <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-700">
                                     <%= item.nama || 'Lainnya' %><% if (item.bobot) { %> (<%= item.bobot %>%)<% } %>
                                 </span>
                                 <% }); %>
@@ -79,10 +85,9 @@
                                         <th class="px-3 py-2 border text-left text-xs font-semibold">NIM</th>
                                         <th class="px-3 py-2 border text-left text-xs font-semibold">Nama Mahasiswa</th>
                                         <th class="px-3 py-2 border text-center text-xs font-semibold">Formatif</th>
-                                        <th class="px-3 py-2 border text-center text-xs font-semibold">Kuis</th>
-                                        <th class="px-3 py-2 border text-center text-xs font-semibold">Tugas</th>
-                                        <th class="px-3 py-2 border text-center text-xs font-semibold">Ujian</th>
-                                        <th class="px-3 py-2 border text-center text-xs font-semibold">PjBL</th>
+                                        <% sumatifCols.forEach(function(col) { %>
+                                        <th class="px-3 py-2 border text-center text-xs font-semibold"><%= col.label %></th>
+                                        <% }); %>
                                         <% (sub.lainnya || []).forEach(function(item) { %>
                                         <th class="px-3 py-2 border text-center text-xs font-semibold"><%= item.nama || 'Lainnya' %></th>
                                         <% }); %>
@@ -99,38 +104,22 @@
                                                 <input type="number" min="0" max="100" step="0.01"
                                                     name="<%= base %>[formatif]"
                                                     value="<%= savedValues[base + '[formatif]'] || '' %>"
-                                                    class="w-20 border rounded px-2 py-1 text-sm text-center">
+                                                    class="w-full border rounded px-2 py-1 text-sm text-center">
                                             </td>
+                                            <% sumatifCols.forEach(function(col) { %>
                                             <td class="px-2 py-1 border">
                                                 <input type="number" min="0" max="100" step="0.01"
-                                                    name="<%= base %>[kuis]"
-                                                    value="<%= savedValues[base + '[kuis]'] || '' %>"
-                                                    class="w-20 border rounded px-2 py-1 text-sm text-center">
+                                                    name="<%= base %>[<%= col.key %>]"
+                                                    value="<%= savedValues[base + '[' + col.key + ']'] || '' %>"
+                                                    class="w-full border rounded px-2 py-1 text-sm text-center">
                                             </td>
-                                            <td class="px-2 py-1 border">
-                                                <input type="number" min="0" max="100" step="0.01"
-                                                    name="<%= base %>[tugas]"
-                                                    value="<%= savedValues[base + '[tugas]'] || '' %>"
-                                                    class="w-20 border rounded px-2 py-1 text-sm text-center">
-                                            </td>
-                                            <td class="px-2 py-1 border">
-                                                <input type="number" min="0" max="100" step="0.01"
-                                                    name="<%= base %>[ujian]"
-                                                    value="<%= savedValues[base + '[ujian]'] || '' %>"
-                                                    class="w-20 border rounded px-2 py-1 text-sm text-center">
-                                            </td>
-                                            <td class="px-2 py-1 border">
-                                                <input type="number" min="0" max="100" step="0.01"
-                                                    name="<%= base %>[pjbl]"
-                                                    value="<%= savedValues[base + '[pjbl]'] || '' %>"
-                                                    class="w-20 border rounded px-2 py-1 text-sm text-center">
-                                            </td>
+                                            <% }); %>
                                             <% (sub.lainnya || []).forEach(function(item, lIdx) { %>
                                             <td class="px-2 py-1 border">
                                                 <input type="number" min="0" max="100" step="0.01"
                                                     name="<%= base %>[lainnya][<%= lIdx %>]"
                                                     value="<%= savedValues[base + '[lainnya][' + lIdx + ']'] || '' %>"
-                                                    class="w-20 border rounded px-2 py-1 text-sm text-center">
+                                                    class="w-full border rounded px-2 py-1 text-sm text-center">
                                             </td>
                                             <% }); %>
                                         </tr>

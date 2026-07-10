@@ -95,6 +95,8 @@ function buildSubCpmkListForPenilaian(rpsItem) {
     ujianBobot: sub.sumatif_ujian_bobot || '',
     pjblNama: sub.sumatif_pjbl_nama || '',
     pjblBobot: sub.sumatif_pjbl_bobot || '',
+    presentasiNama: sub.sumatif_presentasi_nama || '',
+    presentasiBobot: sub.sumatif_presentasi_bobot || '',
     lainnya: (() => {
       try {
         const parsed = JSON.parse(sub.sumatif_lainnya || '[]');
@@ -223,7 +225,7 @@ router.post('/penilaian/mk/:rpsId/kelas/:kelasId/save', isAuthenticated, (req, r
   const values = {};
   Object.keys(req.body).forEach(key => {
     if (
-      /^nilai\[\d+\]\[[^\]]+\]\[(formatif|kuis|tugas|ujian|pjbl)\]$/.test(key) ||
+      /^nilai\[\d+\]\[[^\]]+\]\[(formatif|kuis|tugas|ujian|pjbl|presentasi)\]$/.test(key) ||
       /^nilai\[\d+\]\[[^\]]+\]\[lainnya\]\[\d+\]$/.test(key)
     ) {
       values[key] = req.body[key];

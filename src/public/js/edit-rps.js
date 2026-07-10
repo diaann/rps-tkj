@@ -5,7 +5,7 @@
 function lainnyaRowHtml(nama, bobot) {
     return `
         <div class="flex gap-1 items-center lainnya-row mb-1">
-            <input type="text" class="input lainnya-nama" placeholder="Nama, contoh: Presentasi" value="${nama || ''}" oninput="window.syncLainnyaRow(this)">
+            <input type="text" class="input lainnya-nama" placeholder="Nama, contoh: Praktik / Studi Kasus" value="${nama || ''}" oninput="window.syncLainnyaRow(this)">
             <input type="number" min="0" max="100" class="input lainnya-bobot" style="max-width: 90px;" placeholder="Bobot (%)" value="${bobot || ''}" oninput="window.syncLainnyaRow(this)">
             <button type="button" class="btn-danger text-xs" onclick="window.removeLainnyaRow(this)">&times;</button>
         </div>
@@ -432,7 +432,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-gray-600 mb-1">Sumatif</p>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                                 <div>
                                     <label class="block text-gray-600 text-xs mb-1">Kuis</label>
                                     <input type="text" class="input mb-1" name="sub_cpmk[${cpmkId}][${index}][sumatif_kuis_nama]" placeholder="Nama, contoh: Kuis 1" value="${data.sumatif_kuis_nama || ''}">
@@ -452,6 +452,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <label class="block text-gray-600 text-xs mb-1">PjBL</label>
                                     <input type="text" class="input mb-1" name="sub_cpmk[${cpmkId}][${index}][sumatif_pjbl_nama]" placeholder="Nama, contoh: PjBL 1" value="${data.sumatif_pjbl_nama || ''}">
                                     <input type="number" min="0" max="100" class="input" name="sub_cpmk[${cpmkId}][${index}][sumatif_pjbl_bobot]" placeholder="Bobot (%)" value="${data.sumatif_pjbl_bobot || ''}">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-600 text-xs mb-1">Presentasi</label>
+                                    <input type="text" class="input mb-1" name="sub_cpmk[${cpmkId}][${index}][sumatif_presentasi_nama]" placeholder="Nama, contoh: Presentasi 1" value="${data.sumatif_presentasi_nama || ''}">
+                                    <input type="number" min="0" max="100" class="input" name="sub_cpmk[${cpmkId}][${index}][sumatif_presentasi_bobot]" placeholder="Bobot (%)" value="${data.sumatif_presentasi_bobot || ''}">
                                 </div>
                             </div>
                             ${createLainnyaHtml(cpmkId, index, data)}

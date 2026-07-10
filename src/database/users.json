@@ -3,7 +3,7 @@
     "id": 1,
     "email": "admin@polteku.ac.id",
     "username": "admin",
-    "password": "asd",
+    "password": "admin",
     "role": "admin",
     "status": "active"
   },

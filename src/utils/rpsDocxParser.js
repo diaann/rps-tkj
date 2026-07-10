@@ -299,6 +299,7 @@ function buildRpsObjectFromExtraction(extraction, options = {}) {
     tugas: item.tugas || null,
     ujian: item.ujian || null,
     pjbl: item.pjbl || null,
+    presentasi: item.presentasi || null,
     lainnya: Array.isArray(item.lainnya) ? item.lainnya : []
   }));
 
@@ -422,13 +423,15 @@ function buildRpsObjectFromExtraction(extraction, options = {}) {
     rpsData[`sub_cpmk[${cpmkId}][${localIndex}][sumatif_ujian_bobot]`] = (sub.ujian && sub.ujian.bobot) || '';
     rpsData[`sub_cpmk[${cpmkId}][${localIndex}][sumatif_pjbl_nama]`] = (sub.pjbl && sub.pjbl.nama) || '';
     rpsData[`sub_cpmk[${cpmkId}][${localIndex}][sumatif_pjbl_bobot]`] = (sub.pjbl && sub.pjbl.bobot) || '';
+    rpsData[`sub_cpmk[${cpmkId}][${localIndex}][sumatif_presentasi_nama]`] = (sub.presentasi && sub.presentasi.nama) || '';
+    rpsData[`sub_cpmk[${cpmkId}][${localIndex}][sumatif_presentasi_bobot]`] = (sub.presentasi && sub.presentasi.bobot) || '';
     // "Lainnya" adalah daftar dinamis (nama+bobot bisa lebih dari satu),
     // disimpan sebagai JSON string di 1 field -- sama seperti isian yang
     // akan dikirim dari tombol "+" pada form Edit RPS (lihat edit-rps.js).
     rpsData[`sub_cpmk[${cpmkId}][${localIndex}][sumatif_lainnya]`] = JSON.stringify(
       (sub.lainnya || []).map(item => ({ nama: item.nama || '', bobot: item.bobot || '' }))
     );
-    if (!sub.formatif_nama && !sub.kuis && !sub.tugas && !sub.ujian && !sub.pjbl && !(sub.lainnya && sub.lainnya.length)) {
+    if (!sub.formatif_nama && !sub.kuis && !sub.tugas && !sub.ujian && !sub.pjbl && !sub.presentasi && !(sub.lainnya && sub.lainnya.length)) {
       rpsData.extraction_notes.push(`Bentuk Asesmen (Formatif/Sumatif) Sub-CPMK ${sub.globalSubNumber || localIndex} tidak terdeteksi jelas dari dokumen. Silakan lengkapi lewat Edit RPS.`);
     }
 

@@ -419,39 +419,53 @@ def extract(docx_path):
         **extract_assessment_rows([combined_rows]),
     }
     for idx, sub in enumerate(subcpmk_list):
-        info = assessment_rows.get(sub.get("raw_number", sub["global_number"]))
-        has_korelasi_data = bool(info and (
+        info = assessment_rows.get(sub.get("raw_number", sub["global_number"])) or {}
+        has_korelasi_data = bool(
             info.get("formatif") or info.get("kuis") or info.get("tugas")
-            or info.get("ujian") or info.get("pjbl") or info.get("lainnya")
-        ))
+            or info.get("ujian") or info.get("pjbl") or info.get("presentasi") or info.get("lainnya")
+        )
+
+        # Fallback dihitung SELALU (bukan cuma kalau Korelasi table kosong
+        # total) -- karena sebagian dokumen punya tabel Korelasi yang HANYA
+        # memuat sebagian bucket (mis. Kuis/Tugas/Ujian/PjBL saja), sementara
+        # Presentasi (atau bucket lain) cuma disebut di teks bebas "Teknik &
+        # Kriteria Penilaian" tabel rencana mingguan. Kalau fallback ini cuma
+        # dipanggil saat has_korelasi_data == False (all-or-nothing per
+        # Sub-CPMK), bucket yang "ketinggalan" itu akan PERMANEN kosong
+        # walau infonya sebenarnya ADA, cuma di tempat lain -- ini akar bug
+        # yang dilaporkan: Presentasi tidak pernah terekstraksi walau
+        # Kuis/Tugas/Ujian/PjBL dari tabel Korelasi berhasil.
+        week_detail = weekly[idx] if idx < len(weekly) else None
+        parsed = parse_embedded_assessment((week_detail or {}).get("teknik_kriteria", ""))
+
         if has_korelasi_data:
             sub["bobot"] = info.get("bobot_total", "")
-            sub["formatif_nama"] = info.get("formatif", "")
-            sub["formatif_bobot"] = info.get("formatif_bobot", "")
-            sub["kuis"] = info.get("kuis")
-            sub["tugas"] = info.get("tugas")
-            sub["ujian"] = info.get("ujian")
-            sub["pjbl"] = info.get("pjbl")
-            sub["lainnya"] = info.get("lainnya", [])
+            sub["formatif_nama"] = info.get("formatif") or parsed["formatif"]
+            sub["formatif_bobot"] = info.get("formatif_bobot") or parsed["formatif_bobot"]
+            sub["kuis"] = info.get("kuis") or parsed["kuis"]
+            sub["tugas"] = info.get("tugas") or parsed["tugas"]
+            sub["ujian"] = info.get("ujian") or parsed["ujian"]
+            sub["pjbl"] = info.get("pjbl") or parsed["pjbl"]
+            sub["presentasi"] = info.get("presentasi") or parsed["presentasi"]
+            sub["lainnya"] = info.get("lainnya") or parsed["lainnya"] or []
             sub["bentuk_pembelajaran"] = info.get("bentuk_pembelajaran", "")
             sub["metode_pembelajaran"] = info.get("metode_pembelajaran", "")
         else:
-            # Fallback: sebagian template TIDAK punya tabel "Korelasi antara
-            # CP dan Asesmen" terpisah sama sekali -- rincian Formatif/Sumatif
-            # (mis. "Kuis 1 (5%)", "Laporan Singkat 1 (10%)") malah ditulis
-            # sebagai teks bebas di sel Teknik & Kriteria Penilaian pada
-            # tabel rencana mingguan. Sub-CPMK ke-n (urutan dokumen) berpasangan
-            # dengan baris mingguan ke-n, sama seperti pemetaan yang dipakai
-            # rpsDocxParser.js untuk field lain (indikator, materi, dst).
-            week_detail = weekly[idx] if idx < len(weekly) else None
-            parsed = parse_embedded_assessment((week_detail or {}).get("teknik_kriteria", ""))
-            if parsed["formatif"] or parsed["formatif_bobot"] or parsed["kuis"] or parsed["tugas"] or parsed["ujian"] or parsed["pjbl"] or parsed["lainnya"]:
+            # Tabel Korelasi sama sekali tidak punya data utk Sub-CPMK ini --
+            # rincian Formatif/Sumatif (mis. "Kuis 1 (5%)", "Laporan Singkat 1
+            # (10%)") malah ditulis sebagai teks bebas di sel Teknik & Kriteria
+            # Penilaian pada tabel rencana mingguan. Sub-CPMK ke-n (urutan
+            # dokumen) berpasangan dengan baris mingguan ke-n, sama seperti
+            # pemetaan yang dipakai rpsDocxParser.js untuk field lain
+            # (indikator, materi, dst).
+            if parsed["formatif"] or parsed["formatif_bobot"] or parsed["kuis"] or parsed["tugas"] or parsed["ujian"] or parsed["pjbl"] or parsed["presentasi"] or parsed["lainnya"]:
                 sub["formatif_nama"] = parsed["formatif"]
                 sub["formatif_bobot"] = parsed["formatif_bobot"]
                 sub["kuis"] = parsed["kuis"]
                 sub["tugas"] = parsed["tugas"]
                 sub["ujian"] = parsed["ujian"]
                 sub["pjbl"] = parsed["pjbl"]
+                sub["presentasi"] = parsed["presentasi"]
                 sub["lainnya"] = parsed["lainnya"]
 
     # Sama seperti CP-tree di atas: kalau blok naratif (Materi Kajian/Pustaka/

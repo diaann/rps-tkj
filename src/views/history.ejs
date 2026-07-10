@@ -82,12 +82,12 @@
 
         <!-- Filter and Search -->
         <div class="card mb-6">
-            <div class="flex flex-col md:flex-row gap-4 items-center">
+            <div class="flex flex-col md:flex-row gap-4 md:items-center">
                 <div class="flex-1">
                     <input type="text" id="searchRPS" placeholder="Cari nama mata kuliah, kode MK, atau nama dosen..."
                         class="input w-full">
                 </div>
-                <div class="flex gap-2">
+                <div class="filter-select-group">
                     <select id="filterSemester" class="input">
                         <option value="">Semua Semester</option>
                         <% [...new Set(rps.map(r=> r.semester))].sort().forEach(semester => { %>
@@ -120,7 +120,7 @@
 
         <!-- RPS Documents -->
         <div class="card">
-            <div class="flex items-center justify-between mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
                 <div>
                     <% if (user.role==='admin' ) { %>
                         <h2 class="text-xl font-bold text-gray-800">Semua Dokumen RPS</h2>
@@ -132,11 +132,11 @@
                 </div>
                 <div class="flex gap-2">
                     <% if (user.role==='admin' ) { %>
-                        <a href="/admin/rps" class="btn-primary text-sm">
+                        <a href="/admin/rps" class="btn-primary text-sm flex-1 sm:flex-none text-center">
                             <i class="fas fa-cogs mr-1"></i>Kelola RPS
                         </a>
                         <% } %>
-                            <a href="/create-rps" class="btn-secondary text-sm">+ Buat RPS</a>
+                            <a href="/create-rps" class="btn-secondary text-sm flex-1 sm:flex-none text-center">+ Buat RPS</a>
                 </div>
             </div>
 
@@ -180,39 +180,43 @@
                                         </p>
                             </div>
 
-                            <div class="flex gap-2 flex-wrap">
-                                <a href="/history/view/<%= r.id %>" class="btn-primary text-xs flex-1 text-center flex items-center justify-center">
-                                    <i class="fas fa-eye mr-1"></i>Lihat
+                            <div class="rps-card-actions">
+                                <a href="/history/view/<%= r.id %>" class="rps-btn rps-btn-view">
+                                    <i class="fas fa-eye"></i>Lihat
                                 </a>
-                                <a href="/export/word-1/<%= r.id %>" class="btn-primary text-xs flex-1 text-center"
-                                    style="background:#06b6d4">
-                                    <i class="fas fa-download mr-1"></i>Word-1
-                                </a>
-                                <a href="/export/word-2/<%= r.id %>" class="btn-primary text-xs flex-1 text-center"
-                                    style="background:#10b981">
-                                    <i class="fas fa-download mr-1"></i>Word-2
-                                </a>
-                                <a href="/edit-rps/<%= r.id %>" class="btn-secondary text-xs flex-1 text-center flex items-center justify-center">
-                                    <i class="fas fa-edit mr-1"></i>Edit
-                                </a>
-                                <a href="/history/rps/<%= r.id %>" class="btn-secondary text-xs flex-1 text-center flex items-center justify-center">
-                                    <i class="fas fa-clock-rotate-left mr-1"></i>History
-                                </a>
-                                <button class="btn-secondary text-xs flex-1 text-center" data-id="<%= r.id %>"
-                                    data-name="<%= r.nama_mk %>" onclick="duplicateRps(this)">
-                                    <i class="fas fa-clone mr-1"></i>Duplikat
-                                </button>
-                                <% if (user.role==='admin' ) { %>
-                                    <button class="btn-danger text-xs px-3" data-id="<%= r.id %>"
-                                        data-name="<%= r.nama_mk %>" onclick="deleteRpsAdmin(this)">
-                                        <i class="fas fa-trash"></i>
+                                <div class="rps-action-row">
+                                    <a href="/export/word-1/<%= r.id %>" class="rps-btn rps-btn-word1">
+                                        <i class="fas fa-download"></i>Word-1
+                                    </a>
+                                    <a href="/export/word-2/<%= r.id %>" class="rps-btn rps-btn-word2">
+                                        <i class="fas fa-download"></i>Word-2
+                                    </a>
+                                </div>
+                                <div class="rps-action-row">
+                                    <a href="/edit-rps/<%= r.id %>" class="rps-btn rps-btn-manage">
+                                        <i class="fas fa-edit"></i>Edit
+                                    </a>
+                                    <a href="/history/rps/<%= r.id %>" class="rps-btn rps-btn-manage">
+                                        <i class="fas fa-clock-rotate-left"></i>History
+                                    </a>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="rps-btn rps-btn-manage" style="flex:1" data-id="<%= r.id %>"
+                                        data-name="<%= r.nama_mk %>" onclick="duplicateRps(this)">
+                                        <i class="fas fa-clone"></i>Duplikat
                                     </button>
-                                    <% } else { %>
-                                        <button class="btn-danger text-xs px-3" data-id="<%= r.id %>"
-                                            onclick="deleteRps(this)">
+                                    <% if (user.role==='admin' ) { %>
+                                        <button class="rps-btn rps-btn-delete" data-id="<%= r.id %>"
+                                            data-name="<%= r.nama_mk %>" onclick="deleteRpsAdmin(this)">
                                             <i class="fas fa-trash"></i>
                                         </button>
-                                        <% } %>
+                                        <% } else { %>
+                                            <button class="rps-btn rps-btn-delete" data-id="<%= r.id %>"
+                                                onclick="deleteRps(this)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            <% } %>
+                                </div>
                             </div>
                         </div>
                         <% }); %>

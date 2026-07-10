@@ -257,6 +257,8 @@ const SUB_CPMK_FIELD_LABELS = {
   sumatif_ujian_bobot: 'Bobot Ujian',
   sumatif_pjbl_nama: 'Nama PjBL',
   sumatif_pjbl_bobot: 'Bobot PjBL',
+  sumatif_presentasi_nama: 'Nama Presentasi',
+  sumatif_presentasi_bobot: 'Bobot Presentasi',
   sumatif_lainnya: 'Penilaian Lainnya',
   global_number: 'Nomor Urut'
 };
@@ -1001,8 +1003,18 @@ router.post('/delete-rps/:id', isAuthenticated, (req, res) => {
     rps = rps.filter(r => r.id !== id || r.userId !== req.session.user.id);
   }
 
-  fs.writeFileSync(rpsPath, JSON.stringify(rps, null, 2));
   if (rps.length < before) {
+    fs.writeFileSync(rpsPath, JSON.stringify(rps, null, 2));
+
+    // Ikut hapus semua riwayat edit (rps_history) milik RPS ini -- kalau
+    // tidak, entrinya jadi sampah yatim yang tetap nyangkut di rps_history.json
+    // tanpa RPS induk yang bisa diakses lagi.
+    const history = readJsonFile(rpsHistoryPath, []);
+    const remainingHistory = history.filter(item => parseInt(item.rps_id, 10) !== id);
+    if (remainingHistory.length < history.length) {
+      writeJsonFile(rpsHistoryPath, remainingHistory);
+    }
+
     res.json({ success: true });
   } else {
     res.json({ success: false, message: 'Data tidak ditemukan atau bukan milik Anda.' });

@@ -360,19 +360,130 @@ textarea.input {
   .container-custom {
     padding: 1rem;
   }
-  
-  .rps-card .flex {
-    flex-direction: column;
-    gap: 0.5rem;
+}
+
+/* Grup dropdown filter (Semester/Tahun/Dosen) -- ditumpuk penuh-lebar di
+   mobile (kalau dipaksa sebaris, tiap select kepepet jadi sempit dan teksnya
+   terpotong, mis. "Semua" tanpa kelanjutannya), baru sebaris di layar lebar. */
+.filter-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+@media (min-width: 640px) {
+  .filter-select-group {
+    flex-direction: row;
+    width: auto;
   }
-  
-  .rps-card .btn-primary,
-  .rps-card .btn-secondary,
-  .rps-card .btn-danger {
-    flex: none;
-    width: 100%;
+  .filter-select-group .input {
+    width: auto;
+    min-width: 9rem;
+    flex: 1;
   }
 }
+
+/* RPS card action buttons -- grouped by purpose (lihat / unduh / kelola /
+   hapus) instead of one long flat row, so it stays readable when the card
+   is narrow (mobile) without turning into a wall of same-size buttons. */
+.rps-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.rps-card-actions .rps-action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.rps-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.rps-btn-view {
+  background: #2563eb;
+  color: #fff;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.85rem;
+}
+.rps-btn-view:hover { background: #1d4ed8; }
+
+.rps-btn-word1 { background: #0284c7; color: #fff; }
+.rps-btn-word1:hover { background: #0369a1; }
+.rps-btn-word2 { background: #0d9488; color: #fff; }
+.rps-btn-word2:hover { background: #0f766e; }
+
+.rps-btn-manage {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #e5e7eb;
+}
+.rps-btn-manage:hover { background: #e5e7eb; }
+
+.rps-btn-delete {
+  background: transparent;
+  color: #dc2626;
+  border-color: #fecaca;
+  flex: none;
+  width: 2.5rem;
+  padding: 0.5rem;
+}
+
+/* Baris item CPL (Kode + Deskripsi + tombol -/+) di Kelola CPL -- sebelumnya
+   "Kode CPL" dipaksa width:16% inline, yang di layar sempit jadi ~40-50px
+   (cuma cukup utk 1 karakter). Sekarang ditumpuk penuh-lebar di mobile,
+   baru sebaris seperti semula di layar >=640px. */
+.cpl-item-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+.cpl-item-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+.cpl-item-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+@media (min-width: 640px) {
+  .cpl-item-row {
+    flex-direction: row;
+    align-items: flex-start;
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .cpl-item-fields {
+    flex-direction: row;
+  }
+  .cpl-item-code {
+    width: 16%;
+    min-width: 6.5rem;
+  }
+  .cpl-item-desc {
+    flex: 1;
+  }
+  .cpl-item-actions {
+    flex-direction: column;
+    align-self: flex-end;
+  }
+}
+.rps-btn-delete:hover { background: #fef2f2; border-color: #dc2626; }
 
 /* Line clamp utility */
 .line-clamp-2 {

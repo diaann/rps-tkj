@@ -28,7 +28,7 @@ if (typeof window.addLainnyaRow !== 'function') {
     window.lainnyaRowHtml = function(nama, bobot) {
         return `
             <div class="flex gap-1 items-center lainnya-row mb-1">
-                <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 lainnya-nama" placeholder="Nama, contoh: Presentasi" value="${nama || ''}" oninput="window.syncLainnyaRow(this)">
+                <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 lainnya-nama" placeholder="Nama, contoh: Praktik / Studi Kasus" value="${nama || ''}" oninput="window.syncLainnyaRow(this)">
                 <input type="number" min="0" max="100" class="shadow appearance-none border rounded py-2 px-3 text-gray-700 lainnya-bobot" style="max-width: 110px;" placeholder="Bobot (%)" value="${bobot || ''}" oninput="window.syncLainnyaRow(this)">
                 <button type="button" class="text-red-600 text-xs px-2" onclick="window.removeLainnyaRow(this)">&times;</button>
             </div>
@@ -1524,7 +1524,7 @@ function addSubCPMK(cpmkId, predefinedIndex = null) {
                     </div>
                     <div>
                         <p class="text-xs font-semibold text-gray-600 mb-1">Sumatif</p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                             <div>
                                 <label class="block text-gray-600 text-xs mb-1">Kuis</label>
                                 <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-1" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_kuis_nama]" placeholder="Nama, contoh: Kuis 1">
@@ -1544,6 +1544,11 @@ function addSubCPMK(cpmkId, predefinedIndex = null) {
                                 <label class="block text-gray-600 text-xs mb-1">PjBL</label>
                                 <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-1" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_pjbl_nama]" placeholder="Nama, contoh: PjBL 1">
                                 <input type="number" min="0" max="100" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_pjbl_bobot]" placeholder="Bobot (%)">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 text-xs mb-1">Presentasi</label>
+                                <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-1" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_presentasi_nama]" placeholder="Nama, contoh: Presentasi 1">
+                                <input type="number" min="0" max="100" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_presentasi_bobot]" placeholder="Bobot (%)">
                             </div>
                         </div>
                         <div class="lainnya-wrapper mt-3">

@@ -209,7 +209,7 @@
             <!-- CPMK -->
             <h3 class="text-lg font-bold mt-6 mb-4 text-blue-700 border-b border-blue-200 pb-2">CPMK</h3>
             <div class="overflow-x-auto">
-            <table class="table-auto w-full mb-6 border rounded overflow-hidden">
+            <table class="table-auto w-full mb-6 border rounded min-w-max">
                 <thead class="bg-blue-100">
                     <tr>
                         <th class="px-2 py-2">ID</th>
@@ -230,8 +230,8 @@
                     <tr>
                         <td class="px-2 py-2"><%= id %></td>
                         <td class="px-2 py-2 <%= changedClass(`cpmk[${id}][cpl_code]`) %>"><%= cpl_code %></td>
-                        <td class="px-2 py-2 <%= changedClass(`cpmk[${id}][cpl_description]`) %>"><%= cpl_desc %></td>
-                        <td class="px-2 py-2 <%= changedClass(key) %>"><%= deskripsi %></td>
+                        <td class="px-2 py-2 max-w-xs <%= changedClass(`cpmk[${id}][cpl_description]`) %>"><%= cpl_desc %></td>
+                        <td class="px-2 py-2 max-w-xs <%= changedClass(key) %>"><%= deskripsi %></td>
                     </tr>
                 <% } }); %>
                 </tbody>
@@ -289,6 +289,8 @@
                         sumatif_ujian_bobot: rps[`sub_cpmk[${cpmk}][${sub}][sumatif_ujian_bobot]`] || '',
                         sumatif_pjbl_nama: rps[`sub_cpmk[${cpmk}][${sub}][sumatif_pjbl_nama]`] || '',
                         sumatif_pjbl_bobot: rps[`sub_cpmk[${cpmk}][${sub}][sumatif_pjbl_bobot]`] || '',
+                        sumatif_presentasi_nama: rps[`sub_cpmk[${cpmk}][${sub}][sumatif_presentasi_nama]`] || '',
+                        sumatif_presentasi_bobot: rps[`sub_cpmk[${cpmk}][${sub}][sumatif_presentasi_bobot]`] || '',
                         sumatif_lainnya: (function() {
                             try {
                                 var parsed = JSON.parse(rps[`sub_cpmk[${cpmk}][${sub}][sumatif_lainnya]`] || '[]');
@@ -399,21 +401,23 @@
                                         var tugasView = withPercentView(subData.sumatif_tugas_nama, subData.sumatif_tugas_bobot);
                                         var ujianView = withPercentView(subData.sumatif_ujian_nama, subData.sumatif_ujian_bobot);
                                         var pjblView = withPercentView(subData.sumatif_pjbl_nama, subData.sumatif_pjbl_bobot);
+                                        var presentasiView = withPercentView(subData.sumatif_presentasi_nama, subData.sumatif_presentasi_bobot);
                                         var lainnyaViews = (subData.sumatif_lainnya || []).map(function(item) { return withPercentView(item.nama, item.bobot); }).filter(Boolean);
                                         var formatifView = withPercentView(subData.formatif_nama, subData.formatif_bobot);
-                                        var hasNewAsesmen = formatifView || kuisView || tugasView || ujianView || pjblView || lainnyaViews.length;
-                                        var asesmenChangedClass = subChangedClass(['formatif_nama', 'formatif_bobot', 'sumatif_kuis_nama', 'sumatif_kuis_bobot', 'sumatif_tugas_nama', 'sumatif_tugas_bobot', 'sumatif_ujian_nama', 'sumatif_ujian_bobot', 'sumatif_pjbl_nama', 'sumatif_pjbl_bobot', 'sumatif_lainnya', 'asesmen']);
+                                        var hasNewAsesmen = formatifView || kuisView || tugasView || ujianView || pjblView || presentasiView || lainnyaViews.length;
+                                        var asesmenChangedClass = subChangedClass(['formatif_nama', 'formatif_bobot', 'sumatif_kuis_nama', 'sumatif_kuis_bobot', 'sumatif_tugas_nama', 'sumatif_tugas_bobot', 'sumatif_ujian_nama', 'sumatif_ujian_bobot', 'sumatif_pjbl_nama', 'sumatif_pjbl_bobot', 'sumatif_presentasi_nama', 'sumatif_presentasi_bobot', 'sumatif_lainnya', 'asesmen']);
                                     %>
                                     <td class="px-2 py-2 border text-xs max-w-xs <%= asesmenChangedClass %>">
                                         <% if (hasNewAsesmen) { %>
                                             <% if (formatifView) { %><div><span class="font-semibold">Formatif:</span> <%= formatifView %></div><% } %>
-                                            <% if (kuisView || tugasView || ujianView || pjblView || lainnyaViews.length) { %>
+                                            <% if (kuisView || tugasView || ujianView || pjblView || presentasiView || lainnyaViews.length) { %>
                                             <div class="mt-1"><span class="font-semibold">Sumatif:</span></div>
                                             <ul class="ml-3 list-disc">
                                                 <% if (kuisView) { %><li>Kuis: <%= kuisView %></li><% } %>
                                                 <% if (tugasView) { %><li>Tugas: <%= tugasView %></li><% } %>
                                                 <% if (ujianView) { %><li>Ujian: <%= ujianView %></li><% } %>
                                                 <% if (pjblView) { %><li>PjBL: <%= pjblView %></li><% } %>
+                                                <% if (presentasiView) { %><li>Presentasi: <%= presentasiView %></li><% } %>
                                                 <% lainnyaViews.forEach(function(v) { %><li><%= v %></li><% }); %>
                                             </ul>
                                             <% } %>

@@ -61,16 +61,18 @@
               </div>
               <div data-items-container id="items-container-<%= set.id %>">
                 <% (set.content || []).forEach((it, idx) => { %>
-                  <div class="flex gap-2 items-start mb-1 cpl-item" data-item>
-                    <div style="width:16%;">
-                      <label class="label">Kode CPL</label>
-                      <input class="input w-full" name="code[]" value="<%= it.code %>" placeholder="CPL01" required>
+                  <div class="cpl-item-row cpl-item" data-item>
+                    <div class="cpl-item-fields">
+                      <div class="cpl-item-code">
+                        <label class="label">Kode CPL</label>
+                        <input class="input w-full" name="code[]" value="<%= it.code %>" placeholder="CPL01" required>
+                      </div>
+                      <div class="cpl-item-desc">
+                        <label class="label">Deskripsi CPL</label>
+                        <textarea class="input w-full" name="desc[]" rows="5" placeholder="Menunjukkan sikap profesional yang ..." required><%= it.desc %></textarea>
+                      </div>
                     </div>
-                    <div class="flex-1">
-                      <label class="label">Deskripsi CPL</label>
-                      <textarea class="input w-full" name="desc[]" rows="5" placeholder="Menunjukkan sikap profesional yang ..." required><%= it.desc %></textarea>
-                    </div>
-                    <div style="display:flex; flex-direction:column; gap:6px; align-self:flex-end;">
+                    <div class="cpl-item-actions">
                       <button type="button" class="btn-danger remove-cpl-btn" onclick="removeCplItem(this)">-</button>
                       <button type="button" class="btn-primary add-cpl-btn" onclick="addCplItem(this)">+</button>
                     </div>
@@ -104,16 +106,18 @@
           <input class="input" name="date_created" placeholder="2025-2030">
         </div>
         <div id="new-cpl-items">
-          <div class="flex gap-2 items-start mb-1 cpl-item" data-item>
-            <div style="width:16%;">
-              <label class="label">Kode CPL</label>
-              <input class="input w-full" name="code[]" placeholder="CPL01" required>
+          <div class="cpl-item-row cpl-item" data-item>
+            <div class="cpl-item-fields">
+              <div class="cpl-item-code">
+                <label class="label">Kode CPL</label>
+                <input class="input w-full" name="code[]" placeholder="CPL01" required>
+              </div>
+              <div class="cpl-item-desc">
+                <label class="label">Deskripsi CPL</label>
+                <textarea class="input w-full" name="desc[]" rows="5" placeholder="Menunjukkan sikap profesional yang ..." required></textarea>
+              </div>
             </div>
-            <div class="flex-1">
-              <label class="label">Deskripsi CPL</label>
-              <textarea class="input flex-1" name="desc[]" rows="5" placeholder="Menunjukkan sikap profesional yang ..." required></textarea>
-            </div>
-            <div style="display:flex; flex-direction:column; gap:6px; align-self:flex-end;">
+            <div class="cpl-item-actions">
               <button type="button" class="btn-danger remove-cpl-btn" onclick="removeCplItem(this)">-</button>
               <button type="button" class="btn-primary add-cpl-btn" onclick="addCplItem(this)">+</button>
             </div>
