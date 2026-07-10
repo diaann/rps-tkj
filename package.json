@@ -1,0 +1,21 @@
+{
+  "name": "rps-form",
+  "version": "1.0.0",
+  "description": "A web application for creating and managing RPS (Rencana Pembelajaran Semester).",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "docx": "^9.5.1",
+    "docx-templates": "^4.14.1",
+    "docxtemplater": "^3.65.2",
+    "ejs": "^3.1.6",
+    "express": "^4.17.1",
+    "express-session": "^1.18.2",
+    "multer": "^1.4.5-lts.2",
+    "pizzip": "^3.2.0"
+  }
+}

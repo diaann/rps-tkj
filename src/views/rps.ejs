@@ -1,0 +1,345 @@
+<%- include('partials/header') %>
+
+<div class="container-custom">
+    <form id="rps-form" action="/save-rps" method="POST" onsubmit="return validateStep5AndNext()">
+        <!-- Store active CPL set id so server can record which CPL set was used -->
+        <input type="hidden" name="id_cpls" value="<%= typeof activeCplId !== 'undefined' ? activeCplId : '' %>">
+        <!-- Step 1: Identitas Mata Kuliah -->
+        <div id="step-1" class="step card">
+            <!-- Step Indicator -->
+            <div class="mb-6 text-center">
+                <span class="inline-block bg-blue-100 text-blue-700 px-4 py-1 rounded-full font-semibold">Step 1 dari 5: Identitas Mata Kuliah</span>
+            </div>
+            <h2 class="card-title">Identitas Mata Kuliah</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="label" for="nama_mk">Nama Mata Kuliah</label>
+                    <input class="input" id="nama_mk" name="nama_mk" type="text" required>
+                </div>
+                <div>
+                    <label class="label" for="kode_mk">Kode Mata Kuliah</label>
+                    <input class="input" id="kode_mk" name="kode_mk" type="text" required>
+                </div>
+                <div>
+                    <label class="label" for="rumpun_mk">Rumpun Mata Kuliah</label>
+                    <select class="input" id="rumpun_mk" name="rumpun_mk" required>
+                        <option value="Mata Kuliah Keahlian">Mata Kuliah Keahlian</option>
+                        <option value="Mata Kuliah Dasar Keahlian">Mata Kuliah Dasar Keahlian</option>
+                        <option value="Mata Kuliah Umum">Mata Kuliah Umum</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="label" for="semester">Semester Ke-</label>
+                    <select class="input" id="semester" name="semester" required>
+                        <option value="">Pilih Semester</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="label" for="tahun_akademik">Tahun Akademik</label>
+                    <input class="input" id="tahun_akademik" name="tahun_akademik" type="text" required placeholder="Contoh: 2025/2026">
+                </div>
+                <div>
+                    <label class="label" for="tanggal_penyusunan">Tanggal Penyusunan</label>
+                    <input class="input" id="tanggal_penyusunan" name="tanggal_penyusunan" type="date" required>
+                </div>
+                <div class="md:col-span-2">
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="w-full">
+                            <label class="label" for="sks_teori">Bobot SKS Teori</label>
+                            <input class="input" id="sks_teori" name="sks_teori" type="number" min="0" required>
+                        </div>
+                        <div class="w-full">
+                            <label class="label" for="sks_praktikum">Bobot SKS Praktikum</label>
+                            <input class="input" id="sks_praktikum" name="sks_praktikum" type="number" min="0" required>
+                        </div>
+                    </div>
+                </div>
+                <div id="dosen-pengampu-container" class="md:col-span-2">
+                    <label class="label">Dosen Pengampu</label>
+                    <div class="flex items-center mb-2">
+                        <input class="input" name="dosen_pengampu[]" type="text" required>
+                        <button type="button" class="ml-2 btn-primary" style="padding:0.5rem 1rem;min-width:2.5rem;" onclick="addDosenPengampu()">+</button>
+                    </div>
+                </div>
+            </div>
+            <h2 class="card-title">Otorisasi</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="label" for="penjamin_mutu">Penjamin Mutu</label>
+                    <input class="input" id="penjamin_mutu" name="penjamin_mutu" type="text" required value="<%= typeof penjamin_mutu !== 'undefined' ? penjamin_mutu : '' %>">
+                </div>
+                <div>
+                    <label class="label" for="koordinator_program_studi">Koordinator Program Studi</label>
+                    <input class="input" id="koordinator_program_studi" name="koordinator_program_studi" type="text" required value="<%= typeof koordinator_program_studi !== 'undefined' ? koordinator_program_studi : '' %>">
+                </div>
+                 <div>
+                    <label class="label" for="dosen_pengembang_rps">Dosen Pengembang RPS</label>
+                    <div class="flex items-center mb-2">
+                        <input class="input" id="dosen_pengembang_rps" name="dosen_pengembang_rps[]" type="text" value="<%= user.username %>" readonly>
+                        <button type="button" class="ml-2 btn-primary" style="padding:0.5rem 1rem;min-width:2.5rem;" onclick="addDosenPengembangRps()">+</button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end mt-4">
+                <button type="button" class="btn-primary" onclick="validateStep1AndNext()">Next</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Deskripsi Mata Kuliah -->
+        <div id="step-2" class="step hidden card">
+             <!-- Step Indicator -->
+            <div class="mb-6 text-center">
+                <span class="inline-block bg-blue-100 text-blue-700 px-4 py-1 rounded-full font-semibold">Step 2 dari 5: Deskripsi Mata Kuliah</span>
+            </div>
+            <h2 class="card-title">Deskripsi Mata Kuliah</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label class="label" for="deskripsi_singkat_mk">Deskripsi Singkat Mata Kuliah</label>
+                    <textarea class="input" id="deskripsi_singkat_mk" name="deskripsi_singkat_mk" rows="3" required></textarea>
+                </div>
+
+                <!-- New fields requested: Materi Kajian, Indikator CPL, Bentuk/Metode/Strategi/Modalitas, Pustaka, Prasyarat -->
+                <div class="md:col-span-2">
+                    <label class="label" for="materi_kajian">Materi Kajian / Pokok Bahasan</label>
+                    <textarea class="input" id="materi_kajian" name="materi_kajian" rows="4" required placeholder="Tuliskan materi kajian dan dijabarkan dalam materi pembelajaran dalam pokok-pokok bahasan yang akan dipelajari oleh mahasiswa sesuai sesuai bidang keilmuan/keahlian yang berfokus pada penguasaan pengetahuan, bahan kajian ini terkait dengan kemampuan akhir yang akan dicapai."></textarea>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="label" for="indikator_cpl">Indikator CPL</label>
+                    <textarea class="input" id="indikator_cpl" name="indikator_cpl" rows="2" placeholder="Contoh: Mahasiswa mampu melakukan ..., menganalisis ..., serta menyusun laporan ..."></textarea>
+                </div>
+
+                <div>
+                    <label class="label" for="bentuk_pembelajaran">Bentuk Pembelajaran</label>
+                    <input class="input" id="bentuk_pembelajaran" name="bentuk_pembelajaran" type="text" placeholder="Contoh: Praktikum, Simulasi, Diskusi, Studi Kasus.">
+                </div>
+                <div>
+                    <label class="label" for="metode_pembelajaran">Metode Pembelajaran</label>
+                    <input class="input" id="metode_pembelajaran" name="metode_pembelajaran" type="text" placeholder="Contoh: Problem-Based Learning (PBL), Demonstrasi, Praktikum.">
+                </div>
+
+                <div>
+                    <label class="label" for="strategi_pembelajaran">Strategi Pembelajaran</label>
+                    <input class="input" id="strategi_pembelajaran" name="strategi_pembelajaran" type="text" placeholder="Contoh: Experiential Learning, Collaborative Learning.">
+                </div>
+                <div>
+                    <label class="label" for="modalitas">Modalitas</label>
+                    <input class="input" id="modalitas" name="modalitas" type="text" placeholder="Contoh: Luring (Lab), Daring (Pengayaan tools open-source)">
+                </div>
+
+                <div class="flex flex-col md:flex-row gap-4 md:col-span-2">
+                  <div class="w-full">
+                    <label class="label">Pustaka Utama</label>
+                    <div id="pustaka-utama-list" class="flex flex-col gap-2">
+                      <div class="flex items-start mb-2">
+                        <textarea class="input" name="pustaka_utama[]" rows="2" required></textarea>
+                        <button type="button" class="ml-2 btn-primary" style="padding:0.5rem 1rem;min-width:2.5rem;" onclick="addPustakaUtama()">+</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="w-full">
+                    <label class="label">Pustaka Pendukung</label>
+                    <div id="pustaka-pendukung-list" class="flex flex-col gap-2">
+                      <div class="flex items-start mb-2">
+                        <textarea class="input" name="pustaka_pendukung[]" rows="2"></textarea>
+                        <button type="button" class="ml-2 btn-primary" style="padding:0.5rem 1rem;min-width:2.5rem;" onclick="addPustakaPendukung()">+</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div id="mata-kuliah-syarat-container" class="md:col-span-2">
+                    <label class="label" for="mata_kuliah_syarat">Mata Kuliah Syarat</label>
+                    <div class="flex items-center mb-2">
+                        <input class="input" id="mata_kuliah_syarat" name="mata_kuliah_syarat" type="text" placeholder="Sebutkan mata kuliah prasyarat jika ada">
+                        <button type="button" class="ml-2 btn-primary" style="padding:0.5rem 1rem;min-width:2.5rem;" onclick="addMataKuliahSyarat()">+</button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-between mt-4">
+                <button type="button" class="btn-secondary" onclick="prevStep()">Previous</button>
+                <button type="button" class="btn-primary" onclick="validateStep2AndNext()">Next</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Capaian Pembelajaran Lulusan -->
+        <div id="step-3" class="step hidden card">
+            <h2 class="card-title">Step 3: Capaian Pembelajaran Lulusan</h2>
+            <p class="text-gray-600 mb-4">Pilih CPL yang relevan dengan mata kuliah ini:</p>
+             <div class="grid grid-cols-1 gap-4">
+                <%
+                // Use server-provided 'cpls' if present (injected by routes); otherwise fall back to built-in list
+                const serverCpls = (typeof cpls !== 'undefined' && Array.isArray(cpls)) ? cpls : [
+                    { code: 'CPL01', desc: 'Menunjukkan sikap profesional yang berlandaskan ketakwaan, etika, integritas, nasionalisme, dan kepedulian sosial dalam menjalankan tugas di bidang teknik komputer dan jaringan' },
+                    { code: 'CPL02', desc: 'Menerapkan konsep matematika, komputasi, dan kecerdasan buatan dalam penyelesaian masalah teknis jaringan secara sistematis.' },
+                    { code: 'CPL03', desc: 'Mengelola pembelajaran sepanjang hayat untuk pengembangan profesional diri dalam lingkungan kerja global yang dinamis dan kompetitif.'},
+                    { code: 'CPL04', desc: 'Menyelesaikan permasalahan dan tugas teknis jaringan komputer melalui perancangan, konfigurasi, pengujian, dan pengelolaan perangkat serta infrastruktur jaringan pada berbagai skala topologi dalam konteks operasional sistem komunikasi data dan administrasi jaringan.'},
+                    { code: 'CPL05', desc: 'Merancang infrastruktur jaringan komputer serta sistem virtualisasi dan komputasi awan dalam konteks pembangunan dan pengelolaan layanan TIK yang fleksibel, skalabel, dan terotomasi. (C6)'},
+                    { code: 'CPL06', desc: 'Mengintegrasikan teknologi jaringan wireless & mobile, sistem tertanam, dan komputasi terdistribusi dalam perancangan dan pengelolaan solusi komunikasi data nirkabel yang andal dan adaptif untuk lingkungan industri dan IoT.'},
+                    { code: 'CPL07', desc: 'Mengembangkan solusi berbasis IoT dan sistem tertanam dalam integrasi perangkat keras, perangkat lunak, dan komunikasi data.'},
+                    { code: 'CPL08', desc: 'Merancang solusi berbasis prinsip keamanan siber dan pembelajaran mesin untuk memitigasi risiko serta memperkuat ketahanan infrastruktur informasi'},
+                    { code: 'CPL09', desc: 'Mengelola infrastruktur virtualisasi dan komputasi awan beserta pipeline DevOps dalam otomatisasi penyediaan layanan TIK yang skalabel, andal, dan berkelanjutan'},
+                    { code: 'CPL10', desc: 'Mengkomunikasikan ide dan solusi teknis dalam kegiatan penelitian atau kerja sama tim multidisiplin secara ilmiah dan profesional.'}
+                ];
+                serverCpls.forEach(cpl => { %>
+                    <div class="flex items-start p-3 border rounded hover:bg-gray-50">
+                        <input type="checkbox" name="cpl[]" value="<%= cpl.code || cpl.code %>" data-description="<%= cpl.desc || cpl.desc %>" class="mt-1 mr-3">
+                        <label class="cursor-pointer">
+                            <span class="font-semibold text-blue-600"><%= cpl.code %>:</span>
+                            <span class="text-gray-700"><%= cpl.desc %></span>
+                        </label>
+                    </div>
+                <% }); %>
+            </div>
+            <div class="flex justify-between mt-4">
+                <button type="button" class="btn-secondary" onclick="prevStep()">Previous</button>
+                <button type="button" class="btn-primary" onclick="validateStep3AndNext()">Next</button>
+            </div>
+        </div>
+
+        <!-- Step 4: Capaian Pembelajaran Matakuliah -->
+        <div id="step-4" class="step hidden card">
+            <h2 class="card-title">Step 4: Capaian Pembelajaran Matakuliah</h2>
+            <div id="cpmk-container">
+                <!-- CPMK will be added here dynamically -->
+            </div>
+            <div class="flex justify-between mt-4">
+                <button type="button" class="btn-secondary" onclick="prevStep()">Previous</button>
+                <button type="button" class="btn-primary" onclick="validateStep4AndNext()">Next</button>
+            </div>
+        </div>
+
+        <!-- Step 5: Sub-CPMK -->
+        <div id="step-5" class="step hidden card">
+            <h2 class="card-title">Step 5: Sub-CPMK</h2>
+            <div id="sub-cpmk-container">
+                <!-- Sub-CPMK will be added here dynamically -->
+            </div>
+            <div class="flex justify-between mt-4">
+                <button type="button" class="btn-secondary" onclick="prevStep()">Previous</button>
+                <button class="btn-primary" type="submit">Save RPS</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Validasi wajib isi step 1 sebelum next
+function validateStep1AndNext() {
+    const requiredFields = [
+        'nama_mk', 'kode_mk', 'rumpun_mk', 'semester', 'tahun_akademik',
+        'sks_teori', 'sks_praktikum', 'tanggal_penyusunan',
+        'dosen_pengampu[]', 'penjamin_mutu', 'dosen_pengembang_rps[]', 'koordinator_program_studi'
+    ];
+    let valid = true;
+    for (const name of requiredFields) {
+        let el = document.getElementsByName(name)[0];
+        if (el && !el.value) {
+            el.classList.add('ring-2', 'ring-red-400');
+            valid = false;
+        } else if (el) {
+            el.classList.remove('ring-2', 'ring-red-400');
+        }
+    }
+    if (!valid) {
+        alert('Mohon lengkapi semua data pada Step 1 sebelum melanjutkan!');
+        return;
+    }
+    nextStep();
+}
+
+// Validasi Step 2
+function validateStep2AndNext() {
+    const required = ['deskripsi_singkat_mk', 'materi_kajian', 'pustaka_utama[]'];
+    let valid = true;
+    for (const name of required) {
+        let el = document.getElementsByName(name)[0];
+        if (el && !el.value) {
+            el.classList.add('ring-2', 'ring-red-400');
+            valid = false;
+        } else if (el) {
+            el.classList.remove('ring-2', 'ring-red-400');
+        }
+    }
+    if (!valid) {
+        alert('Mohon lengkapi semua data pada Step 2 sebelum melanjutkan!');
+        return;
+    }
+    nextStep();
+}
+
+// Validasi Step 3
+function validateStep3AndNext() {
+    // Ensure at least one CPL is selected
+    const cplChecks = document.querySelectorAll('input[name="cpl[]"]');
+    const anyChecked = Array.from(cplChecks).some(cb => cb.checked);
+    if (!anyChecked) {
+        alert('Mohon pilih minimal satu CPL pada Step 3 sebelum melanjutkan!');
+        return;
+    }
+    nextStep();
+}
+
+// Validasi Step 4
+function validateStep4AndNext() {
+    // Require at least one CPMK added (CPMK elements have id starting with CPMK)
+    const all = Array.from(document.querySelectorAll('[id^="CPMK"]'));
+    const cpmkElements = all.filter(el => (/^CPMK\d+$/).test(el.id));
+    if (cpmkElements.length === 0) {
+        alert('Mohon tambahkan minimal satu CPMK pada Step 4 sebelum melanjutkan!');
+        return;
+    }
+
+    // Ensure every CPMK has a non-empty deskripsi textarea
+    for (const cpmkEl of cpmkElements) {
+        // The textarea for description is inside `${cpmkId}-content` and uses name="cpmk[<id>][deskripsi]"
+    const textarea = cpmkEl.querySelector('textarea[name$="[deskripsi]"]');
+        if (!textarea || !textarea.value || !textarea.value.trim()) {
+            // Jump to Step 4 and scroll to the offending CPMK
+            currentStep = 4;
+            showStep(currentStep);
+            const target = textarea || cpmkEl;
+            if (target && typeof target.scrollIntoView === 'function') {
+                setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+            }
+            alert(`Mohon isi deskripsi untuk ${cpmkEl.id} pada Step 4 sebelum melanjutkan!`);
+            return;
+        }
+    }
+
+    nextStep();
+}
+
+// Validasi Step 5 (submit)
+function validateStep5AndNext() {
+    // Ensure at least one Sub-CPMK exists for each CPMK
+    // Filter only elements with id exactly like "CPMK01", not "CPMK01-content" etc.
+    const all = Array.from(document.querySelectorAll('[id^="CPMK"]'));
+    const cpmkElements = all.filter(el => (/^CPMK\d+$/).test(el.id));
+    for (const cpmkEl of cpmkElements) {
+        const id = cpmkEl.id;
+        const subList = document.getElementById(`sub-cpmk-list-${id}`);
+        if (!subList || subList.children.length === 0) {
+            // Move user to Step 5 and scroll to the CPMK section to help them fix it
+            currentStep = 5;
+            showStep(currentStep);
+            const target = document.getElementById(`sub-cpmk-section-${id}`) || document.getElementById(`cpmk-list-${id}`) || cpmkEl;
+            if (target && typeof target.scrollIntoView === 'function') {
+                setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+            }
+            alert(`Mohon tambahkan minimal satu Sub-CPMK untuk ${id} pada Step 5 sebelum menyimpan!`);
+            return false;
+        }
+    }
+    // If all good, allow form submit
+    return true;
+}
+</script>
+<%- include('partials/footer') %>

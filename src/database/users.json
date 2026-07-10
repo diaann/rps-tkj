@@ -1,0 +1,66 @@
+[
+  {
+    "id": 1,
+    "email": "admin@polteku.ac.id",
+    "username": "admin",
+    "password": "asd",
+    "role": "admin",
+    "status": "active"
+  },
+  {
+    "id": 2,
+    "email": "rezki@gmail.com",
+    "username": "rezki",
+    "password": "password",
+    "role": "dosen",
+    "status": "active"
+  },
+  {
+    "id": 3,
+    "email": "saya@a.a",
+    "username": "saya",
+    "password": "123",
+    "role": "dosen",
+    "status": "active"
+  },
+  {
+    "id": 4,
+    "email": "a@a.a",
+    "username": "a",
+    "password": "a",
+    "role": "dosen",
+    "status": "active"
+  },
+  {
+    "id": 5,
+    "email": "aa@a.a",
+    "username": "a",
+    "password": "a",
+    "role": "dosen",
+    "status": "active"
+  },
+  {
+    "id": 6,
+    "email": "raihani@apa.com",
+    "username": "Raihani",
+    "password": "asd",
+    "role": "dosen",
+    "status": "active"
+  },
+  {
+    "id": 7,
+    "email": "dian@gmail.com",
+    "username": "dian",
+    "password": "dian",
+    "role": "dosen",
+    "status": "active"
+  },
+  {
+    "id": 8,
+    "email": "coba@gmail.com",
+    "username": "Coba Coba .,12",
+    "password": "coba",
+    "role": "dosen",
+    "status": "pending"
+  }
+]

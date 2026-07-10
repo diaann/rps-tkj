@@ -1,0 +1,614 @@
+/* Custom style for RPS App - improve card, button, and form appearance */
+.card {
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+}
+.card-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+.card-subtitle {
+  color: #6b7280;
+  margin-bottom: 1rem;
+}
+.btn-primary {
+  background: #2563eb;
+  color: #fff;
+  font-weight: bold;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  transition: background 0.2s;
+  border: none;
+}
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+.btn-secondary {
+  background: #6b7280;
+  color: #fff;
+  font-weight: bold;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background 0.2s;
+  border: none;
+}
+.btn-secondary:hover {
+  background: #374151;
+}
+.btn-danger {
+  background: #ef4444;
+  color: #fff;
+  font-weight: bold;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  transition: background 0.2s;
+  border: none;
+}
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+/* Auto-save indicators */
+.auto-save-indicator, .save-success-indicator, .save-error-indicator {
+  transition: all 0.3s ease-in-out;
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Form persistence styles */
+.form-saved {
+  border-left: 4px solid #10b981 !important;
+  background-color: #f0fdf4;
+}
+
+.form-saving {
+  border-left: 4px solid #f59e0b !important;
+  background-color: #fffbeb;
+}
+
+.form-error {
+  border-left: 4px solid #ef4444 !important;
+  background-color: #fef2f2;
+}
+
+/* Enhanced button styles */
+.btn-save {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: none;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.btn-save:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.input {
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  color: #374151;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  box-sizing: border-box;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+textarea.input {
+  resize: vertical;
+  min-height: 2.5rem;
+}
+.label {
+  display: block;
+  color: #374151;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.container-custom {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Collapse/Expand functionality styles */
+.subcpmk-content {
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
+}
+
+.subcpmk-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
+
+.sub-cpmk-content {
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
+}
+
+.sub-cpmk-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
+
+.collapse-icon {
+  transition: transform 0.3s ease-in-out;
+  display: inline-block;
+  font-size: 0.875rem;
+  color: #3b82f6;
+}
+
+.collapse-icon.collapsed {
+  transform: rotate(-90deg);
+}
+
+/* Enhanced table styling for subCPMK */
+.subcpmk-content table {
+  border-collapse: collapse;
+}
+
+.subcpmk-content table th,
+.subcpmk-content table td {
+  border: 1px solid #e5e7eb;
+}
+
+.subcpmk-content table th {
+  background-color: #eff6ff;
+  font-weight: 600;
+}
+
+.subcpmk-content table tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Sub-CPMK header styling */
+.subcpmk-header {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border-bottom: 2px solid #3b82f6;
+  cursor: pointer;
+  user-select: none;
+}
+
+.subcpmk-header:hover {
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+}
+
+/* Edit form collapse styling */
+.sub-cpmk-group {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.sub-cpmk-group h4 {
+  user-select: none;
+  padding: 0.5rem;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+  margin: 0;
+}
+
+.sub-cpmk-group h4:hover {
+  background-color: #f1f5f9;
+}
+
+/* Animation for smooth transitions */
+@keyframes expandContent {
+  from {
+    max-height: 0;
+    opacity: 0;
+  }
+  to {
+    max-height: 1000px;
+    opacity: 1;
+  }
+}
+
+@keyframes collapseContent {
+  from {
+    max-height: 1000px;
+    opacity: 1;
+  }
+  to {
+    max-height: 0;
+    opacity: 0;
+  }
+}
+
+.expanding {
+  animation: expandContent 0.3s ease-in-out forwards;
+}
+
+.collapsing {
+  animation: collapseContent 0.3s ease-in-out forwards;
+}
+
+/* Individual SubCPMK form styling */
+.subcpmk-form-content {
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
+}
+
+.subcpmk-form-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding: 0;
+}
+
+/* SubCPMK form header styling */
+.subcpmk-form-header {
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  border-bottom: 1px solid #cbd5e0;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.subcpmk-form-header:hover {
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e0);
+}
+
+/* Individual SubCPMK container */
+[data-subcpmk-index] {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+[data-subcpmk-index]:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Animation classes for individual forms */
+.subcpmk-form-content.expanding {
+  animation: expandContent 0.3s ease-in-out forwards;
+}
+
+.subcpmk-form-content.collapsing {
+  animation: collapseContent 0.3s ease-in-out forwards;
+}
+
+/* Dashboard specific styles */
+.dashboard-stat-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* RPS card hover effects */
+.rps-card {
+  transition: all 0.3s ease;
+  border: 1px solid #e5e7eb;
+}
+
+.rps-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+  border-color: #3b82f6;
+}
+
+/* Enhanced button styles for dashboard */
+.btn-create-rps {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border: none;
+  color: white;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-create-rps:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge.active {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.draft {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .container-custom {
+    padding: 1rem;
+  }
+  
+  .rps-card .flex {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .rps-card .btn-primary,
+  .rps-card .btn-secondary,
+  .rps-card .btn-danger {
+    flex: none;
+    width: 100%;
+  }
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+/* Enhanced table styling for view-rps */
+.subcpmk-content table {
+  font-size: 0.875rem;
+}
+
+.subcpmk-content table th {
+  min-width: 80px;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.subcpmk-content table td {
+  min-width: 80px;
+  max-width: 200px;
+  word-wrap: break-word;
+  vertical-align: top;
+}
+
+.subcpmk-content table td.max-w-xs {
+  max-width: 150px;
+}
+
+/* Responsive improvements for view page */
+@media (max-width: 1024px) {
+  .subcpmk-content table {
+    font-size: 0.75rem;
+  }
+  
+  .subcpmk-content table th,
+  .subcpmk-content table td {
+    padding: 0.25rem;
+    min-width: 60px;
+  }
+  
+  .subcpmk-content table td.max-w-xs {
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 768px) {
+  .subcpmk-content .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  
+  .subcpmk-content table th,
+  .subcpmk-content table td {
+    padding: 0.125rem 0.25rem;
+    min-width: 50px;
+  }
+  
+  .subcpmk-content table td.max-w-xs {
+    max-width: 100px;
+  }
+}
+
+/* Better scrollbar for horizontal scroll */
+.subcpmk-content .overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+
+.subcpmk-content .overflow-x-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.subcpmk-content .overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.subcpmk-content .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* View page specific improvements */
+.view-rps-container {
+  max-width: none;
+  width: 100%;
+}
+
+.view-rps-content {
+  max-width: 100%;
+}
+
+/* Better spacing for view page */
+.view-rps-section {
+  margin-bottom: 2rem;
+}
+
+.view-rps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 640px) {
+  .view-rps-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .view-rps-container {
+    padding: 1rem;
+  }
+}
+
+/* Metode Pembelajaran Radio Button Styles */
+.metode-input {
+    transition: all 0.3s ease;
+}
+
+.metode-input.hidden {
+    display: none;
+}
+
+.metode-radio {
+    width: 16px;
+    height: 16px;
+    accent-color: #3B82F6;
+}
+
+.metode-radio:checked + span {
+    color: #3B82F6;
+    font-weight: 600;
+}
+
+/* Enhanced form styling for metode pembelajaran section */
+.metode-pembelajaran-section {
+    background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.metode-radio-group {
+    background-color: #FFFFFF;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.metode-input textarea {
+    border-color: #D1D5DB;
+}
+
+.metode-input textarea:focus {
+    border-color: #3B82F6;
+    ring-color: #3B82F6;
+}
+
+/* Radio button group styling */
+.metode-radio-container {
+    display: flex;
+    align-items: center;
+    space-x: 1.5rem;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background-color: #F9FAFB;
+    border-radius: 0.5rem;
+    border: 1px solid #E5E7EB;
+}
+
+.metode-radio-container:hover {
+    background-color: #F3F4F6;
+}
+
+/* Individual radio button styling */
+.metode-radio-option {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.2s ease;
+}
+
+.metode-radio-option:hover {
+    background-color: #EBF8FF;
+}
+
+.metode-radio-option input[type="radio"] {
+    margin-right: 0.5rem;
+}
+
+.metode-radio-option input[type="radio"]:checked + span {
+    color: #1D4ED8;
+    font-weight: 600;
+}
+
+/* Smooth transitions for showing/hiding metode inputs */
+.metode-input {
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.metode-input:not(.hidden) {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        max-height: 200px;
+    }
+}
+
+.metode-input.hidden {
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+    padding: 0;
+}

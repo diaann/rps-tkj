@@ -1,0 +1,178 @@
+<%- include('partials/header') %>
+
+    <div class="container-custom">
+        <div class="card mb-6">
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">Tabel Penilaian</h1>
+            <p class="text-gray-600">
+                <span class="font-semibold"><%= rpsItem.nama_mk %></span>
+                &middot; Semester <%= rpsItem.semester %>
+                &middot; Kelas <%= kelas.nama %>
+            </p>
+        </div>
+
+        <% if (saved) { %>
+            <div class="mb-4 p-3 rounded bg-green-100 text-green-800 border border-green-300">
+                <i class="fas fa-check-circle mr-1"></i> Nilai berhasil disimpan.
+            </div>
+        <% } %>
+
+        <% if (subCpmkList.length === 0) { %>
+            <div class="card text-center py-8 text-gray-500">
+                RPS ini belum punya data Sub-CPMK. Lengkapi dulu lewat Edit RPS.
+            </div>
+        <% } else if (mahasiswaList.length === 0) { %>
+            <div class="card text-center py-8 text-gray-500">
+                Belum ada data mahasiswa untuk kelas <%= kelas.nama %>.
+            </div>
+        <% } else { %>
+
+        <form method="POST" action="/penilaian/mk/<%= rpsItem.id %>/kelas/<%= kelas.id %>/save">
+
+            <!-- Tab navigation -->
+            <div class="card">
+                <div class="flex flex-wrap gap-2 -mb-px">
+                    <% subCpmkList.forEach(function(sub, idx) { %>
+                        <button type="button"
+                            class="penilaian-tab-btn px-4 py-2 text-sm font-medium rounded-t-lg border border-b-0 <%= idx === 0 ? 'bg-white border-blue-500 text-blue-700' : 'bg-gray-50 border-transparent text-gray-500 hover:text-blue-600' %>"
+                            data-tab-target="tb-panel-<%= sub.globalNumber %>"
+                            onclick="showPenilaianTab('tb-panel-<%= sub.globalNumber %>', this)">
+                            Sub-CPMK <%= sub.globalNumber %>
+                        </button>
+                    <% }); %>
+                </div>
+
+                <% subCpmkList.forEach(function(sub, idx) { %>
+                    <div id="tb-panel-<%= sub.globalNumber %>" class="penilaian-tab-panel <%= idx === 0 ? '' : 'hidden' %>">
+
+                        <div class="mb-4 p-4 bg-gray-50 border rounded-lg">
+                            <div class="text-sm text-gray-500 mb-2">Pekan <%= sub.pekanAwal %><% if (sub.pekanAkhir && sub.pekanAkhir !== sub.pekanAwal) { %> - <%= sub.pekanAkhir %><% } %></div>
+                            <div class="text-gray-800 mb-3"><%= sub.deskripsi %></div>
+                            <div class="flex flex-wrap gap-2 text-sm">
+                                <span class="px-3 py-1 rounded-full bg-green-100 text-green-700">
+                                    Formatif: <%= sub.formatifNama || '-' %><% if (sub.formatifBobot) { %> (<%= sub.formatifBobot %>%)<% } %>
+                                </span>
+                                <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-700">
+                                    Kuis: <%= sub.kuisNama || '-' %><% if (sub.kuisBobot) { %> (<%= sub.kuisBobot %>%)<% } %>
+                                </span>
+                                <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-700">
+                                    Tugas: <%= sub.tugasNama || '-' %><% if (sub.tugasBobot) { %> (<%= sub.tugasBobot %>%)<% } %>
+                                </span>
+                                <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-700">
+                                    Ujian: <%= sub.ujianNama || '-' %><% if (sub.ujianBobot) { %> (<%= sub.ujianBobot %>%)<% } %>
+                                </span>
+                                <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-700">
+                                    PjBL: <%= sub.pjblNama || '-' %><% if (sub.pjblBobot) { %> (<%= sub.pjblBobot %>%)<% } %>
+                                </span>
+                                <% (sub.lainnya || []).forEach(function(item) { %>
+                                <span class="px-3 py-1 rounded-full bg-purple-100 text-purple-700">
+                                    <%= item.nama || 'Lainnya' %><% if (item.bobot) { %> (<%= item.bobot %>%)<% } %>
+                                </span>
+                                <% }); %>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="table-auto w-full border-collapse">
+                                <thead class="bg-blue-50">
+                                    <tr>
+                                        <th class="px-3 py-2 border text-left text-xs font-semibold">No</th>
+                                        <th class="px-3 py-2 border text-left text-xs font-semibold">NIM</th>
+                                        <th class="px-3 py-2 border text-left text-xs font-semibold">Nama Mahasiswa</th>
+                                        <th class="px-3 py-2 border text-center text-xs font-semibold">Formatif</th>
+                                        <th class="px-3 py-2 border text-center text-xs font-semibold">Kuis</th>
+                                        <th class="px-3 py-2 border text-center text-xs font-semibold">Tugas</th>
+                                        <th class="px-3 py-2 border text-center text-xs font-semibold">Ujian</th>
+                                        <th class="px-3 py-2 border text-center text-xs font-semibold">PjBL</th>
+                                        <% (sub.lainnya || []).forEach(function(item) { %>
+                                        <th class="px-3 py-2 border text-center text-xs font-semibold"><%= item.nama || 'Lainnya' %></th>
+                                        <% }); %>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <% mahasiswaList.forEach(function(m, mIdx) { %>
+                                        <% const base = `nilai[${sub.globalNumber}][${m.id}]`; %>
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-3 py-2 border text-sm"><%= mIdx + 1 %></td>
+                                            <td class="px-3 py-2 border text-sm"><%= m.nim %></td>
+                                            <td class="px-3 py-2 border text-sm"><%= m.nama %></td>
+                                            <td class="px-2 py-1 border">
+                                                <input type="number" min="0" max="100" step="0.01"
+                                                    name="<%= base %>[formatif]"
+                                                    value="<%= savedValues[base + '[formatif]'] || '' %>"
+                                                    class="w-20 border rounded px-2 py-1 text-sm text-center">
+                                            </td>
+                                            <td class="px-2 py-1 border">
+                                                <input type="number" min="0" max="100" step="0.01"
+                                                    name="<%= base %>[kuis]"
+                                                    value="<%= savedValues[base + '[kuis]'] || '' %>"
+                                                    class="w-20 border rounded px-2 py-1 text-sm text-center">
+                                            </td>
+                                            <td class="px-2 py-1 border">
+                                                <input type="number" min="0" max="100" step="0.01"
+                                                    name="<%= base %>[tugas]"
+                                                    value="<%= savedValues[base + '[tugas]'] || '' %>"
+                                                    class="w-20 border rounded px-2 py-1 text-sm text-center">
+                                            </td>
+                                            <td class="px-2 py-1 border">
+                                                <input type="number" min="0" max="100" step="0.01"
+                                                    name="<%= base %>[ujian]"
+                                                    value="<%= savedValues[base + '[ujian]'] || '' %>"
+                                                    class="w-20 border rounded px-2 py-1 text-sm text-center">
+                                            </td>
+                                            <td class="px-2 py-1 border">
+                                                <input type="number" min="0" max="100" step="0.01"
+                                                    name="<%= base %>[pjbl]"
+                                                    value="<%= savedValues[base + '[pjbl]'] || '' %>"
+                                                    class="w-20 border rounded px-2 py-1 text-sm text-center">
+                                            </td>
+                                            <% (sub.lainnya || []).forEach(function(item, lIdx) { %>
+                                            <td class="px-2 py-1 border">
+                                                <input type="number" min="0" max="100" step="0.01"
+                                                    name="<%= base %>[lainnya][<%= lIdx %>]"
+                                                    value="<%= savedValues[base + '[lainnya][' + lIdx + ']'] || '' %>"
+                                                    class="w-20 border rounded px-2 py-1 text-sm text-center">
+                                            </td>
+                                            <% }); %>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+
+            <div class="mt-4 flex justify-between items-center">
+                <a href="/penilaian" class="btn-secondary px-4 py-2 rounded bg-gray-500 text-white hover:bg-gray-600 inline-block">Kembali</a>
+                <button type="submit" class="btn-primary px-6 py-2 rounded">
+                    <i class="fas fa-save mr-1"></i>Simpan Nilai
+                </button>
+            </div>
+        </form>
+
+        <% } %>
+
+        <% if (subCpmkList.length === 0 || mahasiswaList.length === 0) { %>
+        <a href="/penilaian" class="btn-secondary mt-4 px-4 py-2 rounded bg-gray-500 text-white hover:bg-gray-600 inline-block">Kembali</a>
+        <% } %>
+    </div>
+
+    <script>
+        function showPenilaianTab(targetId, btnEl) {
+            document.querySelectorAll('.penilaian-tab-panel').forEach(function (panel) {
+                panel.classList.add('hidden');
+            });
+            document.querySelectorAll('.penilaian-tab-btn').forEach(function (btn) {
+                btn.classList.remove('bg-white', 'border-blue-500', 'text-blue-700');
+                btn.classList.add('bg-gray-50', 'border-transparent', 'text-gray-500');
+            });
+            const target = document.getElementById(targetId);
+            if (target) target.classList.remove('hidden');
+            if (btnEl) {
+                btnEl.classList.remove('bg-gray-50', 'border-transparent', 'text-gray-500');
+                btnEl.classList.add('bg-white', 'border-blue-500', 'text-blue-700');
+            }
+        }
+    </script>
+
+<%- include('partials/footer') %>

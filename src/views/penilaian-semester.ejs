@@ -1,0 +1,130 @@
+<%- include('partials/header') %>
+
+    <div class="container-custom">
+        <div class="card mb-6">
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">Penilaian</h1>
+            <p class="text-gray-600">Pilih semester, mata kuliah, dan kelas untuk membuka tabel penilaian.</p>
+        </div>
+
+        <div class="card">
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Semester</label>
+                <select id="pilih-semester" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">
+                    <option value="">-- Pilih Semester --</option>
+                    <% for (let s = 1; s <= 8; s++) { %>
+                        <option value="<%= s %>">Semester <%= s %></option>
+                    <% } %>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Mata Kuliah</label>
+                <select id="pilih-matkul" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" disabled>
+                    <option value="">-- Pilih Semester dahulu --</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Kelas</label>
+                <select id="pilih-kelas" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" disabled>
+                    <option value="">-- Pilih Mata Kuliah dahulu --</option>
+                </select>
+            </div>
+
+            <div id="penilaian-empty-msg" class="hidden mb-4 p-3 rounded bg-yellow-50 text-yellow-800 border border-yellow-200 text-sm"></div>
+
+            <button id="btn-lihat-penilaian" type="button" disabled
+                class="btn-primary px-6 py-2 rounded opacity-50 cursor-not-allowed">
+                <i class="fas fa-table mr-1"></i>Lihat Tabel Penilaian
+            </button>
+        </div>
+
+        <a href="/" class="btn-secondary mt-4 px-4 py-2 rounded bg-gray-500 text-white hover:bg-gray-600 inline-block">Kembali</a>
+    </div>
+
+    <script>
+        const MATKUL_DATA = <%- JSON.stringify(matkulData) %>;
+        const KELAS_DATA = <%- JSON.stringify(kelasData) %>;
+
+        const semesterEl = document.getElementById('pilih-semester');
+        const matkulEl = document.getElementById('pilih-matkul');
+        const kelasEl = document.getElementById('pilih-kelas');
+        const btnEl = document.getElementById('btn-lihat-penilaian');
+        const emptyMsgEl = document.getElementById('penilaian-empty-msg');
+
+        function tingkatFromSemester(semester) {
+            const s = parseInt(semester, 10);
+            if (!s || s < 1) return null;
+            return Math.ceil(s / 2);
+        }
+
+        function resetSelect(selectEl, placeholder, disabled) {
+            selectEl.innerHTML = '<option value="">' + placeholder + '</option>';
+            selectEl.disabled = disabled;
+        }
+
+        function updateButtonState() {
+            const ready = semesterEl.value && matkulEl.value && kelasEl.value;
+            btnEl.disabled = !ready;
+            btnEl.classList.toggle('opacity-50', !ready);
+            btnEl.classList.toggle('cursor-not-allowed', !ready);
+        }
+
+        semesterEl.addEventListener('change', function () {
+            resetSelect(matkulEl, '-- Pilih Mata Kuliah --', true);
+            resetSelect(kelasEl, '-- Pilih Mata Kuliah dahulu --', true);
+            emptyMsgEl.classList.add('hidden');
+            updateButtonState();
+
+            const semester = this.value;
+            if (!semester) return;
+
+            const filtered = MATKUL_DATA.filter(function (mk) { return String(mk.semester) === String(semester); });
+            if (filtered.length === 0) {
+                emptyMsgEl.textContent = 'Tidak ada mata kuliah pada semester ini.';
+                emptyMsgEl.classList.remove('hidden');
+                resetSelect(matkulEl, '-- Tidak ada mata kuliah --', true);
+                return;
+            }
+
+            matkulEl.disabled = false;
+            matkulEl.innerHTML = '<option value="">-- Pilih Mata Kuliah --</option>';
+            filtered.forEach(function (mk) {
+                const opt = document.createElement('option');
+                opt.value = mk.id;
+                opt.textContent = mk.nama_mk + (mk.kode_mk ? ' (' + mk.kode_mk + ')' : '');
+                matkulEl.appendChild(opt);
+            });
+        });
+
+        matkulEl.addEventListener('change', function () {
+            resetSelect(kelasEl, '-- Pilih Kelas --', true);
+            updateButtonState();
+
+            if (!this.value) return;
+            const tingkat = tingkatFromSemester(semesterEl.value);
+            const filtered = KELAS_DATA.filter(function (k) { return k.tingkat === tingkat; });
+            if (filtered.length === 0) {
+                resetSelect(kelasEl, '-- Belum ada kelas --', true);
+                return;
+            }
+
+            kelasEl.disabled = false;
+            kelasEl.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+            filtered.forEach(function (k) {
+                const opt = document.createElement('option');
+                opt.value = k.id;
+                opt.textContent = 'Kelas ' + k.nama;
+                kelasEl.appendChild(opt);
+            });
+        });
+
+        kelasEl.addEventListener('change', updateButtonState);
+
+        btnEl.addEventListener('click', function () {
+            if (btnEl.disabled) return;
+            window.location.href = '/penilaian/mk/' + encodeURIComponent(matkulEl.value) + '/kelas/' + encodeURIComponent(kelasEl.value);
+        });
+    </script>
+
+<%- include('partials/footer') %>

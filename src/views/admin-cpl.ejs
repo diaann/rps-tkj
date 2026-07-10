@@ -1,0 +1,219 @@
+<%- include('partials/header') %>
+
+<div class="container-custom">
+  <div class="card">
+    <h2 class="card-title">Kelola CPL & Defaults</h2>
+
+    <% if (typeof req !== 'undefined' && req.query && (req.query.saved || req.query.created || req.query.updated || req.query.deleted)) { %>
+      <div class="p-3 bg-green-100 text-green-800 rounded">Perubahan berhasil disimpan.</div>
+    <% } %>
+
+    <form action="/admin/cpl" method="POST" class="mt-4">
+      <div class="mb-4">
+        <label class="label">Pilih Set CPL Aktif</label>
+        <select name="activeCplId" class="input">
+          <% cpls.forEach(set => { %>
+            <option value="<%= set.id %>" <%= (config && String(config.activeCplId) === String(set.id)) ? 'selected' : '' %>><%= set.name %> (<%= set.date_created %>)</option>
+          <% }); %>
+        </select>
+      </div>
+
+      <div class="mb-4">
+        <label class="label">Penjamin Mutu (default saat buat RPS)</label>
+        <input class="input" name="penjamin_mutu" value="<%= config.penjamin_mutu || '' %>">
+      </div>
+
+      <div class="mb-4">
+        <label class="label">Koordinator Program Studi (default saat buat RPS)</label>
+        <input class="input" name="koordinator_program_studi" value="<%= config.koordinator_program_studi || '' %>">
+      </div>
+
+      <div class="flex justify-end">
+        <button class="btn-primary" type="submit">Simpan Pengaturan</button>
+      </div>
+    </form>
+
+    <hr class="my-6">
+
+    <h3 class="font-semibold mb-2">Daftar Set CPL</h3>
+    <div class="space-y-4">
+      <% cpls.forEach(set => { %>
+        <div class="p-3 border rounded" id="set-card-<%= set.id %>">
+          <div class="flex justify-between items-center">
+            <div>
+              <div class="font-semibold"><%= set.name %> <span class="text-sm text-gray-500">(<%= set.date_created %>)</span></div>
+              <div class="text-sm text-gray-700 mt-1"><%= (set.content || []).length %> item</div>
+            </div>
+            <div class="space-x-2">
+              <button class="btn-secondary" type="button" onclick="toggleEdit('<%= set.id %>')">Edit</button>
+            </div>
+          </div>
+
+          <div id="edit-area-<%= set.id %>" style="display:none;margin-top:12px;">
+            <form action="/admin/cpl/update/<%= set.id %>" method="POST" onsubmit="return prepareSetForm(this)">
+              <div class="mb-2">
+                <label class="label">Nama Set CPL</label>
+                <input class="input" name="name" value="<%= set.name %>" placeholder="CPL2025" required>
+              </div>
+              <div class="mb-2">
+                <label class="label">Rentang Tahun</label>
+                <input class="input" name="date_created" value="<%= set.date_created %>" placeholder="2025-2030">
+              </div>
+              <div data-items-container id="items-container-<%= set.id %>">
+                <% (set.content || []).forEach((it, idx) => { %>
+                  <div class="flex gap-2 items-start mb-1 cpl-item" data-item>
+                    <div style="width:16%;">
+                      <label class="label">Kode CPL</label>
+                      <input class="input w-full" name="code[]" value="<%= it.code %>" placeholder="CPL01" required>
+                    </div>
+                    <div class="flex-1">
+                      <label class="label">Deskripsi CPL</label>
+                      <textarea class="input w-full" name="desc[]" rows="5" placeholder="Menunjukkan sikap profesional yang ..." required><%= it.desc %></textarea>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px; align-self:flex-end;">
+                      <button type="button" class="btn-danger remove-cpl-btn" onclick="removeCplItem(this)">-</button>
+                      <button type="button" class="btn-primary add-cpl-btn" onclick="addCplItem(this)">+</button>
+                    </div>
+                  </div>
+                <% }); %>
+              </div>
+              <div class="mt-3">
+                <button class="btn-primary" type="submit">Simpan Set</button>
+              </div>
+            </form>
+            <div class="mt-2">
+              <form action="/admin/cpl/delete/<%= set.id %>" method="POST" onsubmit="return confirm('Hapus set ini?')">
+                <button class="btn-danger" type="submit">Hapus Set Ini</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+
+    <hr class="my-6">
+    <h3 class="font-semibold mb-2">Buat Set CPL Baru</h3>
+    <div class="p-3 border rounded">
+      <form action="/admin/cpl/create" method="POST" id="create-cpl-form" onsubmit="return prepareCreateForm(this)">
+        <div class="mb-2">
+          <label class="label">Nama Set CPL</label>
+          <input class="input" name="name" placeholder="CPL2025" required>
+        </div>
+        <div class="mb-2">
+          <label class="label">Rentang Tahun</label>
+          <input class="input" name="date_created" placeholder="2025-2030">
+        </div>
+        <div id="new-cpl-items">
+          <div class="flex gap-2 items-start mb-1 cpl-item" data-item>
+            <div style="width:16%;">
+              <label class="label">Kode CPL</label>
+              <input class="input w-full" name="code[]" placeholder="CPL01" required>
+            </div>
+            <div class="flex-1">
+              <label class="label">Deskripsi CPL</label>
+              <textarea class="input flex-1" name="desc[]" rows="5" placeholder="Menunjukkan sikap profesional yang ..." required></textarea>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px; align-self:flex-end;">
+              <button type="button" class="btn-danger remove-cpl-btn" onclick="removeCplItem(this)">-</button>
+              <button type="button" class="btn-primary add-cpl-btn" onclick="addCplItem(this)">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 flex justify-end">
+          <button class="btn-primary" type="submit">Buat Set Baru</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+
+<script>
+function toggleEdit(id) {
+  const area = document.getElementById('edit-area-' + id);
+  if (!area) return;
+  area.style.display = (area.style.display === 'none' || area.style.display === '') ? 'block' : 'none';
+}
+
+// New behavior: per-item add/remove with constraints
+function updateCplButtons(container) {
+  const items = container.querySelectorAll('.cpl-item');
+  items.forEach((it, idx) => {
+    const addBtn = it.querySelector('.add-cpl-btn');
+    const removeBtn = it.querySelector('.remove-cpl-btn');
+    if (!addBtn || !removeBtn) return;
+    // Only last item should show enabled add button
+    if (idx === items.length - 1) {
+      addBtn.style.display = '';
+    } else {
+      addBtn.style.display = 'none';
+    }
+    // Remove button disabled/hidden when only one item remains
+    if (items.length === 1) {
+      removeBtn.disabled = true;
+      removeBtn.style.opacity = '0.5';
+      removeBtn.style.cursor = 'not-allowed';
+    } else {
+      removeBtn.disabled = false;
+      removeBtn.style.opacity = '';
+      removeBtn.style.cursor = '';
+    }
+  });
+}
+
+function addCplItem(button) {
+  const item = button.closest('.cpl-item');
+  const container = item.closest('[data-items-container]') || document.getElementById('new-cpl-items');
+  if (!item || !container) return;
+  const codeInput = item.querySelector('input[name="code[]"]');
+  const descInput = item.querySelector('textarea[name="desc[]"]');
+  if (!codeInput || !descInput) return;
+  if (codeInput.value.trim() === '' || descInput.value.trim() === '') {
+    // Focus first empty
+    if (codeInput.value.trim() === '') codeInput.focus(); else descInput.focus();
+    return;
+  }
+
+  // Clone a new item with empty values
+  const newItem = item.cloneNode(true);
+  // reset values in clone
+  const newCode = newItem.querySelector('input[name="code[]"]');
+  const newDesc = newItem.querySelector('textarea[name="desc[]"]');
+  newCode.value = '';
+  newDesc.value = '';
+  // Insert after current item
+  item.parentNode.insertBefore(newItem, item.nextSibling);
+  // Update buttons state
+  updateCplButtons(container);
+}
+
+function removeCplItem(button) {
+  const item = button.closest('.cpl-item');
+  const container = item.closest('[data-items-container]') || document.getElementById('new-cpl-items');
+  if (!item || !container) return;
+  const items = container.querySelectorAll('.cpl-item');
+  if (items.length <= 1) return; // don't remove last
+  item.remove();
+  updateCplButtons(container);
+}
+
+function prepareCreateForm(form) {
+  const codes = form.querySelectorAll('input[name="code[]"]');
+  if (!codes.length) { alert('Tambahkan minimal 1 item CPL'); return false; }
+  return true;
+}
+
+function prepareSetForm(form) {
+  const codes = form.querySelectorAll('input[name="code[]"]');
+  if (!codes.length) { alert('Tambahkan minimal 1 item CPL'); return false; }
+  return true;
+}
+
+// Initialize buttons on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function () {
+  const newContainer = document.getElementById('new-cpl-items');
+  if (newContainer) updateCplButtons(newContainer);
+  document.querySelectorAll('[data-items-container]').forEach(c => updateCplButtons(c));
+});
+</script>

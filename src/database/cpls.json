@@ -1,0 +1,95 @@
+[
+  {
+    "id": "0",
+    "name": "CPL2020",
+    "date_created": "2020-2025",
+    "content": [
+      {
+        "code": "CPL01",
+        "desc": "Menunjukkan sikap profesional yang berlandaskan ketakwaan, etika, integritas, nasionalisme, dan kepedulian sosial dalam menjalankan tugas di bidang teknik komputer dan jaringan"
+      },
+      {
+        "code": "CPL02",
+        "desc": "Menerapkan konsep matematika, komputasi, dan kecerdasan buatan dalam penyelesaian masalah teknis jaringan secara sistematis."
+      },
+      {
+        "code": "CPL03",
+        "desc": "Mengelola pembelajaran sepanjang hayat untuk pengembangan profesional diri dalam lingkungan kerja global yang dinamis dan kompetitif."
+      },
+      {
+        "code": "CPL04",
+        "desc": "Menyelesaikan permasalahan dan tugas teknis jaringan komputer melalui perancangan, konfigurasi, pengujian, dan pengelolaan perangkat serta infrastruktur jaringan pada berbagai skala topologi dalam konteks operasional sistem komunikasi data dan administrasi jaringan."
+      },
+      {
+        "code": "CPL05",
+        "desc": "Merancang infrastruktur jaringan komputer serta sistem virtualisasi dan komputasi awan dalam konteks pembangunan dan pengelolaan layanan TIK yang fleksibel, skalabel, dan terotomasi. (C6)"
+      },
+      {
+        "code": "CPL06",
+        "desc": "Mengintegrasikan teknologi jaringan wireless & mobile, sistem tertanam, dan komputasi terdistribusi dalam perancangan dan pengelolaan solusi komunikasi data nirkabel yang andal dan adaptif untuk lingkungan industri dan IoT."
+      },
+      {
+        "code": "CPL07",
+        "desc": "Mengembangkan solusi berbasis IoT dan sistem tertanam dalam integrasi perangkat keras, perangkat lunak, dan komunikasi data."
+      },
+      {
+        "code": "CPL08",
+        "desc": "Merancang solusi berbasis prinsip keamanan siber dan pembelajaran mesin untuk memitigasi risiko serta memperkuat ketahanan infrastruktur informasi"
+      },
+      {
+        "code": "CPL09",
+        "desc": "Mengelola infrastruktur virtualisasi dan komputasi awan beserta pipeline DevOps dalam otomatisasi penyediaan layanan TIK yang skalabel, andal, dan berkelanjutan"
+      },
+      {
+        "code": "CPL10",
+        "desc": "Mengkomunikasikan ide dan solusi teknis dalam kegiatan penelitian atau kerja sama tim multidisiplin secara ilmiah dan profesional."
+      }
+    ]
+  },
+  {
+    "id": "1",
+    "name": "CPL2025",
+    "date_created": "2025-2030",
+    "content": [
+      {
+        "code": "CPL01",
+        "desc": "Menjalankan tugas secara profesional dengan sikap bertakwa, etika, dan integritas."
+      },
+      {
+        "code": "CPL02",
+        "desc": "Mampu menerapkan konsep teoretis dan keterampilan praktis dalam teknik komputer dan jaringan."
+      },
+      {
+        "code": "CPL03",
+        "desc": "HAHAHHA"
+      },
+      {
+        "code": "CPL04",
+        "desc": "lfjabfuadja"
+      },
+      {
+        "code": "CPL08",
+        "desc": "Mampu mengelola risiko keamanan informasi dan membangun solusi pertahanan terhadap ancaman siber."
+      }
+    ]
+  },
+  {
+    "id": "4",
+    "name": "CPLAPA",
+    "date_created": "2025-2030",
+    "content": [
+      {
+        "code": "CPL01",
+        "desc": "MSANSdibisafbdakf"
+      },
+      {
+        "code": "CPL02",
+        "desc": "HAHAHHAH"
+      },
+      {
+        "code": "CPL03",
+        "desc": "okelah"
+      }
+    ]
+  }
+]

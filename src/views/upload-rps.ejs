@@ -1,0 +1,175 @@
+<%- include('partials/header') %>
+
+<style>
+    .upload-wrapper {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .upload-dropzone {
+        position: relative;
+        width: 100%;
+        min-height: 290px;
+        background: #3b8fe3;
+        border: 2px dashed rgba(255, 255, 255, 0.85);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        cursor: pointer;
+        transition: 0.2s ease;
+        overflow: hidden;
+    }
+
+    .upload-dropzone:hover {
+        background: #2f7fd0;
+    }
+
+    .upload-dropzone input[type="file"] {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .upload-content {
+        color: white;
+        pointer-events: none;
+    }
+
+    .upload-icon {
+        font-size: 54px;
+        margin-bottom: 18px;
+        opacity: 0.95;
+    }
+
+    .upload-button-look {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: white;
+        color: #111827;
+        padding: 15px 28px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 14px;
+        text-transform: uppercase;
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+    }
+
+    .upload-help {
+        margin-top: 14px;
+        font-size: 15px;
+        font-weight: 500;
+    }
+
+    .file-name {
+        margin-top: 14px;
+        font-size: 14px;
+        color: #eaf3ff;
+        font-weight: 600;
+    }
+
+    .upload-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        margin-top: 24px;
+    }
+</style>
+
+<div class="container-custom">
+    <div class="card">
+        <h2 class="card-title mb-6">
+            Upload File RPS
+        </h2>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="mb-5 p-4 rounded-lg border border-red-200 bg-red-50 text-red-700">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <%= error %>
+            </div>
+        <% } %>
+
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="mb-5 p-4 rounded-lg border border-green-200 bg-green-50 text-green-700">
+                <i class="fas fa-check-circle mr-2"></i>
+                <%= success %>
+            </div>
+        <% } %>
+
+        <div class="mb-5 p-4 rounded-lg bg-blue-50 text-blue-800 text-sm leading-relaxed">
+            Setelah tersimpan, data masih dapat diubah melalui tombol <strong>Edit</strong>.
+        </div>
+
+        <form action="/upload-rps" method="POST" enctype="multipart/form-data">
+            <div class="upload-wrapper">
+                <label class="upload-dropzone" for="rpsFileInput" id="dropzone">
+                    <input
+                        id="rpsFileInput"
+                        type="file"
+                        name="rpsFile"
+                        accept=".docx"
+                        required
+                    >
+
+                    <div class="upload-content">
+                        <div class="upload-icon" id="uploadIcon">
+                            <i class="fas fa-file-word"></i>
+                        </div>
+
+                        <div class="upload-button-look">
+                            <i class="fas fa-file-upload"></i>
+                            Choose File
+                        </div>
+
+                        <div class="upload-help">
+                            atau drag & drop file Word (.docx) di sini
+                        </div>
+
+                        <div id="fileName" class="file-name">
+                            Belum ada file yang dipilih
+                        </div>
+                    </div>
+                </label>
+
+                <p class="text-sm text-gray-500 mt-3 text-center">
+                    Hanya file Word (.docx) yang diperbolehkan.
+                </p>
+
+                <div class="upload-actions">
+                    <button
+                        type="submit"
+                        class="btn-primary flex items-center gap-2 px-5 py-2">
+                        <i class="fas fa-upload"></i>
+                        Upload
+                    </button>
+
+                    <a href="/"
+                        class="btn-secondary flex items-center gap-2 px-5 py-2">
+                        <i class="fas fa-times"></i>
+                        Batal
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const rpsFileInput = document.getElementById('rpsFileInput');
+    const fileName = document.getElementById('fileName');
+
+    rpsFileInput.addEventListener('change', function () {
+        if (this.files && this.files.length > 0) {
+            fileName.textContent = this.files[0].name;
+        } else {
+            fileName.textContent = 'Belum ada file yang dipilih';
+        }
+    });
+</script>
+
+<%- include('partials/footer') %>

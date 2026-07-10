@@ -1,0 +1,122 @@
+<%- include('partials/header') %>
+
+<div class="container-custom">
+    <!-- Admin Navigation -->
+    <div class="card mb-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800 mb-2">Panel Admin</h1>
+                <p class="text-gray-600">Kelola sistem RPS dan validasi user</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex gap-2">
+                <a href="/admin/rps" class="btn-primary flex items-center gap-2 px-4 py-2 text-sm">
+                    <i class="fas fa-file-alt"></i>
+                    Kelola RPS
+                </a>
+                <a href="/" class="btn-secondary flex items-center gap-2 px-4 py-2 text-sm">
+                    <i class="fas fa-home"></i>
+                    Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 class="card-title mb-6">Validasi User Baru</h2>
+        <table class="min-w-full bg-white rounded-lg overflow-hidden">
+            <thead>
+                <tr>
+                    <th class="px-4 py-2 text-left">Email</th>
+                    <th class="px-4 py-2 text-left">Username</th>
+                    <th class="px-4 py-2 text-left">Role</th>
+                    <th class="px-4 py-2 text-left">Status</th>
+                    <th class="px-4 py-2 text-left">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (users.length === 0) { %>
+                    <tr><td colspan="5" class="text-center py-4 text-gray-500">Tidak ada user pending validasi.</td></tr>
+                <% } %>
+                <% users.forEach(function(user) { %>
+                    <tr class="border-t">
+                        <td class="px-4 py-2"><%= user.email %></td>
+                        <td class="px-4 py-2"><%= user.username %></td>
+                        <td class="px-4 py-2 capitalize">
+                            <form action="/admin/change-role/<%= user.id %>" method="POST" class="flex items-center gap-2 text-xs role-change-form" data-user-id="<%= user.id %>">
+                                <select name="role" class="border rounded px-2 py-1 focus:outline-none focus:ring role-select">
+                                    <option value="dosen" <%= user.role === 'dosen' ? 'selected' : '' %>>dosen</option>
+                                    <option value="admin" <%= user.role === 'admin' ? 'selected' : '' %>>admin</option>
+                                </select>
+                                <input type="hidden" name="ajax" value="1">
+                                <button type="submit" class="btn-secondary px-2 py-1">Ubah</button>
+                            </form>
+                        </td>
+                        <td class="px-4 py-2"><span class="inline-block px-2 py-1 rounded-full <%= user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' %>"><%= user.status %></span></td>
+                        <td class="px-4 py-2">
+                            <% if (user.status === 'pending') { %>
+                                <form action="/admin/validate/<%= user.id %>" method="POST" class="inline">
+                                    <button class="btn-primary text-xs" type="submit">Validasi</button>
+                                </form>
+                            <% } else { %>
+                                <span class="text-green-600 font-semibold text-xs">Tervalidasi</span>
+                            <% } %>
+                        </td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<%- include('partials/footer') %>
+
+<script>
+// AJAX submit untuk perubahan role
+document.querySelectorAll('.role-change-form').forEach(form => {
+        form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userId = form.getAttribute('data-user-id');
+        const select = form.querySelector('.role-select');
+        const newRole = select.value;
+        // Use URLSearchParams so bodyParser.urlencoded can parse the request
+        const params = new URLSearchParams();
+        params.append('role', newRole);
+        const ajaxInput = form.querySelector('input[name="ajax"]');
+        if (ajaxInput) params.append('ajax', ajaxInput.value);
+        try {
+            const res = await fetch(form.action, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            });
+            const contentType = res.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                const data = await res.json();
+                if (data.success) {
+                    const name = data.username || `#${userId}`;
+                    showToast(`Role user ${name} berubah: ${data.oldRole} → ${data.newRole}`, 'success');
+                } else {
+                    showToast(data.message || 'Gagal mengubah role', 'error');
+                }
+            } else {
+                // Fallback jika server redirect (tidak pakai AJAX path)
+                location.reload();
+            }
+        } catch (err) {
+            showToast('Error jaringan: ' + err.message, 'error');
+        }
+    });
+});
+
+function showToast(msg, type='info') {
+    const existing = document.getElementById('toast-role');
+    if (existing) existing.remove();
+    const div = document.createElement('div');
+    div.id = 'toast-role';
+    const color = type==='success' ? 'bg-green-600' : type==='error' ? 'bg-red-600' : 'bg-gray-700';
+    div.className = `${color} fixed top-4 right-4 text-white px-4 py-2 rounded shadow z-50 text-sm`; 
+    div.textContent = msg;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 4000);
+}
+</script>

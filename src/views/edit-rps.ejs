@@ -1,0 +1,320 @@
+<%- include('partials/header') %>
+
+    <div class="container-custom">
+        <form id="rps-form" action="/edit-rps/<%= rps.id %>" method="POST">
+            <div class="card">
+                <h2 class="card-title">Edit RPS: <%= rps.nama_mk %>
+                </h2>
+
+                <!-- Identitas Mata Kuliah -->
+                <fieldset class="border p-4 rounded-md mb-6">
+                    <legend class="text-lg font-semibold px-2">Identitas Mata Kuliah</legend>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="label" for="nama_mk">Nama Mata Kuliah</label>
+                            <input class="input" id="nama_mk" name="nama_mk" type="text" value="<%= rps.nama_mk %>"
+                                required>
+                        </div>
+                        <div>
+                            <label class="label" for="kode_mk">Kode Mata Kuliah</label>
+                            <input class="input" id="kode_mk" name="kode_mk" type="text" value="<%= rps.kode_mk %>"
+                                required>
+                        </div>
+                        <div>
+                            <label class="label" for="rumpun_mk">Rumpun Mata Kuliah</label>
+                            <select class="input" id="rumpun_mk" name="rumpun_mk" required>
+                                <option value="Mata Kuliah Keahlian" <%=rps.rumpun_mk==='Mata Kuliah Keahlian'
+                                    ? 'selected' : '' %>>Mata Kuliah Keahlian</option>
+                                <option value="Mata Kuliah Dasar Keahlian"
+                                    <%=rps.rumpun_mk==='Mata Kuliah Dasar Keahlian' ? 'selected' : '' %>>Mata Kuliah
+                                    Dasar Keahlian</option>
+                                <option value="Mata Kuliah Umum" <%=rps.rumpun_mk==='Mata Kuliah Umum' ? 'selected' : ''
+                                    %>>Mata Kuliah Umum</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="label" for="semester">Semester Ke-</label>
+                            <select class="input" id="semester" name="semester" required>
+                                <% for(let i=1; i <=8; i++) { %>
+                                    <option value="<%= i %>" <%=rps.semester==i ? 'selected' : '' %>><%= i %>
+                                    </option>
+                                    <% } %>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="label" for="tahun_akademik">Tahun Akademik</label>
+                            <input class="input" id="tahun_akademik" name="tahun_akademik" type="text"
+                                value="<%= rps.tahun_akademik %>" required placeholder="Contoh: 2025/2026">
+                        </div>
+                        <div>
+                            <label class="label" for="mata_kuliah_syarat">Mata Kuliah Syarat</label>
+                            <input class="input" id="mata_kuliah_syarat" name="mata_kuliah_syarat" type="text"
+                                value="<%= rps.mata_kuliah_syarat || rps.mk_syarat || '' %>" placeholder="Boleh dikosongkan">
+                        </div>
+                        <div class="md:col-span-2">
+                            <div class="flex flex-col md:flex-row gap-4">
+                                <div class="w-full">
+                                    <label class="label" for="sks_teori">Bobot SKS Teori</label>
+                                    <input class="input" id="sks_teori" name="sks_teori" type="number" min="0"
+                                        value="<%= rps.sks_teori %>" required>
+                                </div>
+                                <div class="w-full">
+                                    <label class="label" for="sks_praktikum">Bobot SKS Praktikum</label>
+                                    <input class="input" id="sks_praktikum" name="sks_praktikum" type="number" min="0"
+                                        value="<%= rps.sks_praktikum %>" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="label" for="tanggal_penyusunan">Tanggal Penyusunan</label>
+                            <input class="input" id="tanggal_penyusunan" name="tanggal_penyusunan" type="date"
+                                value="<%= rps.tanggal_penyusunan %>" required>
+                        </div>
+                        <div id="dosen-pengampu-container">
+                            <label class="label">Dosen Pengampu</label>
+                            <%
+                                let dosenPengampuList = rps.dosen_pengampu || rps['dosen_pengampu[]'] || [];
+                                if (!Array.isArray(dosenPengampuList)) {
+                                    dosenPengampuList = dosenPengampuList ? [dosenPengampuList] : [];
+                                }
+                            %>
+                            <% if (dosenPengampuList && dosenPengampuList.length> 0) { %>
+                                <% dosenPengampuList.forEach((dosen, index)=> { %>
+                                    <div class="flex items-center mb-2">
+                                        <input class="input" name="dosen_pengampu[]" type="text" value="<%= dosen %>"
+                                            required>
+                                        <% if (index===0) { %>
+                                            <button type="button" class="ml-2 btn-primary"
+                                                onclick="addDosenPengampu()">+</button>
+                                            <% } else { %>
+                                                <button type="button" class="ml-2 btn-danger"
+                                                    onclick="this.parentElement.remove()">-</button>
+                                                <% } %>
+                                    </div>
+                                    <% }); %>
+                                        <% } else { %>
+                                            <div class="flex items-center mb-2">
+                                                <input class="input" name="dosen_pengampu[]" type="text" required>
+                                                <button type="button" class="ml-2 btn-primary"
+                                                    onclick="addDosenPengampu()">+</button>
+                                            </div>
+                                            <% } %>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="label" for="deskripsi_singkat_mk">Deskripsi Singkat Mata Kuliah</label>
+                            <textarea class="input" id="deskripsi_singkat_mk" name="deskripsi_singkat_mk" rows="3"
+                                required><%= rps.deskripsi_singkat_mk %></textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="label" for="materi_kajian">Materi Kajian / Pokok Bahasan</label>
+                            <textarea class="input" id="materi_kajian" name="materi_kajian" rows="4"
+                                required><%= rps.materi_kajian || '' %></textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="label" for="indikator_cpl">Indikator CPL</label>
+                            <textarea class="input" id="indikator_cpl" name="indikator_cpl" rows="2"><%= rps.indikator_cpl || '' %></textarea>
+                        </div>
+                        <div>
+                            <label class="label" for="bentuk_pembelajaran">Bentuk Pembelajaran</label>
+                            <input class="input" id="bentuk_pembelajaran" name="bentuk_pembelajaran" type="text"
+                                value="<%= rps.bentuk_pembelajaran || '' %>">
+                        </div>
+                        <div>
+                            <label class="label" for="metode_pembelajaran">Metode Pembelajaran</label>
+                            <input class="input" id="metode_pembelajaran" name="metode_pembelajaran" type="text"
+                                value="<%= rps.metode_pembelajaran || '' %>">
+                        </div>
+                        <div>
+                            <label class="label" for="strategi_pembelajaran">Strategi Pembelajaran</label>
+                            <input class="input" id="strategi_pembelajaran" name="strategi_pembelajaran" type="text"
+                                value="<%= rps.strategi_pembelajaran || '' %>">
+                        </div>
+                        <div>
+                            <label class="label" for="modalitas">Modalitas</label>
+                            <input class="input" id="modalitas" name="modalitas" type="text"
+                                value="<%= rps.modalitas || '' %>">
+                        </div>
+                        <div class="flex flex-col md:flex-row gap-4 md:col-span-2">
+                            <div class="w-full">
+                                <label class="label">Pustaka Utama</label>
+                                <div id="pustaka-utama-list" class="flex flex-col gap-2">
+                                    <% const pustakaUtamaList = rps.pustaka_utama || rps['pustaka_utama[]'] || []; %>
+                                    <% if (pustakaUtamaList && pustakaUtamaList.length> 0) { %>
+                                        <% pustakaUtamaList.forEach((pustaka, index)=> { %>
+                                            <div class="flex items-start mb-2">
+                                                <textarea class="input" name="pustaka_utama[]" rows="2"
+                                                    required><%= pustaka %></textarea>
+                                                <% if (index===0) { %>
+                                                    <button type="button" class="ml-2 btn-primary"
+                                                        onclick="addPustakaUtama()">+</button>
+                                                    <% } else { %>
+                                                        <button type="button" class="ml-2 btn-danger"
+                                                            onclick="this.parentElement.remove()">-</button>
+                                                        <% } %>
+                                            </div>
+                                            <% }); %>
+                                                <% } else { %>
+                                                    <div class="flex items-start mb-2">
+                                                        <textarea class="input" name="pustaka_utama[]" rows="2"
+                                                            required></textarea>
+                                                        <button type="button" class="ml-2 btn-primary"
+                                                            onclick="addPustakaUtama()">+</button>
+                                                    </div>
+                                                    <% } %>
+                                </div>
+                            </div>
+                            <div class="w-full">
+                                <label class="label">Pustaka Pendukung</label>
+                                <div id="pustaka-pendukung-list" class="flex flex-col gap-2">
+                                    <% const pustakaPendukungList = rps.pustaka_pendukung || rps['pustaka_pendukung[]'] || []; %>
+                                    <% if (pustakaPendukungList && pustakaPendukungList.length> 0) { %>
+                                        <% pustakaPendukungList.forEach((pustaka, index)=> { %>
+                                            <div class="flex items-start mb-2">
+                                                <textarea class="input" name="pustaka_pendukung[]"
+                                                    rows="2"><%= pustaka %></textarea>
+                                                <% if (index===0) { %>
+                                                    <button type="button" class="ml-2 btn-primary"
+                                                        onclick="addPustakaPendukung()">+</button>
+                                                    <% } else { %>
+                                                        <button type="button" class="ml-2 btn-danger"
+                                                            onclick="this.parentElement.remove()">-</button>
+                                                        <% } %>
+                                            </div>
+                                            <% }); %>
+                                                <% } else { %>
+                                                    <div class="flex items-start mb-2">
+                                                        <textarea class="input" name="pustaka_pendukung[]" rows="2"
+                                                            ></textarea>
+                                                        <button type="button" class="ml-2 btn-primary"
+                                                            onclick="addPustakaPendukung()">+</button>
+                                                    </div>
+                                                    <% } %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Otorisasi -->
+                <fieldset class="border p-4 rounded-md mb-6">
+                    <legend class="text-lg font-semibold px-2">Otorisasi</legend>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="label" for="penjamin_mutu">Penjamin Mutu</label>
+                            <input class="input" id="penjamin_mutu" name="penjamin_mutu" type="text"
+                                value="<%= rps.penjamin_mutu %>" required>
+                        </div>
+                        <div>
+                            <label class="label" for="dosen_pengembang_rps">Dosen Pengembang RPS</label>
+                            <%
+                                let dosenPengembangRpsList = rps['dosen_pengembang_rps[]'] || rps.dosen_pengembang_rps || [];
+                                if (!Array.isArray(dosenPengembangRpsList)) {
+                                    dosenPengembangRpsList = dosenPengembangRpsList ? [dosenPengembangRpsList] : [];
+                                }
+                                if (dosenPengembangRpsList.length === 0) {
+                                    dosenPengembangRpsList = [''];
+                                }
+                            %>
+                            <div id="dosen-pengembang-rps-container">
+                                <% dosenPengembangRpsList.forEach((dosen, index) => { %>
+                                    <div class="flex items-center mb-2">
+                                        <input class="input" id="<%= index === 0 ? 'dosen_pengembang_rps' : '' %>" name="dosen_pengembang_rps[]" type="text"
+                                            value="<%= dosen %>">
+                                        <% if (index === 0) { %>
+                                            <button type="button" class="ml-2 btn-primary" onclick="addDosenPengembangRps()">+</button>
+                                        <% } else { %>
+                                            <button type="button" class="ml-2 btn-danger" onclick="this.parentElement.remove()">-</button>
+                                        <% } %>
+                                    </div>
+                                <% }); %>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="label" for="koordinator_program_studi">Koordinator Program Studi</label>
+                            <input class="input" id="koordinator_program_studi" name="koordinator_program_studi"
+                                value="<%= rps.koordinator_program_studi %>" type="text" required>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Capaian Pembelajaran Lulusan -->
+                <fieldset class="border p-4 rounded-md mb-6">
+                    <legend class="text-lg font-semibold px-2">Capaian Pembelajaran Lulusan (CPL)</legend>
+                    <div class="grid grid-cols-1 gap-2">
+                        <% // Use injected 'cpls' if provided; otherwise fallback to built-in list const
+                            serverCpls=(typeof cpls !=='undefined' && Array.isArray(cpls)) ? cpls : [ { code: 'CPL01' ,
+                            desc: 'Menunjukkan sikap profesional yang berlandaskan ketakwaan, etika, integritas, nasionalisme, dan kepedulian sosial dalam menjalankan tugas di bidang teknik komputer dan jaringan'
+                            }, { code: 'CPL02' ,
+                            desc: 'Menerapkan konsep matematika, komputasi, dan kecerdasan buatan dalam penyelesaian masalah teknis jaringan secara sistematis.'
+                            }, { code: 'CPL03' ,
+                            desc: 'Mengelola pembelajaran sepanjang hayat untuk pengembangan profesional diri dalam lingkungan kerja global yang dinamis dan kompetitif.'
+                            }, { code: 'CPL04' ,
+                            desc: 'Menyelesaikan permasalahan dan tugas teknis jaringan komputer melalui perancangan, konfigurasi, pengujian, dan pengelolaan perangkat serta infrastruktur jaringan pada berbagai skala topologi dalam konteks operasional sistem komunikasi data dan administrasi jaringan.'
+                            }, { code: 'CPL05' ,
+                            desc: 'Merancang infrastruktur jaringan komputer serta sistem virtualisasi dan komputasi awan dalam konteks pembangunan dan pengelolaan layanan TIK yang fleksibel, skalabel, dan terotomasi. (C6)'
+                            }, { code: 'CPL06' ,
+                            desc: 'Mengintegrasikan teknologi jaringan wireless & mobile, sistem tertanam, dan komputasi terdistribusi dalam perancangan dan pengelolaan solusi komunikasi data nirkabel yang andal dan adaptif untuk lingkungan industri dan IoT.'
+                            }, { code: 'CPL07' ,
+                            desc: 'Mengembangkan solusi berbasis IoT dan sistem tertanam dalam integrasi perangkat keras, perangkat lunak, dan komunikasi data.'
+                            }, { code: 'CPL08' ,
+                            desc: 'Merancang solusi berbasis prinsip keamanan siber dan pembelajaran mesin untuk memitigasi risiko serta memperkuat ketahanan infrastruktur informasi'
+                            }, { code: 'CPL09' ,
+                            desc: 'Mengelola infrastruktur virtualisasi dan komputasi awan beserta pipeline DevOps dalam otomatisasi penyediaan layanan TIK yang skalabel, andal, dan berkelanjutan'
+                            }, { code: 'CPL10' ,
+                            desc: 'Mengkomunikasikan ide dan solusi teknis dalam kegiatan penelitian atau kerja sama tim multidisiplin secara ilmiah dan profesional.'
+                            } ]; %>
+                            <% serverCpls.forEach(cpl=> { %>
+                                <div class="flex items-start p-3 border rounded hover:bg-gray-50">
+                                    <%
+                                        const cplList = Array.isArray(rps.cpl) ? rps.cpl : (Array.isArray(rps['cpl[]']) ? rps['cpl[]'] : (rps.cpl ? [rps.cpl] : (rps['cpl[]'] ? [rps['cpl[]']] : [])));
+                                    %>
+                                    <input type="checkbox" name="cpl[]" value="<%= cpl.code %>"
+                                        data-description="<%= cpl.desc %>" class="mt-1 mr-3" <%= cplList.includes(cpl.code) ? 'checked' : '' %>>
+                                    <label class="cursor-pointer">
+                                        <span class="font-semibold text-blue-600">
+                                            <%= cpl.code %>:
+                                        </span>
+                                        <span class="text-gray-700">
+                                            <%= cpl.desc %>
+                                        </span>
+                                    </label>
+                                </div>
+                                <% }); %>
+                    </div>
+                </fieldset>
+
+                <!-- Capaian Pembelajaran Matakuliah -->
+                <fieldset class="border p-4 rounded-md mb-6">
+                    <legend class="text-lg font-semibold px-2">Capaian Pembelajaran Matakuliah (CPMK)</legend>
+                    <div id="cpmk-container">
+                        <!-- CPMK will be rendered here -->
+                    </div>
+                </fieldset>
+
+                <!-- Sub-CPMK -->
+                <fieldset class="border p-4 rounded-md mb-6">
+                    <legend class="text-lg font-semibold px-2">Sub-CPMK</legend>
+                    <div id="sub-cpmk-container">
+                        <!-- Sub-CPMK will be rendered here -->
+                    </div>
+                </fieldset>
+
+                <div class="flex justify-end mt-4">
+                    <a href="/history" class="btn-secondary mr-2">Cancel</a>
+                    <button class="btn-primary" type="submit">Update RPS</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Mark this page as Edit mode so autosave/restore won't interfere with loaded DB data
+        window.IS_EDIT_RPS = true;
+    </script>
+    <%- include('partials/footer') %>
+    <!-- Embed server data as JSON in script tags to avoid EJS-in-JS parsing issues -->
+    <script type="application/json" id="rps-data"><%- JSON.stringify(rps) %></script>
+    <script type="application/json" id="cpls-data"><%- JSON.stringify(cpls || []) %></script>
+
+    <!-- Page-specific JS -->
+    <script src="/js/edit-rps.js"></script>

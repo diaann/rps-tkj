@@ -1,0 +1,443 @@
+<%- include('partials/header') %>
+
+<div class="view-rps-container min-h-screen bg-gray-50 py-4 px-4">
+    <div class="view-rps-content bg-white shadow-lg rounded-lg p-4 md:p-8 w-full mx-auto">
+        <h2 class="text-2xl font-bold mb-6 text-blue-700 border-b pb-2">Detail RPS: <%= rps ? rps.nama_mk : '-' %></h2>
+        <% if (typeof isRevision !== 'undefined' && isRevision && typeof revision !== 'undefined' && revision) { %>
+            <div class="mb-6 p-4 rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-900">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                        <p class="font-bold">
+                            <i class="fas fa-clock-rotate-left mr-2"></i>
+                            Tampilan Versi <%= revision.revision_name %>
+                        </p>
+                        <p class="text-sm mt-1">
+                            Disimpan pada
+                            <%= new Date(revision.edited_at).toLocaleString('id-ID', {
+                                year: 'numeric', month: 'long', day: 'numeric',
+                                hour: '2-digit', minute: '2-digit', second: '2-digit'
+                            }) %>
+                            oleh <strong><%= revision.edited_by_username || 'System' %></strong>.
+                        </p>
+                    </div>
+                    <a href="<%= typeof backUrl !== 'undefined' ? backUrl : '/history' %>" class="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm">
+                        <i class="fas fa-arrow-left"></i>
+                        Kembali ke History
+                    </a>
+                </div>
+            </div>
+        <% } %>
+        <% if (rps) { %>
+            <%
+                // Field mana saja (key mentah) yang berubah dari versi sebelumnya --
+                // dipakai untuk menandai (bold + highlight) nilainya langsung di
+                // dalam dokumen supaya kelihatan tanpa harus bandingkan manual.
+                const __changedKeys = new Set(typeof changedFieldKeys !== 'undefined' && Array.isArray(changedFieldKeys) ? changedFieldKeys : []);
+                function isFieldChanged(key) { return __changedKeys.has(key); }
+                function changedClass(key) { return isFieldChanged(key) ? 'bg-yellow-100 text-yellow-900 font-bold px-1 rounded' : ''; }
+                function changedAny(keys) { return keys.some(k => __changedKeys.has(k)); }
+                function changedAnyClass(keys) { return changedAny(keys) ? 'bg-yellow-100 text-yellow-900 font-bold px-1 rounded' : ''; }
+            %>
+            <% if (__changedKeys.size > 0) { %>
+                <div class="mb-4 text-xs inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-100 text-yellow-900 border border-yellow-200">
+                    <i class="fas fa-highlighter"></i>
+                    Bagian yang di-highlight dan bold menandakan perubahan dari versi sebelumnya
+                </div>
+            <% } %>
+            <!-- Identitas Mata Kuliah -->
+            <div class="view-rps-section">
+                <h3 class="text-lg font-bold mt-6 mb-4 text-blue-700 border-b border-blue-200 pb-2">Identitas Mata Kuliah</h3>
+                <div class="view-rps-grid">
+                    <div><span class="font-semibold text-gray-700">Kode Mata Kuliah:</span> <span class="<%= changedClass('kode_mk') %>"><%= rps.kode_mk %></span></div>
+                    <div><span class="font-semibold text-gray-700">Rumpun MK:</span> <span class="<%= changedClass('rumpun_mk') %>"><%= rps.rumpun_mk %></span></div>
+                    <div><span class="font-semibold text-gray-700">Semester:</span> <span class="<%= changedClass('semester') %>"><%= rps.semester %></span></div>
+                    <div><span class="font-semibold text-gray-700">Tahun Akademik:</span> <span class="<%= changedClass('tahun_akademik') %>"><%= rps.tahun_akademik %></span></div>
+                    <div><span class="font-semibold text-gray-700">Bobot SKS:</span> <span class="<%= changedAnyClass(['sks_teori', 'sks_praktikum']) %>"><%= rps.sks_teori %> Teori, <%= rps.sks_praktikum %> Praktikum</span></div>
+                    <div><span class="font-semibold text-gray-700">Tanggal Penyusunan:</span> <span class="<%= changedClass('tanggal_penyusunan') %>"><%= new Date(rps.tanggal_penyusunan).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                    }) %></span></div>
+                    <div class="md:col-span-2"><span class="font-semibold text-gray-700">Dosen Pengampu:</span>
+                        <%
+                        let dosenList = rps['dosen_pengampu[]'] || rps.dosen_pengampu || [];
+                        if (typeof dosenList === 'string') dosenList = [dosenList];
+                        %>
+                        <span class="<%= changedAnyClass(['dosen_pengampu[]', 'dosen_pengampu']) %>"><%= dosenList.join(', ') || '-' %></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Otorisasi -->
+            <div class="view-rps-section">
+                <h3 class="text-lg font-bold mt-6 mb-4 text-blue-700 border-b border-blue-200 pb-2">Otorisasi</h3>
+                 <div class="view-rps-grid">
+                    <div>
+                        <span class="font-semibold text-gray-700">Dosen Pengembang RPS:</span>
+                        <%
+                        let pengembangRps = rps['dosen_pengembang_rps[]'] || rps.dosen_pengembang_rps || [];
+                        if (typeof pengembangRps === 'string') pengembangRps = [pengembangRps];
+                        %>
+                        <span class="<%= changedAnyClass(['dosen_pengembang_rps[]', 'dosen_pengembang_rps']) %>"><%= pengembangRps.join(', ') || '-' %></span>
+                    </div>
+                    <div><span class="font-semibold text-gray-700">Koordinator Program Studi:</span> <span class="<%= changedClass('koordinator_program_studi') %>"><%= rps.koordinator_program_studi %></span></div>
+                    <div><span class="font-semibold text-gray-700">Penjamin Mutu:</span> <span class="<%= changedClass('penjamin_mutu') %>"><%= rps.penjamin_mutu %></span></div>
+                </div>
+            </div>
+
+            
+            <!-- Pustaka -->
+            <div class="view-rps-section">
+                <h3 class="text-lg font-bold mt-6 mb-4 text-blue-700 border-b border-blue-200 pb-2">Pustaka</h3>
+                <div class="md:col-span-2">
+                    <span class="font-semibold text-gray-700">Deskripsi Singkat:</span><br>
+                    <div class="mt-2 p-3 bg-gray-50 rounded-md text-sm <%= changedClass('deskripsi_singkat_mk') %>" style="white-space: pre-line;">
+                        <%= rps.deskripsi_singkat_mk || '-' %>
+                    </div>
+                </div>
+                <div class="md:col-span-2">
+                    <span class="font-semibold text-gray-700">Materi Kajian / Pokok Bahasan:</span><br>
+                    <div class="mt-2 p-3 bg-gray-50 rounded-md text-sm <%= changedClass('materi_kajian') %>" style="white-space: pre-line;">
+                        <%= rps.materi_kajian || '-' %>
+                    </div>
+                </div>
+                <div class="md:col-span-2">
+                    <span class="font-semibold text-gray-700">Indikator CPL:</span><br>
+                    <div class="mt-2 p-3 bg-gray-50 rounded-md text-sm <%= changedClass('indikator_cpl') %>" style="white-space: pre-line;">
+                        <%= rps.indikator_cpl || '-' %>
+                    </div>
+                </div>
+                <div><span class="font-semibold text-gray-700">Bentuk Pembelajaran:</span> <span class="<%= changedClass('bentuk_pembelajaran') %>"><%= rps.bentuk_pembelajaran || '-' %></span></div>
+                <div><span class="font-semibold text-gray-700">Metode Pembelajaran:</span> <span class="<%= changedClass('metode_pembelajaran') %>"><%= rps.metode_pembelajaran || '-' %></span></div>
+                <div><span class="font-semibold text-gray-700">Strategi Pembelajaran:</span> <span class="<%= changedClass('strategi_pembelajaran') %>"><%= rps.strategi_pembelajaran || '-' %></span></div>
+                <div><span class="font-semibold text-gray-700">Modalitas:</span> <span class="<%= changedClass('modalitas') %>"><%= rps.modalitas || '-' %></span></div>
+                <div class="mb-4">
+                    <span class="font-semibold text-gray-700">Pustaka Utama:</span>
+                    <div class="mt-2 p-3 bg-gray-50 rounded-md text-sm <%= changedAnyClass(['pustaka_utama[]', 'pustaka_utama']) %>">
+                        <%
+                        let pustakaUtama = rps['pustaka_utama[]'] || rps.pustaka_utama || [];
+                        if (typeof pustakaUtama === 'string') pustakaUtama = [pustakaUtama];
+                        %>
+                        <% if (pustakaUtama.length > 0) { %>
+                            <ul class="list-disc list-inside space-y-1">
+                                <% pustakaUtama.forEach(function(pustaka) { %>
+                                    <li><%= pustaka %></li>
+                                <% }); %>
+                            </ul>
+                        <% } else { %>
+                            -
+                        <% } %>
+                    </div>
+                </div>
+                <div>
+                    <span class="font-semibold text-gray-700">Pustaka Pendukung:</span>
+                    <div class="mt-2 p-3 bg-gray-50 rounded-md text-sm <%= changedAnyClass(['pustaka_pendukung[]', 'pustaka_pendukung']) %>">
+                        <%
+                        let pustakaPendukung = rps['pustaka_pendukung[]'] || rps.pustaka_pendukung || [];
+                        if (typeof pustakaPendukung === 'string') pustakaPendukung = [pustakaPendukung];
+                        %>
+                        <% if (pustakaPendukung.length > 0) { %>
+                            <ul class="list-disc list-inside space-y-1">
+                                <% pustakaPendukung.forEach(function(pustaka) { %>
+                                    <li><%= pustaka %></li>
+                                <% }); %>
+                            </ul>
+                        <% } else { %>
+                            -
+                        <% } %>
+                    </div>
+                </div>
+                <div><span class="font-semibold text-gray-700">Mata Kuliah Syarat:</span> <span class="<%= changedAnyClass(['mk_syarat', 'mata_kuliah_syarat']) %>"><%= rps.mk_syarat || rps.mata_kuliah_syarat || '-' %></span></div>
+            </div>
+            
+            <!-- Capaian Pembelajaran Lulusan -->
+            <div class="view-rps-section">
+                 <h3 class="text-lg font-bold mt-6 mb-4 text-blue-700 border-b border-blue-200 pb-2">Capaian Pembelajaran Lulusan (CPL)</h3>
+                <div class="<%= changedAnyClass(['cpl[]', 'cpl', 'cpl_deskripsi[]', 'cpl_deskripsi']) %>">
+                <%
+                // Normalize CPL data to an array to avoid runtime errors when value is string/undefined/object
+                var cplRaw = rps['cpl[]'] || rps.cpl || [];
+                var cplList = [];
+                if (Array.isArray(cplRaw)) {
+                    cplList = cplRaw;
+                } else if (typeof cplRaw === 'string') {
+                    cplList = cplRaw ? [cplRaw] : [];
+                } else if (cplRaw && typeof cplRaw === 'object') {
+                    // If it's an object (e.g., keyed by CPL), try to use its keys; fall back to cpl_descriptions keys
+                    cplList = Object.keys(cplRaw);
+                    if (cplList.length === 0 && rps.cpl_descriptions && typeof rps.cpl_descriptions === 'object') {
+                        cplList = Object.keys(rps.cpl_descriptions);
+                    }
+                }
+                %>
+                <% if (cplList.length > 0) { %>
+                <ul class="list-disc list-inside">
+                    <% 
+                        // canonical CPL descriptions fallback
+                        const canonicalCPLs = {
+                            'CPL01': 'Menunjukkan sikap profesional yang berlandaskan ketakwaan, etika, integritas, nasionalisme, dan kepedulian sosial dalam menjalankan tugas di bidang teknik komputer dan jaringan',
+                            'CPL02': 'Menerapkan konsep matematika, komputasi, dan kecerdasan buatan dalam penyelesaian masalah teknis jaringan secara sistematis.',
+                            'CPL03': 'Mengelola pembelajaran sepanjang hayat untuk pengembangan profesional diri dalam lingkungan kerja global yang dinamis dan kompetitif.',
+                            'CPL04': 'Menyelesaikan permasalahan dan tugas teknis jaringan komputer melalui perancangan, konfigurasi, pengujian, dan pengelolaan perangkat serta infrastruktur jaringan pada berbagai skala topologi dalam konteks operasional sistem komunikasi data dan administrasi jaringan.',
+                            'CPL05': 'Merancang infrastruktur jaringan komputer serta sistem virtualisasi dan komputasi awan dalam konteks pembangunan dan pengelolaan layanan TIK yang fleksibel, skalabel, dan terotomasi. (C6)',
+                            'CPL06': 'Mengintegrasikan teknologi jaringan wireless & mobile, sistem tertanam, dan komputasi terdistribusi dalam perancangan dan pengelolaan solusi komunikasi data nirkabel yang andal dan adaptif untuk lingkungan industri dan IoT.',
+                            'CPL07': 'Mengembangkan solusi berbasis IoT dan sistem tertanam dalam integrasi perangkat keras, perangkat lunak, dan komunikasi data.',
+                            'CPL08': 'Merancang solusi berbasis prinsip keamanan siber dan pembelajaran mesin untuk memitigasi risiko serta memperkuat ketahanan infrastruktur informasi',
+                            'CPL09': 'Mengelola infrastruktur virtualisasi dan komputasi awan beserta pipeline DevOps dalam otomatisasi penyediaan layanan TIK yang skalabel, andal, dan berkelanjutan',
+                            'CPL10': 'Mengkomunikasikan ide dan solusi teknis dalam kegiatan penelitian atau kerja sama tim multidisiplin secara ilmiah dan profesional.'
+                        };
+                    %>
+                    <% cplList.forEach(function(cpl) { %>
+                        <li>
+                            <strong><%= cpl %>:</strong>
+                            <% if (rps.cpl_descriptions && rps.cpl_descriptions[cpl]) { %>
+                                <%= rps.cpl_descriptions[cpl] %>
+                            <% } else if (canonicalCPLs[cpl]) { %>
+                                <%= canonicalCPLs[cpl] %>
+                            <% } else { %>
+                                <span class="text-gray-500">No specific description provided.</span>
+                            <% } %>
+                        </li>
+                    <% }); %>
+                </ul>
+                <% } else { %>
+                    <div class="text-gray-500">No CPL provided.</div>
+                <% } %>
+                </div>
+            </div>
+
+            <!-- CPMK -->
+            <h3 class="text-lg font-bold mt-6 mb-4 text-blue-700 border-b border-blue-200 pb-2">CPMK</h3>
+            <div class="overflow-x-auto">
+            <table class="table-auto w-full mb-6 border rounded overflow-hidden">
+                <thead class="bg-blue-100">
+                    <tr>
+                        <th class="px-2 py-2">ID</th>
+                        <th class="px-2 py-2">Kode CPL</th>
+                        <th class="px-2 py-2">Deskripsi CPL</th>
+                        <th class="px-2 py-2">Deskripsi CPMK</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                <% Object.keys(rps).filter(k => k.startsWith('cpmk[')).forEach(function(key) {
+                    var match = key.match(/^cpmk\[(CPMK\d+)\]\[(.+)\]$/);
+                    if (match && match[2] === 'deskripsi') {
+                        var id = match[1];
+                        var cpl_code = rps[`cpmk[${id}][cpl_code]`];
+                        var cpl_desc = rps[`cpmk[${id}][cpl_description]`];
+                        var deskripsi = rps[key];
+                %>
+                    <tr>
+                        <td class="px-2 py-2"><%= id %></td>
+                        <td class="px-2 py-2 <%= changedClass(`cpmk[${id}][cpl_code]`) %>"><%= cpl_code %></td>
+                        <td class="px-2 py-2 <%= changedClass(`cpmk[${id}][cpl_description]`) %>"><%= cpl_desc %></td>
+                        <td class="px-2 py-2 <%= changedClass(key) %>"><%= deskripsi %></td>
+                    </tr>
+                <% } }); %>
+                </tbody>
+            </table>
+            </div>
+
+            <!-- sub-CPMK -->
+            <div class="flex justify-between items-center mt-6 mb-4">
+                <h3 class="text-lg font-bold text-blue-700 border-b border-blue-200 pb-2">Sub-CPMK</h3>
+                <div class="flex gap-2">
+                    <button type="button" class="btn-secondary text-xs px-2 py-1" onclick="toggleAllSubCpmk(true)">
+                        Expand All
+                    </button>
+                    <button type="button" class="btn-secondary text-xs px-2 py-1" onclick="toggleAllSubCpmk(false)">
+                        Collapse All
+                    </button>
+                </div>
+            </div>
+            <%
+            // Group sub-CPMK by CPMK
+            var subCpmkByCpmk = {};
+            Object.keys(rps).filter(k => k.startsWith('sub_cpmk[')).forEach(function(key) {
+                var match = key.match(/^sub_cpmk\[(CPMK\d+)\]\[(\d+)\]\[(.+)\]$/);
+                if (match && match[3] === 'deskripsi') {
+                    var cpmk = match[1];
+                    var sub = match[2];
+                    if (!subCpmkByCpmk[cpmk]) {
+                        subCpmkByCpmk[cpmk] = [];
+                    }
+                    var subData = {
+                        sub: sub,
+                        global_number: rps[`sub_cpmk[${cpmk}][${sub}][global_number]`] || '',
+                        deskripsi: rps[key],
+                        pekan: rps[`sub_cpmk[${cpmk}][${sub}][pekan]`] || rps[`sub_cpmk[${cpmk}][${sub}][pekan_awal]`] || '',
+                        pekan_akhir: rps[`sub_cpmk[${cpmk}][${sub}][pekan_akhir]`] || '',
+                        indikator: rps[`sub_cpmk[${cpmk}][${sub}][indikator]`] || '',
+                        teknik: rps[`sub_cpmk[${cpmk}][${sub}][teknik_kriteria]`] || '',
+                        luring: rps[`sub_cpmk[${cpmk}][${sub}][metode_luring]`] || '',
+                        daring: rps[`sub_cpmk[${cpmk}][${sub}][metode_daring]`] || '',
+                        materi: rps[`sub_cpmk[${cpmk}][${sub}][materi]`] || '',
+                        modalitas: rps[`sub_cpmk[${cpmk}][${sub}][modalitas]`] || '',
+                        bentuk_pembelajaran: rps[`sub_cpmk[${cpmk}][${sub}][bentuk_pembelajaran]`] || '',
+                        strategi_pembelajaran: rps[`sub_cpmk[${cpmk}][${sub}][strategi_pembelajaran]`] || '',
+                        metode: rps[`sub_cpmk[${cpmk}][${sub}][metode]`] || '',
+                        media: rps[`sub_cpmk[${cpmk}][${sub}][media]`] || '',
+                        sumber_belajar: rps[`sub_cpmk[${cpmk}][${sub}][sumber_belajar]`] || '',
+                        bobot: rps[`sub_cpmk[${cpmk}][${sub}][bobot]`] || '',
+                        formatif_nama: rps[`sub_cpmk[${cpmk}][${sub}][formatif_nama]`] || '',
+                        formatif_bobot: rps[`sub_cpmk[${cpmk}][${sub}][formatif_bobot]`] || '',
+                        sumatif_kuis_nama: rps[`sub_cpmk[${cpmk}][${sub}][sumatif_kuis_nama]`] || '',
+                        sumatif_kuis_bobot: rps[`sub_cpmk[${cpmk}][${sub}][sumatif_kuis_bobot]`] || '',
+                        sumatif_tugas_nama: rps[`sub_cpmk[${cpmk}][${sub}][sumatif_tugas_nama]`] || '',
+                        sumatif_tugas_bobot: rps[`sub_cpmk[${cpmk}][${sub}][sumatif_tugas_bobot]`] || '',
+                        sumatif_ujian_nama: rps[`sub_cpmk[${cpmk}][${sub}][sumatif_ujian_nama]`] || '',
+                        sumatif_ujian_bobot: rps[`sub_cpmk[${cpmk}][${sub}][sumatif_ujian_bobot]`] || '',
+                        sumatif_pjbl_nama: rps[`sub_cpmk[${cpmk}][${sub}][sumatif_pjbl_nama]`] || '',
+                        sumatif_pjbl_bobot: rps[`sub_cpmk[${cpmk}][${sub}][sumatif_pjbl_bobot]`] || '',
+                        sumatif_lainnya: (function() {
+                            try {
+                                var parsed = JSON.parse(rps[`sub_cpmk[${cpmk}][${sub}][sumatif_lainnya]`] || '[]');
+                                return Array.isArray(parsed) ? parsed : [];
+                            } catch (e) { return []; }
+                        })(),
+                        asesmen_legacy: rps[`sub_cpmk[${cpmk}][${sub}][asesmen]`] || ''
+                    };
+                    subCpmkByCpmk[cpmk].push(subData);
+                }
+            });
+            %>
+            
+            <% Object.keys(subCpmkByCpmk).forEach(function(cpmk) { %>
+            <div class="mb-6 border rounded-lg overflow-hidden">
+                <div class="bg-blue-50 p-3 border-b subcpmk-header">
+                    <h4 class="text-lg font-semibold text-blue-700 cursor-pointer flex items-center"
+                        onclick="toggleSubCpmkCollapse('subcpmk-content-<%= cpmk %>', this)"
+                        onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleSubCpmkCollapse('subcpmk-content-<%= cpmk %>', this); }"
+                        tabindex="0"
+                        role="button"
+                        aria-expanded="true"
+                        aria-controls="subcpmk-content-<%= cpmk %>">
+                        <span class="collapse-icon mr-2">▼</span>
+                        Sub-CPMK untuk <%= cpmk %>
+                        <span class="ml-2 text-sm text-blue-500">(<%= subCpmkByCpmk[cpmk].length %> item)</span>
+                    </h4>
+                </div>
+                <div id="subcpmk-content-<%= cpmk %>" class="subcpmk-content">
+                    <div class="overflow-x-auto">
+                        <table class="table-auto w-full border-collapse min-w-max">
+                            <thead class="bg-blue-100">
+                                <tr>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Sub-CPMK</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Pekan</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Deskripsi</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Indikator</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Teknik & Kriteria</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Metode Luring</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Metode Daring</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Materi</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Modalitas</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Bentuk Pembelajaran</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Strategi Pembelajaran</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Metode</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Media</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Sumber Belajar</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Bentuk Asesmen</th>
+                                    <th class="px-2 py-2 text-left border text-xs font-semibold">Bobot (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <% subCpmkByCpmk[cpmk].forEach(function(subData) { %>
+                                <%
+                                    // Bangun ulang key mentah "sub_cpmk[CPMKxx][idx][field]" per baris
+                                    // ini supaya bisa dicek ke __changedKeys per sel.
+                                    function subKey(field) { return `sub_cpmk[${cpmk}][${subData.sub}][${field}]`; }
+                                    function subChangedClass(fields) { return changedAnyClass(fields.map(subKey)); }
+                                %>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-2 py-2 border font-medium text-sm">Sub-CPMK <%= subData.global_number || subData.sub %></td>
+                                    <td class="px-2 py-2 border text-sm <%= subChangedClass(['pekan', 'pekan_awal', 'pekan_akhir']) %>">
+                                        <% if (subData.pekan && subData.pekan.includes('-')) { %>
+                                            <%= subData.pekan %>
+                                        <% } else { %>
+                                            <%= subData.pekan || subData.pekan_awal || '' %><% if (subData.pekan_akhir && subData.pekan_akhir !== subData.pekan_awal) { %> - <%= subData.pekan_akhir %><% } %>
+                                        <% } %>
+                                    </td>
+                                    <td class="px-2 py-2 border text-sm max-w-xs"><div class="line-clamp-3 <%= subChangedClass(['deskripsi']) %>"><%= subData.deskripsi || '-' %></div></td>
+                                    <td class="px-2 py-2 border text-sm max-w-xs"><div class="line-clamp-3 <%= subChangedClass(['indikator']) %>"><%= subData.indikator || '-' %></div></td>
+                                    <td class="px-2 py-2 border text-sm max-w-xs"><div class="line-clamp-3 <%= subChangedClass(['teknik_kriteria']) %>"><%= subData.teknik || '-' %></div></td>
+                                    <td class="px-2 py-2 border text-sm max-w-xs"><div class="line-clamp-3 <%= subChangedClass(['metode_luring']) %>"><%= subData.luring || '-' %></div></td>
+                                    <td class="px-2 py-2 border text-sm max-w-xs"><div class="line-clamp-3 <%= subChangedClass(['metode_daring']) %>"><%= subData.daring || '-' %></div></td>
+                                    <td class="px-2 py-2 border text-sm max-w-xs"><div class="line-clamp-3 <%= subChangedClass(['materi']) %>"><%= subData.materi || '-' %></div></td>
+                                    <%
+                                        // Determine Modalitas display from metode fields (luring/daring)
+                                        let modalitasDisplay = '-';
+                                        const hasLuring = subData.luring && String(subData.luring).trim();
+                                        const hasDaring = subData.daring && String(subData.daring).trim();
+                                        if (hasLuring && hasDaring) {
+                                            modalitasDisplay = 'Luring & Daring';
+                                        } else if (hasLuring) {
+                                            modalitasDisplay = 'Luring';
+                                        } else if (hasDaring) {
+                                            modalitasDisplay = 'Daring';
+                                        } else if (subData.modalitas) {
+                                            // legacy stored modalitas (could be array or string)
+                                            if (Array.isArray(subData.modalitas)) modalitasDisplay = subData.modalitas.join(', ');
+                                            else modalitasDisplay = String(subData.modalitas);
+                                        }
+                                    %>
+                                    <td class="px-2 py-2 border text-sm max-w-xs"><div class="line-clamp-3 <%= subChangedClass(['metode_luring', 'metode_daring', 'modalitas']) %>"><%= modalitasDisplay %></div></td>
+                                    <td class="px-2 py-2 border text-sm max-w-xs"><div class="line-clamp-3 <%= subChangedClass(['bentuk_pembelajaran']) %>"><%= subData.bentuk_pembelajaran || '-' %></div></td>
+                                    <td class="px-2 py-2 border text-sm max-w-xs"><div class="line-clamp-3 <%= subChangedClass(['strategi_pembelajaran']) %>"><%= subData.strategi_pembelajaran || '-' %></div></td>
+                                    <td class="px-2 py-2 border text-sm max-w-xs"><div class="line-clamp-3 <%= subChangedClass(['metode']) %>"><%= subData.metode || '-' %></div></td>
+                                    <td class="px-2 py-2 border text-sm max-w-xs"><div class="line-clamp-3 <%= subChangedClass(['media']) %>"><%= subData.media || '-' %></div></td>
+                                    <td class="px-2 py-2 border text-sm max-w-xs"><div class="line-clamp-3 <%= subChangedClass(['sumber_belajar']) %>"><%= subData.sumber_belajar || '-' %></div></td>
+                                    <%
+                                        function withPercentView(nama, bobot) {
+                                            var n = (nama || '').toString().trim();
+                                            var b = (bobot || '').toString().trim();
+                                            if (n && b) return n + ' (' + b + '%)';
+                                            if (n) return n;
+                                            if (b) return '(' + b + '%)';
+                                            return '';
+                                        }
+                                        var kuisView = withPercentView(subData.sumatif_kuis_nama, subData.sumatif_kuis_bobot);
+                                        var tugasView = withPercentView(subData.sumatif_tugas_nama, subData.sumatif_tugas_bobot);
+                                        var ujianView = withPercentView(subData.sumatif_ujian_nama, subData.sumatif_ujian_bobot);
+                                        var pjblView = withPercentView(subData.sumatif_pjbl_nama, subData.sumatif_pjbl_bobot);
+                                        var lainnyaViews = (subData.sumatif_lainnya || []).map(function(item) { return withPercentView(item.nama, item.bobot); }).filter(Boolean);
+                                        var formatifView = withPercentView(subData.formatif_nama, subData.formatif_bobot);
+                                        var hasNewAsesmen = formatifView || kuisView || tugasView || ujianView || pjblView || lainnyaViews.length;
+                                        var asesmenChangedClass = subChangedClass(['formatif_nama', 'formatif_bobot', 'sumatif_kuis_nama', 'sumatif_kuis_bobot', 'sumatif_tugas_nama', 'sumatif_tugas_bobot', 'sumatif_ujian_nama', 'sumatif_ujian_bobot', 'sumatif_pjbl_nama', 'sumatif_pjbl_bobot', 'sumatif_lainnya', 'asesmen']);
+                                    %>
+                                    <td class="px-2 py-2 border text-xs max-w-xs <%= asesmenChangedClass %>">
+                                        <% if (hasNewAsesmen) { %>
+                                            <% if (formatifView) { %><div><span class="font-semibold">Formatif:</span> <%= formatifView %></div><% } %>
+                                            <% if (kuisView || tugasView || ujianView || pjblView || lainnyaViews.length) { %>
+                                            <div class="mt-1"><span class="font-semibold">Sumatif:</span></div>
+                                            <ul class="ml-3 list-disc">
+                                                <% if (kuisView) { %><li>Kuis: <%= kuisView %></li><% } %>
+                                                <% if (tugasView) { %><li>Tugas: <%= tugasView %></li><% } %>
+                                                <% if (ujianView) { %><li>Ujian: <%= ujianView %></li><% } %>
+                                                <% if (pjblView) { %><li>PjBL: <%= pjblView %></li><% } %>
+                                                <% lainnyaViews.forEach(function(v) { %><li><%= v %></li><% }); %>
+                                            </ul>
+                                            <% } %>
+                                        <% } else { %>
+                                            <%= subData.asesmen_legacy || '-' %>
+                                        <% } %>
+                                    </td>
+                                    <td class="px-2 py-2 border text-center text-sm font-medium <%= subChangedClass(['bobot']) %>"><%= subData.bobot || '0' %>%</td>
+                                </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <% }); %>
+            <a href="<%= typeof backUrl !== 'undefined' ? backUrl : '/history' %>" class="btn-secondary mt-4 px-4 py-2 rounded bg-gray-500 text-white hover:bg-gray-600 inline-block">Kembali</a>
+        <% } else { %>
+            <div class="text-center py-8">
+                <p class="text-red-600 font-semibold mb-4">Data RPS tidak ditemukan.</p>
+                <a href="<%= typeof backUrl !== 'undefined' ? backUrl : '/history' %>" class="btn-secondary mt-4 px-4 py-2 rounded bg-gray-500 text-white hover:bg-gray-600 inline-block">Kembali</a>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

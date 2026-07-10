@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        <%= title %>
+    </title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <!-- Prefer explicit favicon to avoid browser requesting /favicon.ico and returning 404 -->
+    <link rel="icon" href="/css/login-illustration.svg" type="image/svg+xml">
+</head>
+
+<body class="bg-gray-100">
+    <nav class="bg-white shadow-md relative z-40">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <a href="/" class="text-xl sm:text-2xl font-bold text-blue-700 flex items-center">
+                    <svg class="w-7 h-7 sm:w-8 sm:h-8 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                    <span class="whitespace-nowrap">RPS System</span>
+                </a>
+
+                <!-- Desktop menu -->
+                <div class="hidden lg:flex items-center space-x-2 xl:space-x-4">
+                    <a href="/"
+                        class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
+                        <i class="fas fa-home mr-1"></i>Dashboard
+                    </a>
+                    <a href="/create-rps"
+                        class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
+                        <i class="fas fa-plus mr-1"></i>Buat RPS
+                    </a>
+                    <a href="/upload-rps"
+                        class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
+                        <i class="fas fa-file-upload mr-1"></i>Upload RPS
+                    </a>
+                    <a href="/penilaian"
+                        class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
+                        <i class="fas fa-clipboard-check mr-1"></i>Penilaian
+                    </a>
+                    <% if (typeof user !=='undefined' && user.role==='admin' ) { %>
+                        <a href="/admin"
+                            class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
+                            <i class="fas fa-users mr-1"></i>Kelola User
+                        </a>
+                        <a href="/admin/cpl"
+                            class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
+                            <i class="fas fa-file-alt mr-1"></i>Kelola CPL
+                        </a>
+                        <% } %>
+                            <% if (typeof user !=='undefined' ) { %>
+                                <span class="text-gray-600 text-sm whitespace-nowrap">
+                                    <i class="fas fa-user mr-1"></i>
+                                    <%= user.username %>
+                                        <% if (user.role==='admin' ) { %>
+                                            <span
+                                                class="ml-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">Admin</span>
+                                            <% } %>
+                                </span>
+                                <% } %>
+                                    <a href="/logout"
+                                        class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
+                                        <i class="fas fa-sign-out-alt mr-1"></i>Logout
+                                    </a>
+                </div>
+
+                <!-- Mobile hamburger button -->
+                <button id="mobile-menu-button" type="button"
+                    class="lg:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100 focus:outline-none"
+                    aria-label="Toggle navigation menu" aria-expanded="false">
+                    <i id="mobile-menu-icon-open" class="fas fa-bars text-xl"></i>
+                    <i id="mobile-menu-icon-close" class="fas fa-times text-xl" style="display: none;"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="hidden lg:hidden border-t border-gray-200">
+            <div class="px-4 py-3 space-y-1">
+                <% if (typeof user !=='undefined' ) { %>
+                    <div class="flex items-center justify-between px-3 py-2 mb-1 border-b border-gray-100">
+                        <span class="text-gray-600 text-sm">
+                            <i class="fas fa-user mr-1"></i>
+                            <%= user.username %>
+                        </span>
+                        <% if (user.role==='admin' ) { %>
+                            <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">Admin</span>
+                            <% } %>
+                    </div>
+                    <% } %>
+                        <a href="/"
+                            class="block text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                            <i class="fas fa-home mr-2 w-4 text-center"></i>Dashboard
+                        </a>
+                        <a href="/create-rps"
+                            class="block text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                            <i class="fas fa-plus mr-2 w-4 text-center"></i>Buat RPS
+                        </a>
+                        <a href="/upload-rps"
+                            class="block text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                            <i class="fas fa-file-upload mr-2 w-4 text-center"></i>Upload RPS
+                        </a>
+                        <a href="/penilaian"
+                            class="block text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                            <i class="fas fa-clipboard-check mr-2 w-4 text-center"></i>Penilaian
+                        </a>
+                        <% if (typeof user !=='undefined' && user.role==='admin' ) { %>
+                            <a href="/admin"
+                                class="block text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-users mr-2 w-4 text-center"></i>Kelola User
+                            </a>
+                            <a href="/admin/cpl"
+                                class="block text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-file-alt mr-2 w-4 text-center"></i>Kelola CPL
+                            </a>
+                            <% } %>
+                                <a href="/logout"
+                                    class="block bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 mt-2">
+                                    <i class="fas fa-sign-out-alt mr-2 w-4 text-center"></i>Logout
+                                </a>
+            </div>
+        </div>
+    </nav>
+    <script>
+        // Force reload when page is loaded from bfcache (back/forward) so server auth is re-checked
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                // Some browsers set persisted=true when using back/forward cache
+                window.location.reload();
+            }
+        });
+
+        // --- Mobile hamburger menu toggle ---
+        document.addEventListener('DOMContentLoaded', function () {
+            const menuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const iconOpen = document.getElementById('mobile-menu-icon-open');
+            const iconClose = document.getElementById('mobile-menu-icon-close');
+
+            if (!menuButton || !mobileMenu) return;
+
+            function closeMenu() {
+                mobileMenu.classList.add('hidden');
+                if (iconOpen) iconOpen.style.display = '';
+                if (iconClose) iconClose.style.display = 'none';
+                menuButton.setAttribute('aria-expanded', 'false');
+            }
+
+            function openMenu() {
+                mobileMenu.classList.remove('hidden');
+                if (iconOpen) iconOpen.style.display = 'none';
+                if (iconClose) iconClose.style.display = '';
+                menuButton.setAttribute('aria-expanded', 'true');
+            }
+
+            menuButton.addEventListener('click', function () {
+                const isHidden = mobileMenu.classList.contains('hidden');
+                if (isHidden) openMenu(); else closeMenu();
+            });
+
+            // Close the mobile menu when a link inside it is clicked
+            mobileMenu.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', closeMenu);
+            });
+
+            // Close menu when resizing up to desktop width
+            window.addEventListener('resize', function () {
+                if (window.innerWidth >= 1024) closeMenu();
+            });
+        });
+
+        // --- Logout confirmation modal (improved UI) ---
+        // Modal markup
+        const modalHtml = `
+    <div id="logout-confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+      <div class="absolute inset-0 bg-black opacity-40"></div>
+      <div class="bg-white rounded-lg shadow-lg z-10 max-w-lg w-full mx-4">
+        <div class="p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-2">Konfirmasi Logout</h3>
+          <p id="logout-confirm-message" class="text-sm text-gray-700 mb-4">Jika Anda logout, data yang belum disimpan mungkin akan hilang.</p>
+          <div class="flex justify-end space-x-3">
+            <button id="logout-cancel-btn" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">Batal</button>
+            <button id="logout-confirm-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm">Logout</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+        // Insert modal into body
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!document.getElementById('logout-confirm-modal')) {
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+            }
+
+            const modal = document.getElementById('logout-confirm-modal');
+            const cancelBtn = document.getElementById('logout-cancel-btn');
+            const confirmBtn = document.getElementById('logout-confirm-btn');
+            const messageEl = document.getElementById('logout-confirm-message');
+
+            function hideModal() {
+                if (modal) modal.classList.add('hidden');
+            }
+
+            function showModal(msg) {
+                if (messageEl) messageEl.textContent = msg;
+                if (modal) modal.classList.remove('hidden');
+            }
+
+            // Attach handler to logout links
+            document.querySelectorAll('a[href="/logout"]').forEach(link => {
+                link.addEventListener('click', function (ev) {
+                    ev.preventDefault();
+
+                    // Try to persist latest draft
+                    try { if (typeof saveFormState === 'function') saveFormState(); } catch (e) { }
+
+                    // Check for draft data in localStorage
+                    const draftKeys = ['rps_formData', 'rps_cpmkData', 'rps_subCpmkData', 'rps_currentStep'];
+                    let hasDraft = false;
+                    for (const k of draftKeys) {
+                        try {
+                            const v = localStorage.getItem(k);
+                            if (v && v !== 'null' && v !== '[]' && v !== '{}') { hasDraft = true; break; }
+                        } catch (err) { }
+                    }
+
+                    const baseMsg = 'Jika Anda logout, data yang belum disimpan mungkin akan hilang.';
+                    const extra = hasDraft ? ' Terdapat data RPS yang tersimpan otomatis di browser.' : '';
+                    showModal(baseMsg + extra);
+                });
+            });
+
+            // Cancel button
+            if (cancelBtn) cancelBtn.addEventListener('click', function () { hideModal(); });
+
+            // Confirm button: proceed to logout
+            if (confirmBtn) confirmBtn.addEventListener('click', function () {
+                hideModal();
+                // Navigate to logout route
+                window.location.href = '/logout';
+            });
+        });
+    </script>

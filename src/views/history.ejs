@@ -1,0 +1,441 @@
+<%- include('partials/header') %>
+
+    <div class="container-custom">
+        <!-- Welcome Dashboard Header -->
+        <div class="card mb-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+                <div>
+                    <% if (user.role==='admin' ) { %>
+                        <h1 class="text-2xl font-bold text-gray-800 mb-2">Dashboard Admin</h1>
+                        <p class="text-gray-600">Selamat datang, <span class="font-semibold">
+                                <%= user.username %>
+                            </span>!</p>
+                        <p class="text-sm text-gray-500 mt-1">Kelola seluruh RPS dalam sistem</p>
+                        <% } else { %>
+                            <h1 class="text-2xl font-bold text-gray-800 mb-2">Dashboard Dosen</h1>
+                            <p class="text-gray-600">Selamat datang, <span class="font-semibold">
+                                    <%= user.username %>
+                                </span>!</p>
+                            <p class="text-sm text-gray-500 mt-1">Kelola dokumen RPS Anda dengan mudah</p>
+                            <% } %>
+                </div>
+                <div class="mt-4 md:mt-0 flex gap-2">
+                    <% if (user.role==='admin' ) { %>
+                        <a href="/admin" class="btn-secondary flex items-center gap-2 px-4 py-2 text-sm">
+                            <i class="fas fa-users"></i>
+                            Kelola User
+                        </a>
+                        <% } %>
+
+                            <a href="/create-rps" class="btn-primary flex items-center gap-2 px-4 py-2 text-sm">
+                                <i class="fas fa-plus"></i>
+                                Buat RPS Baru
+                            </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="card dashboard-stat-card">
+                <div class="flex items-center justify-center">
+                    <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                        <i class="fas fa-file-alt text-xl"></i>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-gray-800">
+                            <%= rps.length %>
+                        </p>
+                        <p class="text-gray-600 text-sm font-medium">Total RPS</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card dashboard-stat-card">
+                <div class="flex items-center justify-center">
+                    <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+                        <i class="fas fa-calendar text-xl"></i>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-gray-800">
+                            <%= [...new Set(rps.map(r=> r.tahun_akademik))].length %>
+                        </p>
+                        <p class="text-gray-600 text-sm font-medium">Tahun Akademik</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card dashboard-stat-card">
+                <div class="flex items-center justify-center">
+                    <div class="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+                        <i class="fas fa-graduation-cap text-xl"></i>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-gray-800">
+                            <%= [...new Set(rps.map(r=> r.semester))].length %>
+                        </p>
+                        <p class="text-gray-600 text-sm font-medium">Semester</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter and Search -->
+        <div class="card mb-6">
+            <div class="flex flex-col md:flex-row gap-4 items-center">
+                <div class="flex-1">
+                    <input type="text" id="searchRPS" placeholder="Cari nama mata kuliah, kode MK, atau nama dosen..."
+                        class="input w-full">
+                </div>
+                <div class="flex gap-2">
+                    <select id="filterSemester" class="input">
+                        <option value="">Semua Semester</option>
+                        <% [...new Set(rps.map(r=> r.semester))].sort().forEach(semester => { %>
+                            <option value="<%= semester %>">Semester <%= semester %>
+                            </option>
+                            <% }); %>
+                    </select>
+                    <select id="filterTahun" class="input">
+                        <option value="">Semua Tahun</option>
+                        <% [...new Set(rps.map(r=> r.tahun_akademik))].sort().forEach(tahun => { %>
+                            <option value="<%= tahun %>">
+                                <%= tahun %>
+                            </option>
+                            <% }); %>
+                    </select>
+                    <% if (user.role==='admin' ) { %>
+                        <select id="filterOwner" class="input">
+                            <option value="">Semua Dosen</option>
+                            <% [...new Set(rps.map(r=> r.ownerName))].sort().forEach(owner => { %>
+                                <option value="<%= owner %>">
+                                    <%= owner %>
+                                </option>
+                                <% }); %>
+                        </select>
+                        <% } %>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- RPS Documents -->
+        <div class="card">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <% if (user.role==='admin' ) { %>
+                        <h2 class="text-xl font-bold text-gray-800">Semua Dokumen RPS</h2>
+                        <p class="text-gray-600 text-sm">Kelola dan akses semua dokumen RPS dalam sistem</p>
+                        <% } else { %>
+                            <h2 class="text-xl font-bold text-gray-800">Dokumen RPS Anda</h2>
+                            <p class="text-gray-600 text-sm">Kelola dan akses dokumen RPS yang telah dibuat</p>
+                            <% } %>
+                </div>
+                <div class="flex gap-2">
+                    <% if (user.role==='admin' ) { %>
+                        <a href="/admin/rps" class="btn-primary text-sm">
+                            <i class="fas fa-cogs mr-1"></i>Kelola RPS
+                        </a>
+                        <% } %>
+                            <a href="/create-rps" class="btn-secondary text-sm">+ Buat RPS</a>
+                </div>
+            </div>
+
+            <% if (rps.length> 0) { %>
+                <div id="rpsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <% rps.forEach(r=> { %>
+                        <div class="card rps-card border border-gray-200 hover:shadow-lg transition-shadow duration-200"
+                            data-semester="<%= r.semester %>" data-tahun="<%= r.tahun_akademik %>"
+                            data-owner="<%= r.ownerName ? r.ownerName : user.username %>"
+                            data-search="<%= (r.nama_mk + ' ' + r.kode_mk + ' ' + (r.ownerName ? r.ownerName : user.username)).toLowerCase() %>">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-bold text-gray-800 mb-1 line-clamp-2">
+                                        <%= r.nama_mk %>
+                                    </h3>
+                                    <p class="text-blue-600 font-semibold text-sm">
+                                        <%= r.kode_mk %>
+                                    </p>
+                                </div>
+                                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                                    Semester <%= r.semester %>
+                                </span>
+                            </div>
+
+                            <div class="text-xs text-gray-500 mb-4 space-y-1">
+                                <% if (user.role==='admin' && r.ownerName) { %>
+                                    <p><i class="fas fa-user mr-1"></i> <strong>Pembuat:</strong>
+                                        <%= r.ownerName %>
+                                    </p>
+                                    <% } %>
+                                        <p><i class="fas fa-calendar mr-1"></i> Dibuat: <%= new
+                                                Date(r.tanggal_penyusunan).toLocaleDateString('id-ID') %>
+                                        </p>
+                                        <p><i class="fas fa-graduation-cap mr-1"></i>
+                                            <%= r.tahun_akademik %>
+                                        </p>
+                                        <p><i class="fas fa-users mr-1"></i>
+                                            <%= Array.isArray(r.dosen_pengampu) ? r.dosen_pengampu.length :
+                                                (r['dosen_pengampu[]'] ? r['dosen_pengampu[]'].length : 1) %>
+                                                Dosen Pengampu
+                                        </p>
+                            </div>
+
+                            <div class="flex gap-2 flex-wrap">
+                                <a href="/history/view/<%= r.id %>" class="btn-primary text-xs flex-1 text-center flex items-center justify-center">
+                                    <i class="fas fa-eye mr-1"></i>Lihat
+                                </a>
+                                <a href="/export/word-1/<%= r.id %>" class="btn-primary text-xs flex-1 text-center"
+                                    style="background:#06b6d4">
+                                    <i class="fas fa-download mr-1"></i>Word-1
+                                </a>
+                                <a href="/export/word-2/<%= r.id %>" class="btn-primary text-xs flex-1 text-center"
+                                    style="background:#10b981">
+                                    <i class="fas fa-download mr-1"></i>Word-2
+                                </a>
+                                <a href="/edit-rps/<%= r.id %>" class="btn-secondary text-xs flex-1 text-center flex items-center justify-center">
+                                    <i class="fas fa-edit mr-1"></i>Edit
+                                </a>
+                                <a href="/history/rps/<%= r.id %>" class="btn-secondary text-xs flex-1 text-center flex items-center justify-center">
+                                    <i class="fas fa-clock-rotate-left mr-1"></i>History
+                                </a>
+                                <button class="btn-secondary text-xs flex-1 text-center" data-id="<%= r.id %>"
+                                    data-name="<%= r.nama_mk %>" onclick="duplicateRps(this)">
+                                    <i class="fas fa-clone mr-1"></i>Duplikat
+                                </button>
+                                <% if (user.role==='admin' ) { %>
+                                    <button class="btn-danger text-xs px-3" data-id="<%= r.id %>"
+                                        data-name="<%= r.nama_mk %>" onclick="deleteRpsAdmin(this)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    <% } else { %>
+                                        <button class="btn-danger text-xs px-3" data-id="<%= r.id %>"
+                                            onclick="deleteRps(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        <% } %>
+                            </div>
+                        </div>
+                        <% }); %>
+                </div>
+                <% } else { %>
+                    <div class="text-center py-12">
+                        <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                            <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                </path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Belum ada dokumen RPS</h3>
+                        <p class="text-gray-600 mb-6">Mulai buat dokumen RPS pertama Anda untuk mata kuliah yang akan
+                            diajarkan.</p>
+                        <a href="/create-rps" class="btn-primary inline-flex items-center gap-2 px-6 py-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Buat RPS Pertama
+                        </a>
+                    </div>
+                    <% } %>
+        </div>
+    </div>
+
+    <%- include('partials/footer') %>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script>
+            if (window.location.search.includes('saved=1')) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Data telah disimpan',
+                    showConfirmButton: false,
+                    timer: 1800
+                });
+            }
+
+            // Duplicate function for dosen (owner)
+            function duplicateRps(el) {
+                const id = el.getAttribute('data-id');
+                const name = el.getAttribute('data-name');
+
+                Swal.fire({
+                    title: 'Duplikat RPS',
+                    html: `
+                        <div class="text-left">
+                            <p class="mb-2"><strong>Nama RPS:</strong> ${name}</p>
+                            <p class="text-gray-600">Salin dokumen ini ke RPS baru?</p>
+                        </div>
+                    `,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Duplikat',
+                    cancelButtonText: 'Batal'
+                }).then(result => {
+                    if (!result.isConfirmed) return;
+
+                    fetch('/duplicate-rps/' + id, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'RPS berhasil diduplikasi',
+                                    showConfirmButton: false,
+                                    timer: 1400
+                                });
+                                setTimeout(() => { window.location.reload(); }, 1400);
+                            } else {
+                                Swal.fire('Gagal', data.message || 'Gagal menduplikasi RPS', 'error');
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Duplicate error', err);
+                            Swal.fire('Error', 'Terjadi kesalahan saat menduplikasi RPS', 'error');
+                        });
+                });
+            }
+        </script>
+        <script>
+            // Search and filter functionality for history (works for dosen and admin)
+            document.addEventListener('DOMContentLoaded', function () {
+                const searchInput = document.getElementById('searchRPS');
+                const semesterFilter = document.getElementById('filterSemester');
+                const tahunFilter = document.getElementById('filterTahun');
+                const ownerFilter = document.getElementById('filterOwner');
+                const rpsCards = document.querySelectorAll('.rps-card');
+                const rpsContainer = document.getElementById('rpsContainer');
+                const noResults = document.getElementById('noResults');
+
+                function filterRPS() {
+                    const searchTerm = (searchInput && searchInput.value) ? searchInput.value.toLowerCase() : '';
+                    const semesterValue = semesterFilter ? semesterFilter.value : '';
+                    const tahunValue = tahunFilter ? tahunFilter.value : '';
+                    const ownerValue = ownerFilter ? ownerFilter.value : '';
+
+                    let visibleCount = 0;
+
+                    rpsCards.forEach(card => {
+                        const searchData = card.dataset.search || '';
+                        const semester = card.dataset.semester || '';
+                        const tahun = card.dataset.tahun || '';
+                        const owner = card.dataset.owner || '';
+
+                        const matchesSearch = !searchTerm || searchData.includes(searchTerm);
+                        const matchesSemester = !semesterValue || semester === semesterValue;
+                        const matchesTahun = !tahunValue || tahun === tahunValue;
+                        const matchesOwner = !ownerValue || owner === ownerValue;
+
+                        if (matchesSearch && matchesSemester && matchesTahun && matchesOwner) {
+                            card.style.display = '';
+                            visibleCount++;
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+
+                    if (noResults) {
+                        if (visibleCount === 0 && rpsCards.length > 0) {
+                            if (rpsContainer) rpsContainer.style.display = 'none';
+                            noResults.classList.remove('hidden');
+                        } else {
+                            if (rpsContainer) rpsContainer.style.display = '';
+                            noResults.classList.add('hidden');
+                        }
+                    }
+                }
+
+                if (searchInput) searchInput.addEventListener('input', filterRPS);
+                if (semesterFilter) semesterFilter.addEventListener('change', filterRPS);
+                if (tahunFilter) tahunFilter.addEventListener('change', filterRPS);
+                if (ownerFilter) ownerFilter.addEventListener('change', filterRPS);
+            });
+        </script>
+        <script>
+            function deleteRps(el) {
+                const id = el.getAttribute('data-id');
+                Swal.fire({
+                    title: 'Yakin ingin menghapus data?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Ya, hapus!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch('/delete-rps/' + id, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Data berhasil dihapus',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                    // Hapus card dari DOM
+                                    el.closest('.card').remove();
+                                } else {
+                                    Swal.fire('Gagal', data.message || 'Gagal menghapus data', 'error');
+                                }
+                            });
+                    }
+                });
+            }
+
+            // Admin delete function with additional confirmation
+            function deleteRpsAdmin(el) {
+                const id = el.getAttribute('data-id');
+                const name = el.getAttribute('data-name');
+
+                Swal.fire({
+                    title: 'Konfirmasi Hapus RPS (Admin)',
+                    html: `
+            <div class="text-left">
+                <p class="mb-2"><strong>Nama RPS:</strong> ${name}</p>
+                <p class="text-red-600 mb-2">Anda akan menghapus RPS milik dosen lain.</p>
+                <p class="text-sm text-gray-500">Tindakan ini tidak dapat dibatalkan.</p>
+            </div>
+        `,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Ya, Hapus!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch('/delete-rps/' + id, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'RPS berhasil dihapus',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                    // Remove card from DOM
+                                    el.closest('.card').remove();
+                                } else {
+                                    Swal.fire('Gagal', data.message || 'Gagal menghapus RPS', 'error');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                Swal.fire('Error', 'Terjadi kesalahan saat menghapus RPS', 'error');
+                            });
+                    }
+                });
+            }
+        </script>
+        </script>

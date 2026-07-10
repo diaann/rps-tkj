@@ -1,0 +1,39 @@
+<%- include('partials/header-login') %>
+
+<div class="min-h-screen flex items-center justify-center bg-gray-100">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-10">
+        <div class="mb-8 text-center">
+            <h1 class="text-3xl font-extrabold text-gray-800 mb-2">Register</h1>
+            <p class="text-gray-500">Buat akun baru untuk mengakses aplikasi.</p>
+        </div>
+        <% if (locals.error) { %>
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 text-center" role="alert">
+                <span class="block sm:inline"><%= error %></span>
+            </div>
+        <% } %>
+        <form action="/register" method="POST" class="space-y-6">
+            <div>
+                <label class="block text-gray-700 text-sm font-semibold mb-2" for="email">Email</label>
+                <input class="input" id="email" name="email" type="email" placeholder="you@email.com" required autocomplete="username">
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-semibold mb-2" for="username">Username</label>
+                <input class="input" id="username" name="username" type="text" placeholder="Username" required>
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-semibold mb-2" for="password">Password</label>
+                <input class="input" id="password" name="password" type="password" placeholder="Password" required autocomplete="new-password">
+            </div>
+            <div class="flex items-center justify-between">
+                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition" type="submit">
+                    Register
+                </button>
+            </div>
+        </form>
+        <div class="mt-6 text-center text-sm text-gray-500">
+            Sudah punya akun? <a href="/login" class="text-blue-600 hover:underline">Login</a>
+        </div>
+    </div>
+</div>
+
+<%- include('partials/footer') %>
