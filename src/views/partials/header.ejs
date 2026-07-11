@@ -49,8 +49,8 @@
                             <i class="fas fa-chevron-down ml-1 text-xs"></i>
                         </button>
                         <div id="penilaian-dropdown-menu" class="header-dropdown-menu hidden">
-                            <a href="/penilaian"><i class="fas fa-table mr-1"></i>Tabel Penilaian</a>
                             <a href="/rubrik"><i class="fas fa-clipboard-list mr-1"></i>Rubrik Penilaian</a>
+                            <a href="/penilaian"><i class="fas fa-table mr-1"></i>Tabel Penilaian</a>
                         </div>
                     </div>
                     <% if (typeof user !=='undefined' && user.role==='admin' ) { %>
@@ -115,13 +115,13 @@
                             class="block text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
                             <i class="fas fa-file-upload mr-2 w-4 text-center"></i>Upload RPS
                         </a>
-                        <a href="/penilaian"
-                            class="block text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
-                            <i class="fas fa-table mr-2 w-4 text-center"></i>Tabel Penilaian
-                        </a>
                         <a href="/rubrik"
                             class="block text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
                             <i class="fas fa-clipboard-list mr-2 w-4 text-center"></i>Rubrik Penilaian
+                        </a>
+                        <a href="/penilaian"
+                            class="block text-gray-700 hover:text-blue-600 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                            <i class="fas fa-table mr-2 w-4 text-center"></i>Tabel Penilaian
                         </a>
                         <% if (typeof user !=='undefined' && user.role==='admin' ) { %>
                             <a href="/admin"
