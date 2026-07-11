@@ -1,0 +1,75 @@
+<%
+// Partial dipakai untuk form "Tambah Rubrik" (rubrik = null) maupun form "Edit Rubrik"
+// (rubrik = data tersimpan). fid = id unik form ini di halaman (dipakai JS untuk scoping
+// add/remove kolom & baris supaya tidak tabrakan antar form rubrik lain di halaman yg sama).
+const defaultSkala = [
+  { skor: '4', label: '' },
+  { skor: '3', label: '' },
+  { skor: '2', label: '' },
+  { skor: '1', label: '' }
+];
+const skalaList = rubrik ? rubrik.skala : defaultSkala;
+const kriteriaList = rubrik && rubrik.kriteria.length ? rubrik.kriteria : [{ aspek: '', deskripsi: skalaList.map(() => '') }];
+%>
+<div data-form="<%= fid %>">
+    <div class="mb-4">
+        <label class="label">Nama Rubrik</label>
+        <input type="text" class="input rubrik-nama-input" name="nama"
+            value="<%= rubrik ? rubrik.nama : '' %>" placeholder="mis. Rubrik Penilaian Laporan Praktikum" required>
+    </div>
+
+    <div class="mb-4">
+        <div class="flex items-center justify-between mb-2">
+            <label class="label mb-0">Skala Skor</label>
+            <div class="flex gap-2">
+                <button type="button" class="btn-secondary px-3 py-1 rounded text-sm" data-remove-skala-btn onclick="removeLastSkalaColumn('<%= fid %>')">
+                    <i class="fas fa-minus mr-1"></i>Kolom
+                </button>
+                <button type="button" class="btn-primary px-3 py-1 rounded text-sm" onclick="addSkalaColumn('<%= fid %>')">
+                    <i class="fas fa-plus mr-1"></i>Kolom
+                </button>
+            </div>
+        </div>
+        <div class="rubrik-skala-row" data-skala-container>
+            <% skalaList.forEach(function (s) { %>
+                <div class="rubrik-skala-col">
+                    <label class="label text-xs">Skor</label>
+                    <input type="text" class="input rubrik-skor-input" value="<%= s.skor %>" placeholder="4">
+                    <label class="label text-xs">Label</label>
+                    <input type="text" class="input rubrik-label-input" value="<%= s.label %>" placeholder="Sangat Baik">
+                </div>
+            <% }); %>
+        </div>
+    </div>
+
+    <div class="mb-2">
+        <div class="flex items-center justify-between mb-2">
+            <label class="label mb-0">Kriteria / Aspek Penilaian</label>
+            <button type="button" class="btn-primary px-3 py-1 rounded text-sm" onclick="addKriteriaRow('<%= fid %>')">
+                <i class="fas fa-plus mr-1"></i>Kriteria
+            </button>
+        </div>
+        <div data-kriteria-container>
+            <% kriteriaList.forEach(function (kr) { %>
+                <div class="rubrik-kriteria-row">
+                    <div class="rubrik-kriteria-head">
+                        <label class="label text-xs">Aspek / Kriteria</label>
+                        <input type="text" class="input rubrik-aspek-input" value="<%= kr.aspek %>" placeholder="mis. Kelengkapan Jawaban">
+                        <button type="button" class="btn-danger px-3 py-1 rounded text-sm" onclick="removeKriteriaRow(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="rubrik-deskripsi-cells">
+                        <% skalaList.forEach(function (s, k) { %>
+                            <div class="rubrik-deskripsi-cell">
+                                <span class="rubrik-deskripsi-cell-label">Level ke-<%= k + 1 %></span>
+                                <textarea class="input rubrik-deskripsi-input" rows="3"
+                                    placeholder="Deskripsi kriteria pada level skor ini"><%= kr.deskripsi[k] || '' %></textarea>
+                            </div>
+                        <% }); %>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+    </div>
+</div>

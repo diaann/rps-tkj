@@ -29,9 +29,11 @@ app.use(session({
 const indexRouter = require('./routes/index');
 const exportRouter = require('./routes/export');
 const penilaianRouter = require('./routes/penilaian');
+const rubrikRouter = require('./routes/rubrik');
 app.use('/', indexRouter);
 app.use('/', exportRouter);
 app.use('/', penilaianRouter);
+app.use('/', rubrikRouter);
 
 
 // --- PERUBAHAN ADA DI BLOK DI BAWAH INI ---

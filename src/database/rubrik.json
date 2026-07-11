@@ -1,0 +1,55 @@
+[
+  {
+    "id": 1,
+    "rpsId": 49,
+    "nama": "RUBRIK PENILAIAN TUGAS TERTULIS",
+    "skala": [
+      {
+        "skor": "1",
+        "label": "Sangat Kurang"
+      },
+      {
+        "skor": "2",
+        "label": "Kurang"
+      },
+      {
+        "skor": "3",
+        "label": "Cukup"
+      },
+      {
+        "skor": "4",
+        "label": "Baik"
+      },
+      {
+        "skor": "5",
+        "label": "Sangat Baik"
+      }
+    ],
+    "kriteria": [
+      {
+        "aspek": "Kelengkapan Jawaban",
+        "deskripsi": [
+          "Peserta tidak mengidentifikasi istilah apa pun",
+          "Peserta hanya mengidentifikasi sedikit istilah.",
+          "Peserta hanya mengidentifikasi sedikit istilah.",
+          "Peserta berhasil mengidentifikasi dan mendefinisikan sebagian besar istilah",
+          "Peserta berhasil mengidentifikasi dan mendefinisikan semua istilah yang diberikan"
+        ]
+      },
+      {
+        "aspek": "Ketepatan Definisi",
+        "deskripsi": [
+          "Definisi sangat tidak akurat atau tidak relevan",
+          "Definisi kurang akurat dan mengandung banyak kesalahan",
+          "Definisi cukup akurat tetapi ada beberapa kesalahan kecil atau ketidakjelasan",
+          "Definisi akurat namun ada sedikit bagian yang kurang lengkap.",
+          "Definisi sangat akurat dan mencakup semua aspek penting dari istilah tersebut."
+        ]
+      }
+    ],
+    "created_at": "2026-07-11T04:37:55.260Z",
+    "created_by": 1,
+    "updated_at": "2026-07-11T04:37:55.260Z",
+    "updated_by": 1
+  }
+]
