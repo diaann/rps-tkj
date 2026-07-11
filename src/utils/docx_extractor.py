@@ -233,6 +233,22 @@ def extract_otorisasi_docx(rows):
 # "Pekan" + "Indikator" + "Teknik", lalu ambil semua baris data sesudahnya.
 # ---------------------------------------------------------------------------
 
+
+# Baris minggu evaluasi (UTS/UAS) biasanya cuma 1 sel gabungan memanjangi
+# hampir semua kolom (Sub-CPMK s/d Materi jadi satu), sisanya cuma kolom
+# Bobot yang beneran keisi angka -- baris ini TIDAK mewakili Sub-CPMK
+# manapun. Kalau tetap dimasukkan ke `weekly`, pemetaan index weekly[idx]
+# <-> subcpmk_list[idx] di bawah (extract()) jadi geser utk semua Sub-CPMK
+# SESUDAH minggu evaluasi ini -- bug yang bikin nilai bobot UTS/UAS nyasar
+# ke kolom Indikator Sub-CPMK berikutnya, sementara Teknik/Metode/Materi
+# Sub-CPMK itu jadi kosong (kehabisan kolom akibat sel yang ke-gabung).
+EVALUATION_WEEK_PATTERN = re.compile(
+    r"ujian\s+tengah\s+semester|ujian\s+akhir\s+semester|\bUTS\b|\bUAS\b|"
+    r"evaluasi\s+tengah\s+semester|evaluasi\s+akhir\s+semester",
+    re.I,
+)
+
+
 def extract_weekly_plan_docx(all_rows):
     weekly = []
     seen_header = False
@@ -264,6 +280,17 @@ def extract_weekly_plan_docx(all_rows):
         # akan bikin kolom-kolom sesudahnya ikut geser posisi.
         def get(i):
             return row[i] if i < len(row) else ""
+
+        # Lewati baris minggu evaluasi (UTS/UAS) -- lihat penjelasan di
+        # EVALUATION_WEEK_PATTERN di atas. SENGAJA cuma cek kolom Sub-CPMK
+        # (get(1)), BUKAN seluruh baris -- soalnya minggu ajar biasa juga
+        # sering menyebut "UTS (5%)" sebagai salah satu komponen bobot di
+        # kolom Teknik & Kriteria Penilaian (get(3)); kalau ikut dicek di
+        # situ, minggu ajar biasa itu keliru ikut ke-skip juga. Baris
+        # evaluasi asli isinya CUMA frasa evaluasi di kolom Sub-CPMK
+        # (sel gabungan), tidak ada deskripsi capaian pembelajaran lain.
+        if EVALUATION_WEEK_PATTERN.search(get(1)):
+            continue
 
         pekan_awal = pekan_match.group(1)
         pekan_akhir = pekan_match.group(2) or pekan_awal
