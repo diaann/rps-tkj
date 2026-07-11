@@ -71,12 +71,53 @@ def pad_code(prefix, number):
     return f"{prefix}{integer_part}{decimal_part}"
 
 
-def extract_cp_tree(all_tables):
+def find_authoritative_subcpmk_owners(all_tables):
+    """Kalau ada SATU SEL yang menuliskan kombinasi eksplisit "CPMK<kode>,
+    Sub-CPMK<n>" bersamaan (mis. pada tabel Rencana Pembelajaran Mingguan:
+    "CPL6, CPMK06.1, Sub-CPMK1: Mampu ..."), pemetaan itu TIDAK ambigu --
+    dipakai sbg rujukan utk mengoreksi tebakan posisi pada baris ringkasan
+    "CPMK ⇒ Sub-CPMK" yang sel kode CPMK & Sub-CPMK-nya sama-sama tergabung
+    (vertical merge di Word jadi 1 sel per kolom, memuat banyak kode/Sub-CPMK
+    sekaligus) -- di baris ringkasan itu urutan CPMK vs Sub-CPMK sudah tidak
+    lagi berkorespondensi 1-ke-1 begitu ada CPMK yang menaungi lebih/kurang
+    dari 1 Sub-CPMK, jadi tebakan posisi gampang salah (lihat pemakainya di
+    bawah). SENGAJA dicek per SEL individual (bukan gabungan satu baris),
+    supaya kode CPMK terakhir pada baris ringkasan tsb -- yang di teks
+    gabungan satu baris kebetulan "menempel" persis di depan Sub-CPMK
+    PERTAMA (krn 2 sel berbeda yang digabung jadi satu string) -- tidak ikut
+    kebaca seolah itu pasangan asli.
+    """
+    owners = {}
+    pattern = re.compile(r"CPMK\s*0*(\d+(?:\.\d+)?)\D{0,20}?Sub[\s\-]*CPMK\s*0*(\d+)\b", re.I | re.S)
+    for table in all_tables:
+        for row in table:
+            for cell in row:
+                if not cell:
+                    continue
+                for m in pattern.finditer(cell):
+                    cpmk_id = pad_code("CPMK", m.group(1))
+                    sub_num = int(m.group(2))
+                    owners.setdefault(sub_num, cpmk_id)
+    return owners
+
+
+def extract_cp_tree(all_tables, authoritative_owners=None):
     """
     Menyusuri baris-baris tabel (semua halaman) dan membangun pohon
     CPL -> CPMK -> Sub-CPMK berdasarkan kode yang terdeteksi di kolom kiri
     tiap baris tabel, dipasangkan dengan teks deskripsi di kolom kanannya.
+
+    authoritative_owners: dict {sub_num: cpmk_id} hasil
+    find_authoritative_subcpmk_owners(), IDEALNYA dihitung oleh pemanggil
+    dari rentang baris yang LEBIH LUAS daripada `all_tables` (mis. termasuk
+    tabel Rencana Pembelajaran Mingguan yang seringkali sudah dipotong/tidak
+    ikut disertakan di `all_tables` karena beririsan dengan section "Korelasi
+    antara CP dan Asesmen"). Kalau tidak diberikan, dihitung sendiri dari
+    `all_tables` saja sebagai fallback (lebih terbatas cakupannya).
     """
+    if authoritative_owners is None:
+        authoritative_owners = find_authoritative_subcpmk_owners(all_tables)
+
     cpl_desc = {}
     cpl_order = []
     cpmk_map = {}
@@ -312,10 +353,19 @@ def extract_cp_tree(all_tables):
                 for i, sub_match in enumerate(sub_matches):
                     sub_num = int(sub_match.group(1))
                     desc = clean(sub_match.group(2))
-                    # Pemetaan Sub-CPMK ke CPMK: berpasangan urut kalau jumlahnya
-                    # sama; kalau Sub-CPMK lebih banyak, sisanya ikut kode CPMK
-                    # terakhir dalam tumpukan (pola paling umum pada template RPS).
-                    owner = cpmk_tokens[i] if i < len(cpmk_tokens) else cpmk_tokens[-1]
+                    # Prioritaskan pemetaan tak-ambigu dari
+                    # find_authoritative_subcpmk_owners (mis. baris Rencana
+                    # Pembelajaran Mingguan yang eksplisit menulis "CPMKx,
+                    # Sub-CPMKy" bersamaan) kalau tersedia. BARU kalau tidak
+                    # ada rujukan sama sekali, jatuh ke tebakan posisi
+                    # berpasangan urut (indeks ke-i Sub-CPMK <-> indeks ke-i
+                    # CPMK; sisa yang kelebihan ikut kode CPMK terakhir) --
+                    # tebakan ini SERING SALAH begitu satu CPMK menaungi
+                    # jumlah Sub-CPMK yang tidak rata, jadi cuma dipakai
+                    # sebagai upaya terakhir.
+                    owner = authoritative_owners.get(sub_num) or (
+                        cpmk_tokens[i] if i < len(cpmk_tokens) else cpmk_tokens[-1]
+                    )
                     sub_key = (owner, sub_num)
                     if sub_key not in subcpmk_map:
                         subcpmk_order.append(sub_key)
@@ -467,6 +517,23 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                 # baris data tidak disangka baris header lain (bug yang
                 # sempat kejadian: pending_header tidak pernah ke-commit
                 # karena baris data terus dianggap header baru).
+                #
+                # Kasus serupa yang TIDAK tertangkap exclusion "angka%" di atas:
+                # sel data naratif tanpa angka sama sekali, mis. kolom "Bentuk
+                # dan Metode Pembelajaran" berisi "BP: Praktikum, Seminar\nMP:
+                # Demonstrasi, Diskusi, PBL", atau kolom Formatif berisi
+                # "Partisipasi, Tanya Jawab, Kuis" -- keduanya kebetulan
+                # menyebut kata kunci ("Praktikum"/"PBL"/"Kuis") tapi jelas
+                # BUKAN label kolom (label kolom asli selalu 1 kata/frasa
+                # pendek tanpa koma ataupun baris baru, mis. "PjBL", "Kuis",
+                # "Tes Tertulis"). Tanpa exclusion ini, SETIAP baris data pada
+                # tabel Korelasi (bukan cuma 1 baris) ikut lolos jadi kandidat
+                # header baru silih berganti -- baris data TERAKHIR yang
+                # kebetulan lolos jadi pending_header yang ke-commit, bukan
+                # baris header sungguhan -- sehingga SEMUA baris data asli
+                # (Sub-CPMK & bobot PjBL/Kuis/Presentasi-nya) hilang total,
+                # dianggap header dan dibuang (bug nyata: RPS "-Pulung" yang
+                # bobot Sumatif-nya ketuker/nyasar jadi teks mentah di Formatif).
                 hits = [
                     (i, c) for i, c in enumerate(display_cells)
                     if c and re.search(
@@ -477,6 +544,8 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                     )
                     and not re.search(r"formatif|sumatif|bentuk\s+asesmen", c, re.I)
                     and not re.search(r"\d\s*%", c)
+                    and "\n" not in c
+                    and "," not in c
                 ]
                 is_header_candidate = formatif_hit is not None or len(hits) >= 2
                 if is_header_candidate:

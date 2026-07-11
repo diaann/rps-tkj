@@ -40,6 +40,7 @@ from rps_common import (
     clean,
     clean_multiline,
     extract_cp_tree,
+    find_authoritative_subcpmk_owners,
     extract_assessment_rows,
     extract_narrative_sections,
     parse_embedded_assessment,
@@ -117,6 +118,45 @@ def find_identity_table_index(tables_as_rows):
 # tebak dari geometri kata seperti di PDF), karena strukturnya eksplisit.
 # ---------------------------------------------------------------------------
 
+ROMAN_NUMERAL_VALUES = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
+
+
+def roman_to_int(text):
+    """Konversi angka romawi (mis. "IV", "VIII") ke integer. Sebagian
+    dokumen RPS menulis kolom Semester pakai angka romawi, bukan angka biasa
+    -- return None kalau teksnya bukan angka romawi yang valid, supaya
+    pemanggilnya bisa lanjut coba pola lain / anggap tidak terdeteksi."""
+    s = text.strip().upper()
+    if not s or not re.fullmatch(r"[IVXLCDM]+", s):
+        return None
+    total = 0
+    prev_value = 0
+    for ch in reversed(s):
+        value = ROMAN_NUMERAL_VALUES[ch]
+        if value < prev_value:
+            total -= value
+        else:
+            total += value
+            prev_value = value
+    # Validasi longgar: render ulang & bandingkan, supaya string acak yang
+    # kebetulan tersusun dari huruf romawi valid (mis. salah ketik "IIII")
+    # tidak lolos jadi angka semester yang aneh kalau tidak dalam rentang wajar.
+    return total if 1 <= total <= 14 else None
+
+
+def parse_semester_value(text):
+    """Kembalikan nomor semester (string angka) dari SATU sel, menerima baik
+    format angka biasa ("4") maupun angka romawi ("IV") -- beberapa template
+    RPS menulis semester dengan angka romawi."""
+    c_clean = text.strip()
+    if re.fullmatch(r"\d{1,2}", c_clean):
+        return c_clean
+    roman_value = roman_to_int(c_clean)
+    if roman_value is not None:
+        return str(roman_value)
+    return None
+
+
 def extract_identity_docx(rows):
     header_idx = None
     for i, row in enumerate(rows):
@@ -160,9 +200,11 @@ def extract_identity_docx(rows):
             continue
         if re.fullmatch(r"T\s*[=:]?\s*\d*", c_clean, re.I) or re.fullmatch(r"P\s*[=:]?\s*\d*", c_clean, re.I):
             continue
-        if not semester and re.fullmatch(r"\d{1,2}", c_clean):
-            semester = c_clean
-            continue
+        if not semester:
+            semester_value = parse_semester_value(c_clean)
+            if semester_value is not None:
+                semester = semester_value
+                continue
         if re.search(r"\d{4}", c_clean) or re.search(
             r"(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember|"
             r"january|february|march|may|june|july|august|october|december)",
@@ -425,7 +467,16 @@ def extract(docx_path):
             cp_rows_stripped.append(row)
 
     cp_all_tables = [cp_rows_stripped] + nested_tables_rows
-    cpl_list, cpmk_list, subcpmk_list = extract_cp_tree(cp_all_tables)
+    # PENTING: pemetaan "CPMKx, Sub-CPMKy" yang tak-ambigu (dipakai utk
+    # mengoreksi tebakan posisi saat kode CPMK & Sub-CPMK sama-sama tergabung
+    # jadi 1 sel ringkasan) HARUS dicari di `combined_rows` yang lebih luas,
+    # BUKAN di `cp_rows_raw`/`cp_all_tables` saja -- tabel Rencana
+    # Pembelajaran Mingguan (tempat pemetaan eksplisit itu biasanya ada)
+    # seringkali sudah terpotong dari `cp_rows_raw` begitu ketemu section
+    # "Korelasi antara CP dan Asesmen", padahal tabel mingguannya sendiri
+    # baru muncul beberapa baris SESUDAH itu.
+    authoritative_owners = find_authoritative_subcpmk_owners([combined_rows] + nested_tables_rows)
+    cpl_list, cpmk_list, subcpmk_list = extract_cp_tree(cp_all_tables, authoritative_owners=authoritative_owners)
 
     # "weekly" dihitung DI SINI (lebih awal dari sebelumnya) karena dipakai
     # juga sebagai fallback Formatif/Sumatif di bawah -- lihat catatan di situ.

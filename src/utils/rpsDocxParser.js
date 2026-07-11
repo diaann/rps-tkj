@@ -359,9 +359,23 @@ function buildRpsObjectFromExtraction(extraction, options = {}) {
     rpsData.extraction_notes.push('Rencana pembelajaran mingguan tidak terdeteksi jelas dari dokumen (format tabel mingguan bisa berbeda-beda antar template). Silakan lengkapi lewat Edit RPS.');
   }
 
+  // PENTING: ID CPMK internal HARUS selalu format sekuensial "CPMKxx" (dua
+  // digit), berapa pun/apa pun format penomoran ASLI di dokumen sumber --
+  // sebagian RPS menomori CPMK mengikuti CPL yang menaunginya, mis. "CPMK06.4"
+  // (CPMK ke-4 di bawah CPL06), bukan "CPMK1, CPMK2, ...". Kalau id mentah ini
+  // dipakai apa adanya sebagai key, SELURUH bagian lain sistem (tampilan RPS,
+  // form edit, export Word, tabel penilaian) yang mencocokkan key pakai regex
+  // /^CPMK\d+$/ akan gagal cocok gara-gara tanda titik di id -- datanya ada di
+  // rps.json tapi dianggap tidak ada sama sekali di semua fitur tsb. Jadi di
+  // sini ID mentah dari dokumen HANYA dipakai sebagai kunci pemetaan
+  // sementara (cpmkIdMap) utk menyambungkan Sub-CPMK ke CPMK induknya yang
+  // benar; teks penomoran aslinya sendiri tetap utuh di dalam field deskripsi
+  // CPMK, jadi tidak ada informasi yang hilang.
   const cpmkCplMap = {};
+  const cpmkIdMap = {};
   cpmks.forEach((cpmk, idx) => {
-    const cpmkId = cpmk.id || padCode('CPMK', idx + 1);
+    const cpmkId = padCode('CPMK', idx + 1);
+    if (cpmk.id) cpmkIdMap[cpmk.id] = cpmkId;
     const cplCode = cpmk.cpl_code || cplList[0] || '';
     rpsData[`cpmk[${cpmkId}][cpl_code]`] = cplCode;
     rpsData[`cpmk[${cpmkId}][cpl_description]`] = cpmk.cpl_description || cplDescriptions[cplCode] || '';
@@ -369,9 +383,10 @@ function buildRpsObjectFromExtraction(extraction, options = {}) {
     cpmkCplMap[cpmkId] = cplCode;
   });
 
+  const defaultCpmkId = padCode('CPMK', 1) || 'CPMK01';
   const localCounters = {};
   subCpmks.forEach(sub => {
-    const cpmkId = sub.cpmk_id || (cpmks[0] && cpmks[0].id) || 'CPMK01';
+    const cpmkId = cpmkIdMap[sub.cpmk_id] || defaultCpmkId;
     localCounters[cpmkId] = (localCounters[cpmkId] || 0) + 1;
     const localIndex = localCounters[cpmkId];
     const weekDetail = weekly[(sub.globalSubNumber || localIndex) - 1] || null;

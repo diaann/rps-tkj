@@ -16,30 +16,6 @@
     "status": "active"
   },
   {
-    "id": 3,
-    "email": "saya@a.a",
-    "username": "saya",
-    "password": "123",
-    "role": "dosen",
-    "status": "active"
-  },
-  {
-    "id": 4,
-    "email": "a@a.a",
-    "username": "a",
-    "password": "a",
-    "role": "dosen",
-    "status": "active"
-  },
-  {
-    "id": 5,
-    "email": "aa@a.a",
-    "username": "a",
-    "password": "a",
-    "role": "dosen",
-    "status": "active"
-  },
-  {
     "id": 6,
     "email": "raihani@apa.com",
     "username": "Raihani",
@@ -54,13 +30,5 @@
     "password": "dian",
     "role": "dosen",
     "status": "active"
-  },
-  {
-    "id": 8,
-    "email": "coba@gmail.com",
-    "username": "Coba Coba .,12",
-    "password": "coba",
-    "role": "dosen",
-    "status": "pending"
   }
 ]
