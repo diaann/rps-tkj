@@ -6,7 +6,7 @@ function lainnyaRowHtml(nama, bobot) {
     return `
         <div class="flex gap-1 items-center lainnya-row mb-1">
             <input type="text" class="input lainnya-nama" placeholder="Nama, contoh: Praktik / Studi Kasus" value="${nama || ''}" oninput="window.syncLainnyaRow(this)">
-            <input type="number" min="0" max="100" class="input lainnya-bobot" style="max-width: 90px;" placeholder="Bobot (%)" value="${bobot || ''}" oninput="window.syncLainnyaRow(this)">
+            <input type="text" inputmode="decimal" class="input lainnya-bobot bobot-input" style="max-width: 90px;" placeholder="Bobot (%)" value="${window.bobotVal(bobot)}" oninput="window.syncLainnyaRow(this)">
             <button type="button" class="btn-danger text-xs" onclick="window.removeLainnyaRow(this)">&times;</button>
         </div>
     `;
@@ -421,14 +421,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div>
                         <label class="label">Bobot Penilaian (%)</label>
-                        <input class="input" name="sub_cpmk[${cpmkId}][${index}][bobot]" type="number" min="0" max="100" step="0.01" value="${data.bobot || ''}" required>
+                        <input class="input bobot-input" name="sub_cpmk[${cpmkId}][${index}][bobot]" type="text" inputmode="decimal" value="${window.bobotVal(data.bobot)}" required>
                     </div>
                     <div class="md:col-span-2 border rounded p-3 bg-gray-50">
                         <label class="label">Bentuk Asesmen</label>
                         <div class="mb-3">
                             <p class="text-xs font-semibold text-gray-600 mb-1">Formatif</p>
                             <input type="text" class="input mb-1" name="sub_cpmk[${cpmkId}][${index}][formatif_nama]" placeholder="Nama asesmen, contoh: Partisipasi dan Tanya jawab" value="${data.formatif_nama || ''}">
-                            <input type="number" min="0" max="100" class="input" name="sub_cpmk[${cpmkId}][${index}][formatif_bobot]" placeholder="Bobot (%) -- opsional" value="${data.formatif_bobot || ''}">
+                            <input type="text" inputmode="decimal" class="input bobot-input" name="sub_cpmk[${cpmkId}][${index}][formatif_bobot]" placeholder="Bobot (%) -- opsional" value="${window.bobotVal(data.formatif_bobot)}">
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-gray-600 mb-1">Sumatif</p>
@@ -436,27 +436,27 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div>
                                     <label class="block text-gray-600 text-xs mb-1">Kuis</label>
                                     <input type="text" class="input mb-1" name="sub_cpmk[${cpmkId}][${index}][sumatif_kuis_nama]" placeholder="Nama, contoh: Kuis 1" value="${data.sumatif_kuis_nama || ''}">
-                                    <input type="number" min="0" max="100" class="input" name="sub_cpmk[${cpmkId}][${index}][sumatif_kuis_bobot]" placeholder="Bobot (%)" value="${data.sumatif_kuis_bobot || ''}">
+                                    <input type="text" inputmode="decimal" class="input bobot-input" name="sub_cpmk[${cpmkId}][${index}][sumatif_kuis_bobot]" placeholder="Bobot (%)" value="${window.bobotVal(data.sumatif_kuis_bobot)}">
                                 </div>
                                 <div>
                                     <label class="block text-gray-600 text-xs mb-1">Tugas</label>
                                     <input type="text" class="input mb-1" name="sub_cpmk[${cpmkId}][${index}][sumatif_tugas_nama]" placeholder="Nama, contoh: Laporan Singkat 1" value="${data.sumatif_tugas_nama || ''}">
-                                    <input type="number" min="0" max="100" class="input" name="sub_cpmk[${cpmkId}][${index}][sumatif_tugas_bobot]" placeholder="Bobot (%)" value="${data.sumatif_tugas_bobot || ''}">
+                                    <input type="text" inputmode="decimal" class="input bobot-input" name="sub_cpmk[${cpmkId}][${index}][sumatif_tugas_bobot]" placeholder="Bobot (%)" value="${window.bobotVal(data.sumatif_tugas_bobot)}">
                                 </div>
                                 <div>
                                     <label class="block text-gray-600 text-xs mb-1">Ujian</label>
                                     <input type="text" class="input mb-1" name="sub_cpmk[${cpmkId}][${index}][sumatif_ujian_nama]" placeholder="Nama, contoh: UTS" value="${data.sumatif_ujian_nama || ''}">
-                                    <input type="number" min="0" max="100" class="input" name="sub_cpmk[${cpmkId}][${index}][sumatif_ujian_bobot]" placeholder="Bobot (%)" value="${data.sumatif_ujian_bobot || ''}">
+                                    <input type="text" inputmode="decimal" class="input bobot-input" name="sub_cpmk[${cpmkId}][${index}][sumatif_ujian_bobot]" placeholder="Bobot (%)" value="${window.bobotVal(data.sumatif_ujian_bobot)}">
                                 </div>
                                 <div>
                                     <label class="block text-gray-600 text-xs mb-1">PjBL</label>
                                     <input type="text" class="input mb-1" name="sub_cpmk[${cpmkId}][${index}][sumatif_pjbl_nama]" placeholder="Nama, contoh: PjBL 1" value="${data.sumatif_pjbl_nama || ''}">
-                                    <input type="number" min="0" max="100" class="input" name="sub_cpmk[${cpmkId}][${index}][sumatif_pjbl_bobot]" placeholder="Bobot (%)" value="${data.sumatif_pjbl_bobot || ''}">
+                                    <input type="text" inputmode="decimal" class="input bobot-input" name="sub_cpmk[${cpmkId}][${index}][sumatif_pjbl_bobot]" placeholder="Bobot (%)" value="${window.bobotVal(data.sumatif_pjbl_bobot)}">
                                 </div>
                                 <div>
                                     <label class="block text-gray-600 text-xs mb-1">Presentasi</label>
                                     <input type="text" class="input mb-1" name="sub_cpmk[${cpmkId}][${index}][sumatif_presentasi_nama]" placeholder="Nama, contoh: Presentasi 1" value="${data.sumatif_presentasi_nama || ''}">
-                                    <input type="number" min="0" max="100" class="input" name="sub_cpmk[${cpmkId}][${index}][sumatif_presentasi_bobot]" placeholder="Bobot (%)" value="${data.sumatif_presentasi_bobot || ''}">
+                                    <input type="text" inputmode="decimal" class="input bobot-input" name="sub_cpmk[${cpmkId}][${index}][sumatif_presentasi_bobot]" placeholder="Bobot (%)" value="${window.bobotVal(data.sumatif_presentasi_bobot)}">
                                 </div>
                             </div>
                             ${createLainnyaHtml(cpmkId, index, data)}
@@ -498,6 +498,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function validateEditRpsStructure(form) {
         if (!form) return false;
         if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
+            return false;
+        }
+        if (typeof window.validateBobotInputs === 'function' && !window.validateBobotInputs(form)) {
             return false;
         }
 

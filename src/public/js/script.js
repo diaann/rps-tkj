@@ -20,6 +20,68 @@ const steps = document.querySelectorAll('.step');
 let cpmkCounter = 0;
 let subCpmkCounter = 0;
 
+// Input bobot asesmen menerima koma maupun titik sebagai pemisah desimal
+// (banyak dosen terbiasa menulis "4,5" ala format Indonesia). Field-nya
+// bertipe text (bukan number) supaya browser tidak menolak koma sebelum
+// sempat dinormalisasi di sini, lalu disamakan ke titik saat disimpan.
+if (!window.__bobotHelpersInstalled) {
+    window.__bobotHelpersInstalled = true;
+
+    window.bobotVal = function(v) {
+        if (v === undefined || v === null) return '';
+        return String(v).trim().replace(/,/g, '.');
+    };
+
+    window.isValidBobotValue = function(value) {
+        const trimmed = (value || '').toString().trim();
+        if (trimmed === '') return true; // opsional, required dicek terpisah
+        const num = Number(trimmed);
+        return !Number.isNaN(num) && num >= 0 && num <= 100;
+    };
+
+    // Normalisasi ketikan koma->titik secara real-time untuk semua input
+    // ".bobot-input", termasuk yang dibuat belakangan lewat innerHTML.
+    document.addEventListener('input', function(e) {
+        const el = e.target;
+        if (!el.classList || !el.classList.contains('bobot-input')) return;
+        const before = el.value;
+        let value = before.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+        const firstDot = value.indexOf('.');
+        if (firstDot !== -1) {
+            value = value.slice(0, firstDot + 1) + value.slice(firstDot + 1).replace(/\./g, '');
+        }
+        if (value !== before) {
+            const pos = el.selectionStart || value.length;
+            el.value = value;
+            const newPos = Math.max(0, pos - (before.length - value.length));
+            try { el.setSelectionRange(newPos, newPos); } catch (err) { /* ignore */ }
+        }
+    });
+
+    window.validateBobotInputs = function(form) {
+        const inputs = form.querySelectorAll('.bobot-input');
+        for (const input of inputs) {
+            if (!window.isValidBobotValue(input.value)) {
+                if (typeof input.scrollIntoView === 'function') {
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                input.focus();
+                alert('Bobot asesmen harus berupa angka 0-100 (boleh pakai koma atau titik untuk desimal, contoh: 4,5 atau 4.5).');
+                return false;
+            }
+            if (input.hasAttribute('required') && input.value.trim() === '') {
+                if (typeof input.scrollIntoView === 'function') {
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                input.focus();
+                alert('Mohon isi Bobot Penilaian sebelum menyimpan.');
+                return false;
+            }
+        }
+        return true;
+    };
+}
+
 // Fungsi global untuk daftar dinamis "Lainnya" (Bentuk Asesmen Sumatif).
 // Sama persis dengan versi di edit-rps.js (dipertahankan di kedua file
 // karena script.js dimuat di semua halaman lewat partials/footer.ejs,
@@ -29,7 +91,7 @@ if (typeof window.addLainnyaRow !== 'function') {
         return `
             <div class="flex gap-1 items-center lainnya-row mb-1">
                 <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 lainnya-nama" placeholder="Nama, contoh: Praktik / Studi Kasus" value="${nama || ''}" oninput="window.syncLainnyaRow(this)">
-                <input type="number" min="0" max="100" class="shadow appearance-none border rounded py-2 px-3 text-gray-700 lainnya-bobot" style="max-width: 110px;" placeholder="Bobot (%)" value="${bobot || ''}" oninput="window.syncLainnyaRow(this)">
+                <input type="text" inputmode="decimal" class="shadow appearance-none border rounded py-2 px-3 text-gray-700 lainnya-bobot bobot-input" style="max-width: 110px;" placeholder="Bobot (%)" value="${window.bobotVal(bobot)}" oninput="window.syncLainnyaRow(this)">
                 <button type="button" class="text-red-600 text-xs px-2" onclick="window.removeLainnyaRow(this)">&times;</button>
             </div>
         `;
@@ -1016,6 +1078,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
                 }
+                if (!window.validateBobotInputs(rpsForm)) {
+                    e.preventDefault();
+                    return;
+                }
             } catch (err) {
                 // If validator throws, block submission and surface error
                 e.preventDefault();
@@ -1514,7 +1580,7 @@ function addSubCPMK(cpmkId, predefinedIndex = null) {
                 </div>
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Bobot Penilaian (%)</label>
-                    <input type="number" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" min="0" max="100" step="0.01" name="sub_cpmk[${cpmkId}][${nextIndex}][bobot]" required>
+                    <input type="text" inputmode="decimal" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bobot-input" name="sub_cpmk[${cpmkId}][${nextIndex}][bobot]" required>
                 </div>
                 <div class="md:col-span-2 border rounded p-3 bg-gray-50">
                     <label class="block text-gray-700 text-sm font-bold mb-2">Bentuk Asesmen</label>
@@ -1528,27 +1594,27 @@ function addSubCPMK(cpmkId, predefinedIndex = null) {
                             <div>
                                 <label class="block text-gray-600 text-xs mb-1">Kuis</label>
                                 <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-1" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_kuis_nama]" placeholder="Nama, contoh: Kuis 1">
-                                <input type="number" min="0" max="100" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_kuis_bobot]" placeholder="Bobot (%)">
+                                <input type="text" inputmode="decimal" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bobot-input" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_kuis_bobot]" placeholder="Bobot (%)">
                             </div>
                             <div>
                                 <label class="block text-gray-600 text-xs mb-1">Tugas</label>
                                 <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-1" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_tugas_nama]" placeholder="Nama, contoh: Laporan Singkat 1">
-                                <input type="number" min="0" max="100" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_tugas_bobot]" placeholder="Bobot (%)">
+                                <input type="text" inputmode="decimal" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bobot-input" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_tugas_bobot]" placeholder="Bobot (%)">
                             </div>
                             <div>
                                 <label class="block text-gray-600 text-xs mb-1">Ujian</label>
                                 <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-1" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_ujian_nama]" placeholder="Nama, contoh: UTS">
-                                <input type="number" min="0" max="100" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_ujian_bobot]" placeholder="Bobot (%)">
+                                <input type="text" inputmode="decimal" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bobot-input" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_ujian_bobot]" placeholder="Bobot (%)">
                             </div>
                             <div>
                                 <label class="block text-gray-600 text-xs mb-1">PjBL</label>
                                 <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-1" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_pjbl_nama]" placeholder="Nama, contoh: PjBL 1">
-                                <input type="number" min="0" max="100" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_pjbl_bobot]" placeholder="Bobot (%)">
+                                <input type="text" inputmode="decimal" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bobot-input" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_pjbl_bobot]" placeholder="Bobot (%)">
                             </div>
                             <div>
                                 <label class="block text-gray-600 text-xs mb-1">Presentasi</label>
                                 <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-1" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_presentasi_nama]" placeholder="Nama, contoh: Presentasi 1">
-                                <input type="number" min="0" max="100" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_presentasi_bobot]" placeholder="Bobot (%)">
+                                <input type="text" inputmode="decimal" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bobot-input" name="sub_cpmk[${cpmkId}][${nextIndex}][sumatif_presentasi_bobot]" placeholder="Bobot (%)">
                             </div>
                         </div>
                         <div class="lainnya-wrapper mt-3">
