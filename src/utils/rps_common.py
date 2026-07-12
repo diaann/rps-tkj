@@ -528,10 +528,14 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                         entry["formatif"] = raw_formatif
             if bp_mp_idx is not None and bp_mp_idx < len(display_cells) and display_cells[bp_mp_idx]:
                 bp_mp_text = display_cells[bp_mp_idx]
-                bp_match = re.search(r"BP\s*:?\s*(.*?)(?=(?:[,;\n]\s*)?MP\s*:|$)", bp_mp_text, re.I | re.S)
-                mp_match = re.search(r"MP\s*:?\s*(.*)", bp_mp_text, re.I | re.S)
-                bentuk = clean(bp_match.group(1)) if bp_match else ""
-                metode = clean(mp_match.group(1)) if mp_match else ""
+                # BP: dan MP: bisa muncul dgn urutan bebas (ada dokumen yg nulis "MP: ... BP: ..."),
+                # jadi kedua regex musti punya lookahead simetris biar masing2 berhenti pas ketemu
+                # penanda satunya, bukan "nyerobot" isi bagian lain (dulu mp_match nyerobot smp akhir
+                # teks & ikut makan "BP: ..." kalau BP-nya muncul belakangan).
+                bp_match = re.search(r"BP\s*:?\s*(.*?)(?=(?:[,;/\n]\s*)?MP\s*:|$)", bp_mp_text, re.I | re.S)
+                mp_match = re.search(r"MP\s*:?\s*(.*?)(?=(?:[,;/\n]\s*)?BP\s*:|$)", bp_mp_text, re.I | re.S)
+                bentuk = clean(bp_match.group(1)).strip(" ,;/-") if bp_match else ""
+                metode = clean(mp_match.group(1)).strip(" ,;/-") if mp_match else ""
                 if bentuk:
                     entry["bentuk_pembelajaran"] = bentuk
                 if metode:
@@ -594,9 +598,13 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                         })
 
             # bobot total = sel numerik TERAKHIR yg keisi (bukan cells[-1] literal,
-            # suka ada sel kosong nyangkut di ekor baris)
+            # suka ada sel kosong nyangkut di ekor baris). dibatasi mulai setelah kolom
+            # bp_mp_idx biar ga ketuker sama sel angka polos di kolom identitas
+            # (CP L/CPMK/Sub-CPMK) - itu suka ikut "nempel" di baris merged-cell sisa
+            # yg sel datanya sendiri kosong semua, jadinya bobot malah kebaca "03" dst.
+            bobot_search_start = (bp_mp_idx + 1) if bp_mp_idx is not None else 0
             trailing_numeric = next(
-                (m.group(1) for c in reversed(display_cells)
+                (m.group(1) for idx, c in reversed(list(enumerate(display_cells))) if idx >= bobot_search_start
                 for m in [re.fullmatch(r"(\d{1,3}(?:[.,]\d+)?)\s*%?", c.strip())] if m),
                 None
             )
