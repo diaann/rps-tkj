@@ -6,6 +6,7 @@ const path = require('path');
 const rpsPath = path.join(__dirname, '..', 'database', 'rps.json');
 const rubrikPath = path.join(__dirname, '..', 'database', 'rubrik.json');
 
+// Baca file JSON. Kalau belum ada/rusak, pakai nilai default (fallbackValue).
 function readJsonFile(filePath, fallbackValue) {
   try {
     if (!fs.existsSync(filePath)) {
@@ -23,10 +24,12 @@ function readJsonFile(filePath, fallbackValue) {
   }
 }
 
+// Tulis data (array/object) ke file JSON.
 function writeJsonFile(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 
+// Middleware: tolak akses kalau belum login, lempar ke halaman login.
 function isAuthenticated(req, res, next) {
   if (req.session.user) {
     return next();
@@ -34,6 +37,7 @@ function isAuthenticated(req, res, next) {
   res.redirect('/login');
 }
 
+// Cek apakah user yang login boleh buka RPS ini: admin bebas, dosen cuma boleh RPS miliknya sendiri.
 function canAccessRps(req, rpsItem) {
   if (!rpsItem) return false;
   if (req.session.user.role === 'admin') return true;
@@ -44,9 +48,11 @@ function canAccessRps(req, rpsItem) {
 // kriteria[0][aspek], kriteria[0][deskripsi][0], ...) -- indeksnya sudah
 // dirapikan ulang oleh JS di client (lihat reindexRubrikForm) sebelum submit,
 // jadi di sini tinggal baca berurutan sampai key-nya tidak ada lagi.
+// Ubah data form (field skala[0][skor], kriteria[0][aspek], dst) jadi objek rubrik yang rapi.
 function parseRubrikForm(body) {
   const nama = (body.nama || '').trim();
 
+  // Baca kolom Skala Skor satu-satu (skala[0], skala[1], ...) sampai kehabisan.
   const skala = [];
   let j = 0;
   while (body[`skala[${j}][skor]`] !== undefined) {
@@ -56,6 +62,7 @@ function parseRubrikForm(body) {
     j++;
   }
 
+  // Baca baris Kriteria satu-satu, tiap baris punya 1 deskripsi per kolom skala.
   const kriteria = [];
   let i = 0;
   while (body[`kriteria[${i}][aspek]`] !== undefined) {
@@ -73,6 +80,7 @@ function parseRubrikForm(body) {
 
 // Step 1: pilih semester + mata kuliah (satu halaman, dropdown beranting via JS,
 // pola yang sama seperti /penilaian).
+// Halaman 1: pilih semester lalu mata kuliah (dropdown-nya diisi/difilter di JS sisi klien).
 router.get('/rubrik', isAuthenticated, (req, res) => {
   const rps = readJsonFile(rpsPath, []);
   let accessibleRps = rps;
@@ -97,6 +105,7 @@ router.get('/rubrik', isAuthenticated, (req, res) => {
 });
 
 // Step 2: halaman utama rubrik untuk satu RPS -- tab per rubrik + form tambah/edit/hapus.
+// Halaman 2: daftar rubrik (tab per rubrik) untuk 1 mata kuliah + form tambah/edit.
 router.get('/rubrik/mk/:rpsId', isAuthenticated, (req, res) => {
   const rps = readJsonFile(rpsPath, []);
   const item = rps.find(r => String(r.id) === String(req.params.rpsId));
@@ -118,7 +127,7 @@ router.get('/rubrik/mk/:rpsId', isAuthenticated, (req, res) => {
   });
 });
 
-// Tambah rubrik baru
+// Simpan rubrik baru ke rubrik.json (tolak kalau nama/skala/kriteria masih kosong).
 router.post('/rubrik/mk/:rpsId/add', isAuthenticated, (req, res) => {
   const rps = readJsonFile(rpsPath, []);
   const item = rps.find(r => String(r.id) === String(req.params.rpsId));
@@ -150,7 +159,7 @@ router.post('/rubrik/mk/:rpsId/add', isAuthenticated, (req, res) => {
   res.redirect(`/rubrik/mk/${item.id}?saved=1`);
 });
 
-// Edit rubrik
+// Timpa isi rubrik yang sudah ada dengan data form terbaru.
 router.post('/rubrik/mk/:rpsId/:rubrikId/edit', isAuthenticated, (req, res) => {
   const rps = readJsonFile(rpsPath, []);
   const item = rps.find(r => String(r.id) === String(req.params.rpsId));
@@ -183,7 +192,7 @@ router.post('/rubrik/mk/:rpsId/:rubrikId/edit', isAuthenticated, (req, res) => {
   res.redirect(`/rubrik/mk/${item.id}?saved=1`);
 });
 
-// Hapus rubrik
+// Hapus satu rubrik dari daftar.
 router.post('/rubrik/mk/:rpsId/:rubrikId/delete', isAuthenticated, (req, res) => {
   const rps = readJsonFile(rpsPath, []);
   const item = rps.find(r => String(r.id) === String(req.params.rpsId));

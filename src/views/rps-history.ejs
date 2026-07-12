@@ -190,6 +190,7 @@
 
         <% if (revisions.length > 0) { %>
             <% const latestRevisionNumber = Math.max(...revisions.map(rev => parseInt(rev.revision_number || 0, 10))); %>
+            <!-- daftar semua revisi, terbaru di atas -->
             <ul class="revision-list">
                 <% revisions.slice().reverse().forEach(function(rev) { %>
                     <% const isLatest = parseInt(rev.revision_number || 0, 10) === latestRevisionNumber; %>
@@ -224,6 +225,7 @@
                         <a class="revision-link" href="/history/rps/<%= rps.id %>/revision/<%= rev.id %>">Lihat</a>
                         <% if (!isLatest) { %>
                             <span class="text-gray-400">|</span>
+                            <!-- tombol pulihkan cuma muncul di revisi lama, bukan versi terbaru -->
                             <form class="inline-revert-form" action="/history/rps/<%= rps.id %>/revision/<%= rev.id %>/revert" method="POST" onsubmit="return confirm('Pulihkan RPS ke <%= rev.revision_name %>? Perubahan saat ini akan disimpan sebagai revisi baru.');">
                                 <button type="submit" class="inline-revert-button">Pulihkan versi ini</button>
                             </form>

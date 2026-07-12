@@ -3,33 +3,33 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-let multer = null;
+let multer = null; //memuat  package multer (middleware express untuk menangani upload)
 try {
   multer = require('multer');
 } catch (error) {
   console.warn('[UPLOAD RPS] Package multer belum terinstall. Jalankan npm install untuk mengaktifkan upload RPS.');
 }
-const { parseRpsDocxBuffer } = require('../utils/rpsDocxParser');
+const { parseRpsDocxBuffer } = require('../utils/rpsDocxParser'); //impor fungsi parseRpsDocxBuffer dari modul rpsDocxParser.js. jembatan menuji logika ekstraksi python
 
-const usersPath = path.join(__dirname, '..', 'database', 'users.json');
+const usersPath = path.join(__dirname, '..', 'database', 'users.json'); //mendefinisikan path berkas2 json
 const rpsPath = path.join(__dirname, '..', 'database', 'rps.json');
 const rpsHistoryPath = path.join(__dirname, '..', 'database', 'rps_history.json');
 const cplsPath = path.join(__dirname, '..', 'database', 'cpls.json');
 const configPath = path.join(__dirname, '..', 'database', 'config.json');
 const uploadRpsDir = path.join(__dirname, '..', '..', 'uploads', 'rps-docx');
 
-function ensureUploadDir() {
+function ensureUploadDir() { //fungsi yg membuat folder scr rekursif jika belumada
   if (!fs.existsSync(uploadRpsDir)) {
     fs.mkdirSync(uploadRpsDir, { recursive: true });
   }
 }
 
-function safeUnlink(filePath) {
+function safeUnlink(filePath) { //fungsi yg menghapus file tanpa adanya error jika gagal
   if (!filePath) return;
   fs.unlink(filePath, () => {});
 }
 
-const uploadRpsFile = multer ? multer({
+const uploadRpsFile = multer ? multer({ //objek multer
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
       ensureUploadDir();
@@ -45,7 +45,7 @@ const uploadRpsFile = multer ? multer({
       cb(null, `${Date.now()}-${safeBase}${ext}`);
     }
   }),
-  fileFilter: (req, file, cb) => {
+  fileFilter: (req, file, cb) => { //menolak file yg ekstensi nya bukan docx
     const ext = path.extname(file.originalname || '').toLowerCase();
     const isDocx = ext === '.docx' ||
       file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -54,7 +54,7 @@ const uploadRpsFile = multer ? multer({
     }
     cb(null, true);
   },
-  limits: { fileSize: 15 * 1024 * 1024 }
+  limits: { fileSize: 15 * 1024 * 1024 } //max filenya 15mb
 }) : null;
 
 function ensureArray(value) {
@@ -163,6 +163,7 @@ function writeJsonFile(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 
+// salin dalam2 (deep copy) sebuah objek RPS, biar aman disimpan sbg snapshot revisi tanpa ikut kebawa perubahan
 function clonePlainObject(value) {
   return JSON.parse(JSON.stringify(value || {}));
 }
@@ -175,6 +176,7 @@ function getUserById(userId) {
   return getAllUsers().find(u => String(u.id) === String(userId));
 }
 
+// bungkus data user jadi bentuk ringkas {id, username, email, role} buat dicatat sbg pembuat revisi
 function getEditorFromUser(user, fallbackName = 'System') {
   return {
     id: user && user.id ? user.id : null,
@@ -188,11 +190,13 @@ function getRpsById(rpsList, rpsId) {
   return rpsList.find(r => String(r.id) === String(rpsId));
 }
 
+// cek RPS ini boleh diakses user yg login: admin bebas, dosen cuma boleh RPS miliknya sendiri
 function canAccessRps(req, rpsItem) {
   if (!req.session.user || !rpsItem) return false;
   return req.session.user.role === 'admin' || String(rpsItem.userId) === String(req.session.user.id);
 }
 
+// kamus: nama field mentah RPS -> label yg enak dibaca, dipakai di halaman Riwayat Revisi
 const FIELD_LABELS = {
   nama_mk: 'Nama Mata Kuliah',
   kode_mk: 'Kode MK',
@@ -227,6 +231,7 @@ const FIELD_LABELS = {
   'cpl_deskripsi[]': 'Deskripsi CPL'
 };
 
+// sama, tapi khusus nama field di dalam Sub-CPMK (durasi, bobot, dst)
 const SUB_CPMK_FIELD_LABELS = {
   cpl: 'CPL terkait',
   durasi: 'Durasi',
@@ -326,6 +331,7 @@ function getChangedFieldKeys(before, after) {
   return changedKeys;
 }
 
+// sama seperti getChangedFieldKeys, tapi hasilnya label yg enak dibaca (buat ditampilkan ke user)
 function getChangedFieldNames(before, after) {
   const seenLabels = new Set();
   const labels = [];
@@ -339,6 +345,7 @@ function getChangedFieldNames(before, after) {
   return labels;
 }
 
+// cek satu nilai field dianggap "kosong" apa nggak (dipakai buat klasifikasi added/removed/modified)
 function isEmptyFieldValue(value) {
   if (value === undefined || value === null) return true;
   if (Array.isArray(value)) return value.every(v => String(v).trim() === '');
@@ -391,6 +398,7 @@ function getPreviousRevisionData(revisions, targetRevision) {
   return revisions[idx - 1].data;
 }
 
+// ID angka berikutnya buat item baru (RPS baru / revisi baru), tinggal +1 dari yg terbesar
 function getNextNumericId(items) {
   if (!items || items.length === 0) return 1;
   return Math.max(...items.map(item => parseInt(item.id || 0, 10))) + 1;
@@ -404,10 +412,12 @@ function getRpsRevisions(rpsId) {
     .sort((a, b) => (parseInt(a.revision_number, 10) || 0) - (parseInt(b.revision_number, 10) || 0));
 }
 
+// INTI fitur Riwayat Revisi: simpan 1 entri revisi baru (snapshot lengkap RPS saat ini) ke rps_history.json
 function createRpsRevision(rpsItem, editorUser, options = {}) {
   const history = readJsonFile(rpsHistoryPath, []);
   const rpsId = parseInt(rpsItem.id, 10);
   const revisionsForRps = history.filter(item => parseInt(item.rps_id, 10) === rpsId);
+  // nomor revisi berikutnya (v1, v2, v3, ...) khusus utk RPS ini
   const revisionNumber = revisionsForRps.length
     ? Math.max(...revisionsForRps.map(item => parseInt(item.revision_number || 0, 10))) + 1
     : 1;
@@ -429,7 +439,7 @@ function createRpsRevision(rpsItem, editorUser, options = {}) {
     change_stats: options.change_stats || null,
     source_revision_id: options.source_revision_id || null,
     source_revision_name: options.source_revision_name || null,
-    data: clonePlainObject(rpsItem)
+    data: clonePlainObject(rpsItem) // <- salinan LENGKAP RPS saat ini, bukan cuma daftar perubahannya
   };
 
   history.push(revision);
@@ -437,6 +447,7 @@ function createRpsRevision(rpsItem, editorUser, options = {}) {
   return revision;
 }
 
+// buat "versi awal" utk RPS lama yg belum pernah tercatat revisinya (biar tetap bisa dipulihkan nanti)
 function ensureInitialRevision(rpsItem, editorUser) {
   if (!rpsItem || !rpsItem.id) return null;
   const existingRevisions = getRpsRevisions(rpsItem.id);
@@ -856,6 +867,7 @@ router.post('/history/rps/:id/revision/:revisionId/revert', isAuthenticated, (re
   rps[index] = restoredRps;
   writeJsonFile(rpsPath, rps);
 
+  // pemulihan JUGA dicatat sbg revisi baru (bukan menghapus riwayat di antaranya)
   createRpsRevision(restoredRps, req.session.user, {
     action: 'revert',
     message: `Dikembalikan ke ${revision.revision_name}`,
@@ -1192,13 +1204,13 @@ router.post('/admin/cpl/delete/:id', isAuthenticated, isAdmin, (req, res) => {
   }
 });
 
-// Upload (BARU)
+// route get untuk menampilkan halaman (merender halaman upload-rps.ejs), post untuk memproses berkas yg diunggah
 router.get('/upload-rps', isAuthenticated, (req, res) => {
   res.render('upload-rps', { title: 'Upload RPS', user: req.session.user, error: null, success: null });
 });
 
 router.post('/upload-rps', isAuthenticated, (req, res) => {
-  if (!uploadRpsFile) {
+  if (!uploadRpsFile) { // multer belum ke-install -> fitur upload dimatikan, kasih pesan error
     return res.status(500).render('upload-rps', {
       title: 'Upload RPS',
       user: req.session.user,
@@ -1207,8 +1219,9 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
     });
   }
 
+  // memanggil uploadRpsFile. middleware membaca field file bernama "rpsFile" dari body dan hasilnya ditaruh di req.file
   uploadRpsFile.single('rpsFile')(req, res, async (uploadError) => {
-    if (uploadError) {
+    if (uploadError) { // gagal pas proses upload-nya sendiri (mis. bukan .docx, kelewat besar)
       return res.status(400).render('upload-rps', {
         title: 'Upload RPS',
         user: req.session.user,
@@ -1217,7 +1230,7 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
       });
     }
 
-    if (!req.file) {
+    if (!req.file) { // menangani error
       return res.status(400).render('upload-rps', {
         title: 'Upload RPS',
         user: req.session.user,
@@ -1229,7 +1242,7 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
     try {
       const config = readJsonFile(configPath, {});
       const fileBuffer = fs.readFileSync(req.file.path);
-      const { rpsData } = await parseRpsDocxBuffer(fileBuffer, {
+      const { rpsData } = await parseRpsDocxBuffer(fileBuffer, { //berhubungan dgn ekstraksi python
         fileName: req.file.originalname,
         fallback: {
           username: req.session.user.username,
@@ -1240,7 +1253,7 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
       });
 
 
-      // Menyimpan data ke rps.json
+      // menyimpan data ke rps.json
       const rps = readJsonFile(rpsPath, []);
       const newId = getNextNumericId(rps);
       const now = new Date().toISOString();
@@ -1258,15 +1271,15 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
       rps.push(finalRpsData);
       writeJsonFile(rpsPath, rps);
 
-      // Catatan riwayat edit
+      // mencatat riwayat edit/revisi pertama
       createRpsRevision(finalRpsData, req.session.user, {
         action: 'upload_docx',
         message: `RPS dibuat dari upload Word: ${req.file.originalname || 'file'}`
       });
 
-      safeUnlink(req.file.path);
+      safeUnlink(req.file.path); // arahkan user ke halaman detail rps yg baru dibuat
       return res.redirect(`/history/view/${newId}?uploaded=1`);
-    } catch (error) {
+    } catch (error) { // ekstraksi python gagal (dokumen rusak/format tidak dikenali, dst)
       console.error('[UPLOAD RPS] Gagal mengekstrak file:', error);
       safeUnlink(req.file && req.file.path);
       return res.status(500).render('upload-rps', {

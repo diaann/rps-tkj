@@ -95,7 +95,7 @@
                                 </thead>
                                 <tbody class="divide-y divide-gray-200">
                                     <% mahasiswaList.forEach(function(m, mIdx) { %>
-                                        <% const base = `nilai[${sub.globalNumber}][${m.id}]`; %>
+                                        <% const base = `nilai[${sub.globalNumber}][${m.id}]`; // awalan nama field nilai utk 1 mahasiswa %>
                                         <tr class="hover:bg-gray-50">
                                             <td class="px-3 py-2 border text-sm"><%= mIdx + 1 %></td>
                                             <td class="px-3 py-2 border text-sm"><%= m.nim %></td>
@@ -147,6 +147,7 @@
     </div>
 
     <script>
+        // ganti tab Sub-CPMK yg aktif; semua tab tetap 1 <form> yg sama jadi nilai ga hilang pas pindah tab
         function showPenilaianTab(targetId, btnEl) {
             document.querySelectorAll('.penilaian-tab-panel').forEach(function (panel) {
                 panel.classList.add('hidden');

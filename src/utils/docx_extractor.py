@@ -3,14 +3,13 @@
 docx_extractor.py
 
 Ekstraksi terstruktur untuk dokumen RPS dari file Word (.docx), menggunakan
-python-docx. Struktur tabel di .docx itu EKSPLISIT di datanya sendiri (baris
+python-docx. Struktur tabel di .docx itu eksplisit di datanya sendiri (baris
 & sel yang jelas), tidak perlu ditebak dari posisi garis/koordinat teks.
 
-Halaman sampul (cover) -- kalau ada -- otomatis TIDAK ikut terbaca, karena
-skrip ini hanya membaca ISI TABEL, bukan teks paragraf biasa; dan tabel
+Halaman sampul (cover) otomatis tidak ikut terbaca, karena
+skrip ini hanya membaca isi tabel, bukan teks paragraf biasa. dan tabel
 identitas RPS yang sesungguhnya dicari lewat tanda tangan header-nya sendiri
-("MATA KULIAH (MK)" + "KODE" + "SEMESTER"), bukan asal tabel pertama di
-dokumen.
+("MATA KULIAH (MK)" + "KODE" + "SEMESTER"), bukan asal tabel pertama di dokumen.
 
 Output JSON-nya dikonsumsi oleh sisi Node.js (rpsDocxParser.js) untuk merakit
 rpsData yang sama formatnya dengan input manual lewat form.
@@ -48,17 +47,17 @@ from rps_common import (
 
 
 # ---------------------------------------------------------------------------
-# Util baca tabel python-docx
+# baca tabel python-docx
 # ---------------------------------------------------------------------------
 
 def dedupe_row(row):
-    """python-docx mengembalikan objek Cell yang SAMA berulang-ulang untuk
-    tiap kolom grid yang dicakup 1 sel gabungan (merge horizontal) -- bisa
-    dicek lewat identitas elemen XML-nya (`cell._tc`). Rapatkan HANYA yang
-    memang cell object sama persis (merge asli), BUKAN sekadar teks yang
+    """python-docx mengembalikan objek Cell yang sama berulang-ulang untuk
+    tiap kolom grid yang dicakup 1 sel gabungan (merge horizontal). bisa
+    dicek lewat identitas elemen XML-nya (`cell._tc`). Rapatkan hanya yang
+    memang cell object sama persis (merge asli), bukan sekadar teks yang
     kebetulan sama (mis. dua sel yang sama-sama kosong tapi memang berbeda
-    kolom) -- kalau pakai teks, dua sel kosong bersebelahan bisa salah
-    kegabung jadi satu dan bikin kolom-kolom sesudahnya ikut geser posisi."""
+    kolom). kalau pakai teks, dua sel kosong bersebelahan bisa salah
+    tergabung jadi satu dan bikin kolom-kolom sesudahnya ikut geser posisi."""
     result = []
     last_tc = None
     for cell in row.cells:
@@ -68,21 +67,21 @@ def dedupe_row(row):
         last_tc = cell._tc
     return result
 
-
+# menerapkan dedupe_row ke setiap baris sebuah tabel word
+# menghasilkan representasi tabel sbg list of list string
 def table_to_rows(table):
     return [dedupe_row(row) for row in table.rows]
 
 
 def expand_multiline_cells(rows):
-    """Satu sel tabel Word kadang berisi BEBERAPA butir (tiap pustaka/topik
+    """Satu sel tabel Word kadang berisi beberapa butir (tiap pustaka/topik
     materi kajian ditulis dosen sebagai paragraf terpisah dalam 1 sel yang
     sama, bukan 1 baris tabel per butir). Beda dengan PDF, newline dari
-    `cell.text` python-docx SELALU berarti batas paragraf yang sungguhan
-    (bukan jejak line-wrap lebar kolom kertas) -- jadi di sini aman, dan
-    malah HARUS dipecah jadi baris tersendiri per butir sebelum diserahkan ke
+    `cell.text` python-docx selalu berarti batas paragraf yang sungguhan
+    (bukan jejak line-wrap lebar kolom kertas).
+    jadi harus dipecah jadi baris tersendiri per butir sebelum diserahkan ke
     extract_narrative_sections, supaya tiap butir tertampung sebagai entri
-    terpisah alih-alih ketelan jadi satu string gabungan (bug lama: Materi
-    Kajian & Pustaka Utama/Pendukung nyatu jadi 1 baris)."""
+    terpisah alih-alih tertelan menjadi satu string gabungan"""
     expanded = []
     for row in rows:
         if len(row) < 2:
@@ -99,7 +98,7 @@ def expand_multiline_cells(rows):
             expanded.append(blank_head + [line])
     return expanded
 
-
+#  mencari tabel mana yg merupaka tabel identitas rps
 def find_identity_table_index(tables_as_rows):
     for idx, rows in enumerate(tables_as_rows):
         for row in rows[:6]:
@@ -114,7 +113,7 @@ def find_identity_table_index(tables_as_rows):
 
 
 # ---------------------------------------------------------------------------
-# Identitas & Otorisasi -- di docx ini tinggal baca sel per posisi (bukan
+# Identitas & Otorisasi. di docx ini tinggal baca sel per posisi (bukan
 # tebak dari geometri kata seperti di PDF), karena strukturnya eksplisit.
 # ---------------------------------------------------------------------------
 
@@ -123,8 +122,8 @@ ROMAN_NUMERAL_VALUES = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M
 
 def roman_to_int(text):
     """Konversi angka romawi (mis. "IV", "VIII") ke integer. Sebagian
-    dokumen RPS menulis kolom Semester pakai angka romawi, bukan angka biasa
-    -- return None kalau teksnya bukan angka romawi yang valid, supaya
+    dokumen RPS menulis kolom semester pakai angka romawi, bukan angka biasa
+    return None kalau teksnya bukan angka romawi yang valid, supaya
     pemanggilnya bisa lanjut coba pola lain / anggap tidak terdeteksi."""
     s = text.strip().upper()
     if not s or not re.fullmatch(r"[IVXLCDM]+", s):
@@ -138,16 +137,12 @@ def roman_to_int(text):
         else:
             total += value
             prev_value = value
-    # Validasi longgar: render ulang & bandingkan, supaya string acak yang
-    # kebetulan tersusun dari huruf romawi valid (mis. salah ketik "IIII")
-    # tidak lolos jadi angka semester yang aneh kalau tidak dalam rentang wajar.
     return total if 1 <= total <= 14 else None
 
 
 def parse_semester_value(text):
-    """Kembalikan nomor semester (string angka) dari SATU sel, menerima baik
-    format angka biasa ("4") maupun angka romawi ("IV") -- beberapa template
-    RPS menulis semester dengan angka romawi."""
+    """Kembalikan nomor semester (string angka) dari satu sel, menerima baik
+    format angka biasa ("4") maupun angka romawi ("IV")"""
     c_clean = text.strip()
     if re.fullmatch(r"\d{1,2}", c_clean):
         return c_clean
@@ -156,7 +151,7 @@ def parse_semester_value(text):
         return str(roman_value)
     return None
 
-
+# fungsi untuk mencari baris header yg ada kata mata kuliah, kode, dan semester
 def extract_identity_docx(rows):
     header_idx = None
     for i, row in enumerate(rows):
@@ -226,6 +221,7 @@ def extract_identity_docx(rows):
     }
 
 
+# cari baris Otorisasi (Pengembang RPS/Koordinator RMK/Ketua Prodi) & ambil nilainya per kolom
 def extract_otorisasi_docx(rows):
     header_idx = None
     for i, row in enumerate(rows):
@@ -291,6 +287,7 @@ EVALUATION_WEEK_PATTERN = re.compile(
 )
 
 
+# baca tabel Rencana Pembelajaran Mingguan (1 baris = 1 pekan), skip baris legenda/minggu UTS-UAS
 def extract_weekly_plan_docx(all_rows):
     weekly = []
     seen_header = False
@@ -368,11 +365,13 @@ STOP_SECTION_PATTERNS = [
 ]
 
 
+# cek baris ini "tabel lampiran" (rubrik/tugas) yg bukan bagian RPS inti -> berhenti baca di sini
 def is_stop_section(row):
     joined = " ".join(c for c in row if c.strip())
     return any(re.search(p, joined, re.I) for p in STOP_SECTION_PATTERNS)
 
 
+# orkestrator utama: buka .docx, cari tabel identitas sbg jangkar, lalu panggil semua fungsi ekstraksi di atas
 def extract(docx_path):
     document = docx.Document(docx_path)
     tables_as_rows = [table_to_rows(t) for t in document.tables]

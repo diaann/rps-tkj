@@ -36,6 +36,7 @@
     </div>
 
     <script>
+        // semua data matkul dikirim sekali di awal, difilter di browser -> ga perlu reload halaman
         const MATKUL_DATA = <%- JSON.stringify(matkulData) %>;
 
         const semesterEl = document.getElementById('pilih-semester');
@@ -43,11 +44,13 @@
         const btnEl = document.getElementById('btn-lihat-rubrik');
         const emptyMsgEl = document.getElementById('rubrik-empty-msg');
 
+        // kosongkan & kunci/buka sebuah dropdown
         function resetSelect(selectEl, placeholder, disabled) {
             selectEl.innerHTML = '<option value="">' + placeholder + '</option>';
             selectEl.disabled = disabled;
         }
 
+        // tombol "Lihat Rubrik" cuma aktif kalau semester & matkul udah dipilih
         function updateButtonState() {
             const ready = semesterEl.value && matkulEl.value;
             btnEl.disabled = !ready;
@@ -55,6 +58,7 @@
             btnEl.classList.toggle('cursor-not-allowed', !ready);
         }
 
+        // pilih semester -> isi ulang dropdown Mata Kuliah sesuai semester itu
         semesterEl.addEventListener('change', function () {
             resetSelect(matkulEl, '-- Pilih Mata Kuliah --', true);
             emptyMsgEl.classList.add('hidden');
@@ -83,6 +87,7 @@
 
         matkulEl.addEventListener('change', updateButtonState);
 
+        // pindah ke halaman rubrik mata kuliah yg dipilih
         btnEl.addEventListener('click', function () {
             if (btnEl.disabled) return;
             window.location.href = '/rubrik/mk/' + encodeURIComponent(matkulEl.value);

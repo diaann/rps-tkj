@@ -105,9 +105,11 @@
             Setelah tersimpan, data masih dapat diubah melalui tombol <strong>Edit</strong>.
         </div>
 
+        <!-- data ditangkap oleh middleware multer di sisi server -->
         <form action="/upload-rps" method="POST" enctype="multipart/form-data">
             <div class="upload-wrapper">
                 <label class="upload-dropzone" for="rpsFileInput" id="dropzone">
+                    <!-- name="rpsFile" harus sama persis dgn uploadRpsFile.single('rpsFile') di route -->
                     <input
                         id="rpsFileInput"
                         type="file"
@@ -160,6 +162,7 @@
 </div>
 
 <script>
+    // cuma ganti teks "Belum ada file yang dipilih" jadi nama file yg dipilih user
     const rpsFileInput = document.getElementById('rpsFileInput');
     const fileName = document.getElementById('fileName');
 

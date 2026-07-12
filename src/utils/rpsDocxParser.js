@@ -1,3 +1,4 @@
+//module yg bertugas menjembatani dunia node.js dan skrip python
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -15,22 +16,21 @@ const INDONESIAN_MONTHS = {
 };
 
 // ---------------------------------------------------------------------------
-// Util kecil untuk membersihkan & menormalkan nilai yang sudah diekstrak
-// secara terstruktur oleh docx_extractor.py.
+// function untuk membersihkan & menormalkan nilai yang sudah diekstrak secara terstruktur oleh docx_extractor.py.
 // ---------------------------------------------------------------------------
 
-function padCode(prefix, number) {
+function padCode(prefix, number) { // ubah angka mentah menjadi baku. contoh: CPL01
   const n = String(number || '').replace(/\D/g, '');
   if (!n) return '';
   return `${prefix}${n.padStart(2, '0')}`;
 }
 
-function normalizeCplCode(value) {
+function normalizeCplCode(value) { // fungsi yg diterapkan pada pola untuk teks yg mengandung kata CPL dan angka. contoh: ubah cpl 3 menjadi CPL03
   const match = String(value || '').match(/CPL\s*0*(\d+)/i);
   return match ? padCode('CPL', match[1]) : String(value || '').trim();
 }
 
-function cleanText(value) {
+function cleanText(value) { // membersihkan string
   return String(value || '')
     .replace(/\u00a0/g, ' ')
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
@@ -40,7 +40,7 @@ function cleanText(value) {
     .trim();
 }
 
-function toTitleCase(value) {
+function toTitleCase(value) { // konversi teks menjadi Title Case dgn pengecualian seperti yg disebut tdk dikapitalisasi
   const smallWords = new Set(['dan', 'di', 'ke', 'dari', 'untuk', 'pada', 'dengan', 'atau']);
   return String(value || '')
     .toLowerCase()
@@ -58,7 +58,7 @@ function toTitleCase(value) {
     .trim();
 }
 
-function cleanCourseName(value, fileName = '') {
+function cleanCourseName(value, fileName = '') { // menentukan nama matkul, kalau ada akan ambil dari hasil esktraksi, kalau tdk ada ambil dari nama file
   let name = cleanText(value);
   if (!name && fileName) {
     name = path.basename(fileName, path.extname(fileName));
@@ -79,7 +79,7 @@ function cleanCourseName(value, fileName = '') {
   return name;
 }
 
-function parseFlexibleDate(value) {
+function parseFlexibleDate(value) { //parsing tanggal dari berbagai format
   const text = cleanText(value).toLowerCase();
   if (!text) return { iso: '', year: null, month: null, day: null, original: '' };
 
@@ -116,7 +116,7 @@ function parseFlexibleDate(value) {
   return { iso: '', year: null, month: null, day: null, original: cleanText(value) };
 }
 
-function inferAcademicYear(dateInfo) {
+function inferAcademicYear(dateInfo) { // menebak tahun akademik dari tgl penyusunan RPS. kalau penyusunan setelah juli, dianggap mulai dari tahun tsb
   const now = new Date();
   const year = dateInfo && dateInfo.year ? dateInfo.year : now.getFullYear();
   const month = dateInfo && dateInfo.month ? dateInfo.month : now.getMonth() + 1;
@@ -124,6 +124,7 @@ function inferAcademicYear(dateInfo) {
   return `${year - 1}/${year}`;
 }
 
+// membaca cpl.json
 function loadCplDescriptionsFromDatabase(activeCplId = '') {
   const descriptionMap = {};
   try {
@@ -153,6 +154,7 @@ function loadCplDescriptionsFromDatabase(activeCplId = '') {
 // mentah yang dilinearkan.
 // ---------------------------------------------------------------------------
 
+// jalankan skrip python docx_extractor.py sbg proses terpisah dan mengembalikan hasilnya sbg objek js
 function runPythonExtractor(scriptPath, filePath, missingModuleErrorKey, missingModuleMessage) {
   const candidates = [process.env.PYTHON_BIN, 'python3', 'python', 'py'].filter(Boolean);
   let lastError = null;
@@ -204,7 +206,7 @@ function runPythonExtractor(scriptPath, filePath, missingModuleErrorKey, missing
 
   if (sawWindowsStoreStub) {
     throw new Error(
-      'Python belum terinstall di komputer ini -- "python"/"python3" di PATH masih mengarah ke ' +
+      'Python belum terinstall. "python"/"python3" di PATH masih mengarah ke ' +
       'stub Microsoft Store (App Execution Alias), bukan Python asli. Cara memperbaiki: ' +
       '(1) Install Python 3 dari https://python.org/downloads (centang "Add python.exe to PATH" saat instalasi), ' +
       'atau (2) matikan alias tsb. di Settings > Apps > Advanced app settings > App execution aliases, ' +
@@ -219,14 +221,14 @@ function runPythonExtractor(scriptPath, filePath, missingModuleErrorKey, missing
 }
 
 // ---------------------------------------------------------------------------
-// Perakitan rpsData dari hasil ekstraksi terstruktur
+// menyusun rpsData dari hasil ekstraksi mentah (extraction.identity)
 // ---------------------------------------------------------------------------
 
 function buildIdentity(extraction, fileName, options) {
   const identity = extraction.identity || {};
   const dateInfo = parseFlexibleDate(identity.tanggal_penyusunan_raw || '');
 
-  let namaMk = cleanCourseName(identity.nama_mk, fileName);
+  let namaMk = cleanCourseName(identity.nama_mk, fileName); // clean nama matkul
   if (!namaMk) namaMk = 'RPS hasil upload Word';
 
   let kodeMk = cleanText(identity.kode_mk || '');
@@ -241,14 +243,12 @@ function buildIdentity(extraction, fileName, options) {
     sks_teori: cleanText(identity.sks_teori) || '0',
     sks_praktikum: cleanText(identity.sks_praktikum) || '0',
     tanggal_penyusunan: dateInfo.iso || new Date().toISOString().slice(0, 10),
-    // Tahun akademik memang tidak pernah tercantum eksplisit di dokumen RPS
-    // manapun yang diuji -- dibiarkan hasil tebakan dari tanggal penyusunan
-    // sebagai titik awal, tapi selalu ditandai di extraction_notes supaya user tahu
-    // field ini perlu dicek/diisi manual, bukan dianggap "gagal ekstrak".
+    // Tahun akademik memang tidak tercantum eksplisit di dokumen RPS
     tahun_akademik: dateInfo.iso ? inferAcademicYear(dateInfo) : ''
   };
 }
 
+// fungsi yg menggabugkan identitas, otorisasi, daftal cpl, dll menjadi sattu objek rpsData
 function buildAuthorization(extraction, fallback) {
   const auth = extraction.otorisasi || {};
   return {
@@ -260,6 +260,7 @@ function buildAuthorization(extraction, fallback) {
   };
 }
 
+// fungsi utama: satukan identity + otorisasi + CPL/CPMK/Sub-CPMK jadi 1 objek rpsData siap simpan
 function buildRpsObjectFromExtraction(extraction, options = {}) {
   const fallback = options.fallback || {};
   const fileName = options.fileName || '';
@@ -267,6 +268,7 @@ function buildRpsObjectFromExtraction(extraction, options = {}) {
   const identity = buildIdentity(extraction, fileName, options);
   const auth = buildAuthorization(extraction, fallback);
 
+  // menyusun daftar cpl yg terdeteksi 
   const cplList = (extraction.cpl || []).map(item => normalizeCplCode(item.code)).filter(Boolean);
   const extractedCplDescriptions = {};
   (extraction.cpl || []).forEach(item => {
@@ -279,6 +281,8 @@ function buildRpsObjectFromExtraction(extraction, options = {}) {
     if (dbCplDescriptions[code]) cplDescriptions[code] = dbCplDescriptions[code];
   });
 
+  // nenetakan cpmk hasil ekstraksi menjadi objek
+  // dengan cpl_code dan cpl_descriptionya
   const cpmks = (extraction.cpmk || []).map(item => ({
     id: item.id,
     cpl_code: item.cpl_code || cplList[0] || '',
@@ -286,6 +290,7 @@ function buildRpsObjectFromExtraction(extraction, options = {}) {
     deskripsi: cleanText(item.deskripsi)
   }));
 
+  // hal yg sama dgn sebelumnya, tp ini khusus sub-cpmk + bobot asesmen
   const subCpmks = (extraction.subcpmk || []).map(item => ({
     globalSubNumber: item.global_number,
     cpmk_id: item.cpmk_id,
@@ -309,6 +314,7 @@ function buildRpsObjectFromExtraction(extraction, options = {}) {
   const dosenPengampu = extraction.dosen_pengampu || [];
   const materiKajian = (extraction.materi_kajian || []).join('\n');
 
+  // membentuk objek rpsData, gabungkan identitas
   const rpsData = {
     ...identity,
     mk_syarat: extraction.mk_syarat || '',
@@ -359,18 +365,17 @@ function buildRpsObjectFromExtraction(extraction, options = {}) {
     rpsData.extraction_notes.push('Rencana pembelajaran mingguan tidak terdeteksi jelas dari dokumen (format tabel mingguan bisa berbeda-beda antar template). Silakan lengkapi lewat Edit RPS.');
   }
 
-  // PENTING: ID CPMK internal HARUS selalu format sekuensial "CPMKxx" (dua
-  // digit), berapa pun/apa pun format penomoran ASLI di dokumen sumber --
+  // ID CPMK internal harus selalu format sekuensial "CPMKxx" (dua digit)
+  // berapa pun/apa pun format penomoran asli di dokumen sumber
   // sebagian RPS menomori CPMK mengikuti CPL yang menaunginya, mis. "CPMK06.4"
   // (CPMK ke-4 di bawah CPL06), bukan "CPMK1, CPMK2, ...". Kalau id mentah ini
-  // dipakai apa adanya sebagai key, SELURUH bagian lain sistem (tampilan RPS,
-  // form edit, export Word, tabel penilaian) yang mencocokkan key pakai regex
-  // /^CPMK\d+$/ akan gagal cocok gara-gara tanda titik di id -- datanya ada di
-  // rps.json tapi dianggap tidak ada sama sekali di semua fitur tsb. Jadi di
-  // sini ID mentah dari dokumen HANYA dipakai sebagai kunci pemetaan
-  // sementara (cpmkIdMap) utk menyambungkan Sub-CPMK ke CPMK induknya yang
-  // benar; teks penomoran aslinya sendiri tetap utuh di dalam field deskripsi
-  // CPMK, jadi tidak ada informasi yang hilang.
+  // dipakai apa adanya sebagai key, seluruh bagian lain sistem (tampilan RPS, form edit, export Word, tabel penilaian)
+  // yang mencocokkan key pakai regex
+  // /^CPMK\d+$/ akan gagal cocok gara-gara tanda titik di id. datanya ada di rps.json tapi dianggap tidak ada sama sekali di semua fitur tsb.
+  // Jadi di sini ID mentah dari dokumen HANYA dipakai sebagai kunci pemetaan
+  // sementara (cpmkIdMap) utk menyambungkan Sub-CPMK ke CPMK induknya yang benar. 
+  // teks penomoran aslinya sendiri tetap utuh di dalam field deskripsi CPMK, jadi tidak ada informasi yang hilang.
+  // iterasi daftar cpmk hasil ekstraksi dan diberi id
   const cpmkCplMap = {};
   const cpmkIdMap = {};
   cpmks.forEach((cpmk, idx) => {
@@ -441,7 +446,7 @@ function buildRpsObjectFromExtraction(extraction, options = {}) {
     rpsData[`sub_cpmk[${cpmkId}][${localIndex}][sumatif_presentasi_nama]`] = (sub.presentasi && sub.presentasi.nama) || '';
     rpsData[`sub_cpmk[${cpmkId}][${localIndex}][sumatif_presentasi_bobot]`] = (sub.presentasi && sub.presentasi.bobot) || '';
     // "Lainnya" adalah daftar dinamis (nama+bobot bisa lebih dari satu),
-    // disimpan sebagai JSON string di 1 field -- sama seperti isian yang
+    // disimpan sebagai JSON string di 1 field. sama seperti isian yang
     // akan dikirim dari tombol "+" pada form Edit RPS (lihat edit-rps.js).
     rpsData[`sub_cpmk[${cpmkId}][${localIndex}][sumatif_lainnya]`] = JSON.stringify(
       (sub.lainnya || []).map(item => ({ nama: item.nama || '', bobot: item.bobot || '' }))
@@ -466,13 +471,13 @@ function buildRpsObjectFromExtraction(extraction, options = {}) {
 // src/routes/index.js tidak perlu diubah)
 // ---------------------------------------------------------------------------
 
-// Jalur upload Word (.docx) -- struktur tabel di .docx eksplisit di datanya
-// sendiri. Lihat README_PDF_EXTRACTION.md bagian "Jalur upload Word" untuk
-// detail & batasannya.
+// Jalur upload Word (.docx). struktur tabel di .docx eksplisit di datanya sendiri
+// Satu2nya fungsi yg dipanggil langsung oleh route
 async function parseRpsDocxBuffer(buffer, options = {}) {
   const tmpFile = path.join(os.tmpdir(), `rps-upload-${crypto.randomBytes(8).toString('hex')}.docx`);
   fs.writeFileSync(tmpFile, buffer);
 
+  // untuk menjalankan docx_extractor.py kemudian meneruskan hasil ekstraksi ke buildRpsObjectFromExtraction
   try {
     const extraction = runPythonExtractor(
       DOCX_PYTHON_SCRIPT,
@@ -487,6 +492,7 @@ async function parseRpsDocxBuffer(buffer, options = {}) {
   }
 }
 
+// ekspor fungsi agar keduanya bisa diimpor dari file  lain
 module.exports = {
   parseRpsDocxBuffer,
   buildRpsObjectFromExtraction

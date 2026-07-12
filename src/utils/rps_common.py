@@ -26,6 +26,7 @@ MONTHS = {
 # Util teks
 # ---------------------------------------------------------------------------
 
+# bersihkan whitespace aneh & karakter tak terlihat dari teks hasil ekstraksi
 def clean(s):
     if not s:
         return ""
@@ -37,6 +38,7 @@ def clean(s):
     return s
 
 
+# sama seperti clean(), tapi jaga batas antar baris (buat isi sel yg banyak paragraf)
 def clean_multiline(s):
     if not s:
         return ""
@@ -44,6 +46,7 @@ def clean_multiline(s):
     return "\n".join(l for l in lines if l)
 
 
+# pecah 1 sel isinya daftar bernomor/bullet ("1. ...", "- ...") jadi list per butir
 def split_numbered_list(s):
     text = clean_multiline(s)
     if not text:
@@ -61,6 +64,7 @@ def split_numbered_list(s):
     return items or ([clean(text)] if clean(text) else [])
 
 
+# angka mentah -> kode baku 2 digit, mis. pad_code("CPMK", "6.1") -> "CPMK06.1"
 def pad_code(prefix, number):
     s = str(number or "").strip()
     m = re.match(r"0*(\d+)(\.\d+)?", s)
@@ -71,6 +75,7 @@ def pad_code(prefix, number):
     return f"{prefix}{integer_part}{decimal_part}"
 
 
+# cari pola "CPMKx ... Sub-CPMKy" yg nempel di 1 sel yg sama -> pasangan CPMK-SubCPMK yg pasti benar
 def find_authoritative_subcpmk_owners(all_tables):
     """Kalau ada SATU SEL yang menuliskan kombinasi eksplisit "CPMK<kode>,
     Sub-CPMK<n>" bersamaan (mis. pada tabel Rencana Pembelajaran Mingguan:
@@ -101,6 +106,7 @@ def find_authoritative_subcpmk_owners(all_tables):
     return owners
 
 
+# fungsi paling penting di file ini: susun pohon CPL -> CPMK -> Sub-CPMK dari baris2 tabel
 def extract_cp_tree(all_tables, authoritative_owners=None):
     """
     Menyusuri baris-baris tabel (semua halaman) dan membangun pohon
@@ -427,6 +433,7 @@ SUMATIF_BUCKET_PATTERNS = [
 ]
 
 
+# nama kolom Sumatif (mis. "Tes Tertulis") -> salah 1 bucket tetap: kuis/tugas/ujian/pjbl/presentasi/lainnya
 def classify_sumatif_column(label_text):
     """Petakan nama kolom Sumatif dari dokumen ke salah satu bucket tetap
     (Kuis/Tugas/Ujian/PjBL/Presentasi), atau 'lainnya' kalau tidak cocok
@@ -439,6 +446,7 @@ def classify_sumatif_column(label_text):
     return "lainnya"
 
 
+# baca tabel "Korelasi antara CP dan Asesmen": bobot Formatif & Sumatif per Sub-CPMK
 def extract_assessment_rows(all_tables, assume_in_section=False):
     """Baris tabel 'Korelasi antara CP dan Asesmen': untuk tiap Sub-CPMK,
     ambil Formatif + rincian Sumatif (Kuis/Tugas/Ujian/PjBL/Lainnya) sesuai
@@ -784,6 +792,7 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
     return rows_out
 
 
+# fallback kalau dokumen TIDAK punya tabel Korelasi: baca bobot dari teks bebas "Formatif:/Sumatif:"
 def parse_embedded_assessment(text):
     """Fallback untuk template RPS yang SAMA SEKALI TIDAK punya tabel
     'Korelasi antara CP dan Asesmen' terpisah -- rincian Formatif/Sumatif
@@ -883,6 +892,7 @@ def parse_embedded_assessment(text):
 # tidak terbaca" pada pendekatan lama.
 # ---------------------------------------------------------------------------
 
+# baca blok naratif: Deskripsi Singkat, Materi Kajian, Pustaka, Dosen Pengampu, MK Syarat
 def extract_narrative_sections(all_tables):
     deskripsi_parts = []
     materi_parts = []

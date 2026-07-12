@@ -43,6 +43,7 @@
     </div>
 
     <script>
+        // semua data matkul & kelas dikirim sekali di awal, difilter di browser -> ga perlu reload halaman
         const MATKUL_DATA = <%- JSON.stringify(matkulData) %>;
         const KELAS_DATA = <%- JSON.stringify(kelasData) %>;
 
@@ -52,17 +53,20 @@
         const btnEl = document.getElementById('btn-lihat-penilaian');
         const emptyMsgEl = document.getElementById('penilaian-empty-msg');
 
+        // sama kayak di server (routes/penilaian.js), dihitung ulang di sini biar ga perlu request lagi
         function tingkatFromSemester(semester) {
             const s = parseInt(semester, 10);
             if (!s || s < 1) return null;
             return Math.ceil(s / 2);
         }
 
+        // kosongkan & kunci/buka sebuah dropdown
         function resetSelect(selectEl, placeholder, disabled) {
             selectEl.innerHTML = '<option value="">' + placeholder + '</option>';
             selectEl.disabled = disabled;
         }
 
+        // tombol "Lihat Tabel Penilaian" cuma aktif kalau ketiga dropdown udah dipilih
         function updateButtonState() {
             const ready = semesterEl.value && matkulEl.value && kelasEl.value;
             btnEl.disabled = !ready;
@@ -70,6 +74,7 @@
             btnEl.classList.toggle('cursor-not-allowed', !ready);
         }
 
+        // pilih semester -> isi ulang dropdown Mata Kuliah, dan kunci ulang dropdown Kelas
         semesterEl.addEventListener('change', function () {
             resetSelect(matkulEl, '-- Pilih Mata Kuliah --', true);
             resetSelect(kelasEl, '-- Pilih Mata Kuliah dahulu --', true);
@@ -97,6 +102,7 @@
             });
         });
 
+        // pilih mata kuliah -> isi ulang dropdown Kelas sesuai tingkat dari semesternya
         matkulEl.addEventListener('change', function () {
             resetSelect(kelasEl, '-- Pilih Kelas --', true);
             updateButtonState();
@@ -121,6 +127,7 @@
 
         kelasEl.addEventListener('change', updateButtonState);
 
+        // pindah ke halaman tabel penilaian utk matkul+kelas yg dipilih
         btnEl.addEventListener('click', function () {
             if (btnEl.disabled) return;
             window.location.href = '/penilaian/mk/' + encodeURIComponent(matkulEl.value) + '/kelas/' + encodeURIComponent(kelasEl.value);

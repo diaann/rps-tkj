@@ -193,6 +193,7 @@ function formIdFor(rubrik) { return rubrik ? ('r' + rubrik.id) : 'new'; }
             });
         }
 
+        // matikan tombol "- Kolom" kalau kolom skala tinggal 1 (minimal harus ada 1)
         function updateSkalaButtons(fid) {
             const container = document.querySelector('[data-form="' + fid + '"] [data-skala-container]');
             if (!container) return;
@@ -205,6 +206,7 @@ function formIdFor(rubrik) { return rubrik ? ('r' + rubrik.id) : 'new'; }
             }
         }
 
+        // tambah 1 kotak deskripsi baru ("Level ke-N") ke sebuah baris kriteria
         function appendDeskripsiCell(row, value) {
             const cellsContainer = row.querySelector('.rubrik-deskripsi-cells');
             if (!cellsContainer) return;

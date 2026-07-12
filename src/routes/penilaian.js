@@ -8,6 +8,7 @@ const kelasPath = path.join(__dirname, '..', 'database', 'kelas.json');
 const mahasiswaPath = path.join(__dirname, '..', 'database', 'mahasiswa.json');
 const penilaianPath = path.join(__dirname, '..', 'database', 'penilaian.json');
 
+// Baca file JSON. Kalau belum ada/rusak, pakai nilai default (fallbackValue).
 function readJsonFile(filePath, fallbackValue) {
   try {
     if (!fs.existsSync(filePath)) {
@@ -25,10 +26,12 @@ function readJsonFile(filePath, fallbackValue) {
   }
 }
 
+// Tulis data (array/object) ke file JSON.
 function writeJsonFile(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 
+// Middleware: tolak akses kalau belum login, lempar ke halaman login.
 function isAuthenticated(req, res, next) {
   if (req.session.user) {
     return next();
@@ -36,12 +39,14 @@ function isAuthenticated(req, res, next) {
   res.redirect('/login');
 }
 
+// Semester -> tingkat angkatan (dipakai buat mencocokkan kelas ke mata kuliah).
 function tingkatFromSemester(semester) {
   const s = parseInt(semester, 10);
   if (!s || s < 1) return null;
   return Math.ceil(s / 2); // 1-2 -> 1, 3-4 -> 2, 5-6 -> 3, 7-8 -> 4
 }
 
+// Cek apakah user yang login boleh menilai RPS ini: admin bebas, dosen cuma boleh RPS miliknya sendiri.
 function canAccessRpsForPenilaian(req, rpsItem) {
   if (!rpsItem) return false;
   if (req.session.user.role === 'admin') return true;
@@ -52,12 +57,15 @@ function canAccessRpsForPenilaian(req, rpsItem) {
 // daftar Sub-CPMK (TB) berurutan, lengkap dengan bobot Formatif & Sumatif
 // (Kuis/Tugas/Ujian) yang sudah tersimpan di RPS.
 //
-// CATATAN: field "global_number" yang tersimpan di RPS TIDAK bisa diandalkan
+// CATATAN: field "global_number" yang tersimpan di RPS tidak bisa diandalkan
 // untuk penomoran (kadang tidak pernah diisi -> selalu 0, kadang cuma reset
 // ulang per-CPMK -> duplikat seperti 1,1,1,2,2,3). Jadi nomor tab di halaman
 // ini dihitung ulang dari nol secara berurutan berdasarkan urutan CPMK
 // (CPMK01, CPMK02, ...) lalu urutan Sub-CPMK di dalamnya, supaya selalu unik.
+// Rangkai ulang field mentah RPS (sub_cpmk[CPMKxx][n][field]) jadi daftar Sub-CPMK
+// siap pakai buat tabel penilaian, lengkap dgn nama & bobot Formatif/Sumatif-nya.
 function buildSubCpmkListForPenilaian(rpsItem) {
+  // Kumpulkan semua field milik Sub-CPMK yang sama ke dalam satu objek.
   const byKey = {};
   Object.keys(rpsItem).forEach(key => {
     const match = key.match(/^sub_cpmk\[(CPMK\d+)\]\[(\d+)\]\[(.+)\]$/);
@@ -79,6 +87,8 @@ function buildSubCpmkListForPenilaian(rpsItem) {
     return a.localIndex - b.localIndex;
   });
 
+  // Nomor tab (globalNumber) dihitung ulang di sini, JANGAN pakai global_number
+  // tersimpan di RPS -- itu kadang kosong/duplikat, jadi tidak bisa diandalkan.
   return rawList.map((sub, idx) => ({
     globalNumber: idx + 1,
     cpmkId: sub.cpmkId,
@@ -110,6 +120,7 @@ function buildSubCpmkListForPenilaian(rpsItem) {
 
 // Halaman utama Penilaian: satu halaman dengan 3 dropdown beranting
 // (Semester -> Mata Kuliah -> Kelas), semuanya bereaksi via JS tanpa reload.
+// Kirim semua data matkul & kelas sekaligus supaya dropdown difilter di browser.
 router.get('/penilaian', isAuthenticated, (req, res) => {
   const rps = readJsonFile(rpsPath, []);
   let accessibleRps = rps;
@@ -136,7 +147,8 @@ router.get('/penilaian', isAuthenticated, (req, res) => {
   });
 });
 
-// Step 2: pilih mata kuliah pada semester tsb (admin = semua, dosen = milik sendiri)
+// Step 2 (tidak dipakai dari UI, halaman /penilaian sudah cascading sendiri di JS):
+// pilih mata kuliah pada semester tsb (admin = semua, dosen = milik sendiri)
 router.get('/penilaian/semester/:semester', isAuthenticated, (req, res) => {
   const semester = req.params.semester;
   const rps = readJsonFile(rpsPath, []);
@@ -154,7 +166,8 @@ router.get('/penilaian/semester/:semester', isAuthenticated, (req, res) => {
   });
 });
 
-// Step 3: pilih kelas (2 opsi sesuai tingkat dari semester matkul tsb)
+// Step 3 (juga tidak dipakai dari UI, sama alasannya seperti di atas):
+// pilih kelas sesuai tingkat dari semester matkul tsb
 router.get('/penilaian/mk/:rpsId', isAuthenticated, (req, res) => {
   const rps = readJsonFile(rpsPath, []);
   const item = rps.find(r => String(r.id) === String(req.params.rpsId));
@@ -174,7 +187,8 @@ router.get('/penilaian/mk/:rpsId', isAuthenticated, (req, res) => {
   });
 });
 
-// Step 4: tabel penilaian (tab per Sub-CPMK/TB)
+// Step 4 -- INI yang benar-benar dituju dari halaman /penilaian:
+// tampilkan tabel penilaian (tab per Sub-CPMK), terisi nilai lama kalau sudah pernah disimpan.
 router.get('/penilaian/mk/:rpsId/kelas/:kelasId', isAuthenticated, (req, res) => {
   const rps = readJsonFile(rpsPath, []);
   const item = rps.find(r => String(r.id) === String(req.params.rpsId));
@@ -210,6 +224,7 @@ router.get('/penilaian/mk/:rpsId/kelas/:kelasId', isAuthenticated, (req, res) =>
 
 // Simpan nilai (form POST biasa, field pakai notasi kurung seperti bagian RPS lain:
 // nilai[<subGlobalNumber>][<mahasiswaId>][formatif|kuis|tugas|ujian])
+// Nilai lama utk RPS+kelas ini langsung DITIMPA semua oleh nilai baru dari form.
 router.post('/penilaian/mk/:rpsId/kelas/:kelasId/save', isAuthenticated, (req, res) => {
   const rps = readJsonFile(rpsPath, []);
   const item = rps.find(r => String(r.id) === String(req.params.rpsId));
@@ -220,8 +235,7 @@ router.post('/penilaian/mk/:rpsId/kelas/:kelasId/save', isAuthenticated, (req, r
 
   const kelasId = req.params.kelasId;
 
-  // Hanya simpan key yang memang berformat nilai[...][...][...], jaga-jaga
-  // ada field lain (mis. csrf) yang ikut terkirim.
+  // Saring: cuma field bernama nilai[...][...][...] yang disimpan, field lain diabaikan.
   const values = {};
   Object.keys(req.body).forEach(key => {
     if (
