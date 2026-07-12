@@ -26,6 +26,11 @@
             </div>
         <% } else { %>
 
+        <!-- PENTING: cuma ADA 1 <form> di seluruh halaman ini, membungkus SEMUA tab
+             Sub-CPMK sekaligus (tab-tab-nya cuma disembunyiin/ditampilin pakai css,
+             bukan form terpisah-terpisah). jadi walau user cuma keliatan lagi ngisi
+             1 tab doang, pas tombol "Simpan Nilai" diklik, NILAI DARI SEMUA TAB
+             ikut terkirim bareng ke server sekali jalan. -->
         <form method="POST" action="/penilaian/mk/<%= rpsItem.id %>/kelas/<%= kelas.id %>/save">
 
             <!-- Tab navigation -->
@@ -100,6 +105,10 @@
                                             <td class="px-3 py-2 border text-sm"><%= mIdx + 1 %></td>
                                             <td class="px-3 py-2 border text-sm"><%= m.nim %></td>
                                             <td class="px-3 py-2 border text-sm"><%= m.nama %></td>
+                                            <!-- name="...[formatif]" -- inilah nama field yg beneran dikirim ke
+                                                 server pas form disubmit, misal jadi "nilai[3][mhs007][formatif]".
+                                                 value=... ngambil dari savedValues (nilai yg udah pernah
+                                                 disimpan sebelumnya), jadi form otomatis "keinget" nilai lama. -->
                                             <td class="px-2 py-1 border">
                                                 <input type="number" min="0" max="100" step="0.01"
                                                     name="<%= base %>[formatif]"

@@ -2,17 +2,9 @@
 """
 docx_extractor.py
 
-Ekstraksi terstruktur untuk dokumen RPS dari file Word (.docx), menggunakan
-python-docx. Struktur tabel di .docx itu eksplisit di datanya sendiri (baris
-& sel yang jelas), tidak perlu ditebak dari posisi garis/koordinat teks.
-
-Halaman sampul (cover) otomatis tidak ikut terbaca, karena
-skrip ini hanya membaca isi tabel, bukan teks paragraf biasa. dan tabel
-identitas RPS yang sesungguhnya dicari lewat tanda tangan header-nya sendiri
-("MATA KULIAH (MK)" + "KODE" + "SEMESTER"), bukan asal tabel pertama di dokumen.
-
-Output JSON-nya dikonsumsi oleh sisi Node.js (rpsDocxParser.js) untuk merakit
-rpsData yang sama formatnya dengan input manual lewat form.
+baca dokumen rps (.docx) pakai python-docx, cuma baca isi tabel (bukan paragraf biasa,
+jadi cover otomatis skip). cari tabel identitas lewat header "mata kuliah"+"kode"+"semester".
+output json-nya dipakai rpsDocxParser.js buat dirakit jadi rpsData.
 """
 
 import sys
@@ -51,13 +43,8 @@ from rps_common import (
 # ---------------------------------------------------------------------------
 
 def dedupe_row(row):
-    """python-docx mengembalikan objek Cell yang sama berulang-ulang untuk
-    tiap kolom grid yang dicakup 1 sel gabungan (merge horizontal). bisa
-    dicek lewat identitas elemen XML-nya (`cell._tc`). Rapatkan hanya yang
-    memang cell object sama persis (merge asli), bukan sekadar teks yang
-    kebetulan sama (mis. dua sel yang sama-sama kosong tapi memang berbeda
-    kolom). kalau pakai teks, dua sel kosong bersebelahan bisa salah
-    tergabung jadi satu dan bikin kolom-kolom sesudahnya ikut geser posisi."""
+    # merged cell bikin python-docx return Cell object yg sama berkali-kali per kolom.
+    # cek pakai cell._tc (identity), bukan teks, biar 2 sel kosong yg beda kolom ga ketuker.
     result = []
     last_tc = None
     for cell in row.cells:
@@ -74,14 +61,8 @@ def table_to_rows(table):
 
 
 def expand_multiline_cells(rows):
-    """Satu sel tabel Word kadang berisi beberapa butir (tiap pustaka/topik
-    materi kajian ditulis dosen sebagai paragraf terpisah dalam 1 sel yang
-    sama, bukan 1 baris tabel per butir). Beda dengan PDF, newline dari
-    `cell.text` python-docx selalu berarti batas paragraf yang sungguhan
-    (bukan jejak line-wrap lebar kolom kertas).
-    jadi harus dipecah jadi baris tersendiri per butir sebelum diserahkan ke
-    extract_narrative_sections, supaya tiap butir tertampung sebagai entri
-    terpisah alih-alih tertelan menjadi satu string gabungan"""
+    # 1 sel bisa isinya banyak butir (\n = batas paragraf beneran di word).
+    # pecah jadi baris sendiri per butir sblm ke extract_narrative_sections.
     expanded = []
     for row in rows:
         if len(row) < 2:
@@ -113,18 +94,14 @@ def find_identity_table_index(tables_as_rows):
 
 
 # ---------------------------------------------------------------------------
-# Identitas & Otorisasi. di docx ini tinggal baca sel per posisi (bukan
-# tebak dari geometri kata seperti di PDF), karena strukturnya eksplisit.
+# identitas & otorisasi. baca sel per posisi, struktur tabelnya eksplisit
 # ---------------------------------------------------------------------------
 
 ROMAN_NUMERAL_VALUES = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
 
 
 def roman_to_int(text):
-    """Konversi angka romawi (mis. "IV", "VIII") ke integer. Sebagian
-    dokumen RPS menulis kolom semester pakai angka romawi, bukan angka biasa
-    return None kalau teksnya bukan angka romawi yang valid, supaya
-    pemanggilnya bisa lanjut coba pola lain / anggap tidak terdeteksi."""
+    # angka romawi -> int (buat kolom semester yg kadang ditulis romawi). invalid -> none.
     s = text.strip().upper()
     if not s or not re.fullmatch(r"[IVXLCDM]+", s):
         return None
@@ -141,8 +118,7 @@ def roman_to_int(text):
 
 
 def parse_semester_value(text):
-    """Kembalikan nomor semester (string angka) dari satu sel, menerima baik
-    format angka biasa ("4") maupun angka romawi ("IV")"""
+    # nomor semester dari 1 sel, terima angka biasa ("4") atau romawi ("IV")
     c_clean = text.strip()
     if re.fullmatch(r"\d{1,2}", c_clean):
         return c_clean
@@ -233,8 +209,7 @@ def extract_otorisasi_docx(rows):
         return {}
 
     header_row = rows[header_idx]
-    # Cari posisi label supaya urutan kolomnya benar walau ada label
-    # tambahan (mis. "OTORISASI" ikut terulang sebagai sel pertama).
+    # cari posisi tiap label di header, biar urutan kolom bener meski ada label ekstra
     pengembang_idx = koordinator_idx = ketua_idx = None
     for i, c in enumerate(header_row):
         if re.fullmatch(r"Pengembang(?:\s+RPS)?", c.strip(), re.I):
@@ -266,20 +241,12 @@ def extract_otorisasi_docx(rows):
 
 
 # ---------------------------------------------------------------------------
-# Rencana pembelajaran mingguan -- di docx tidak ada masalah lintas-halaman
-# seperti PDF, jadi cukup cari baris legenda "(1)".."(8)" atau header berisi
-# "Pekan" + "Indikator" + "Teknik", lalu ambil semua baris data sesudahnya.
+# rencana pembelajaran mingguan. cari header "pekan"+"indikator"+"teknik",
+# lalu ambil semua baris data sesudahnya
 # ---------------------------------------------------------------------------
 
 
-# Baris minggu evaluasi (UTS/UAS) biasanya cuma 1 sel gabungan memanjangi
-# hampir semua kolom (Sub-CPMK s/d Materi jadi satu), sisanya cuma kolom
-# Bobot yang beneran keisi angka -- baris ini TIDAK mewakili Sub-CPMK
-# manapun. Kalau tetap dimasukkan ke `weekly`, pemetaan index weekly[idx]
-# <-> subcpmk_list[idx] di bawah (extract()) jadi geser utk semua Sub-CPMK
-# SESUDAH minggu evaluasi ini -- bug yang bikin nilai bobot UTS/UAS nyasar
-# ke kolom Indikator Sub-CPMK berikutnya, sementara Teknik/Metode/Materi
-# Sub-CPMK itu jadi kosong (kehabisan kolom akibat sel yang ke-gabung).
+# baris minggu evaluasi (uts/uas) = 1 sel gabungan panjang, bukan baris sub-cpmk asli. skip.
 EVALUATION_WEEK_PATTERN = re.compile(
     r"ujian\s+tengah\s+semester|ujian\s+akhir\s+semester|\bUTS\b|\bUAS\b|"
     r"evaluasi\s+tengah\s+semester|evaluasi\s+akhir\s+semester",
@@ -287,7 +254,7 @@ EVALUATION_WEEK_PATTERN = re.compile(
 )
 
 
-# baca tabel Rencana Pembelajaran Mingguan (1 baris = 1 pekan), skip baris legenda/minggu UTS-UAS
+# baca tabel Rencana Pembelajaran Mingguan (1 baris = 1 pekan), skip minggu UTS-UAS
 def extract_weekly_plan_docx(all_rows):
     weekly = []
     seen_header = False
@@ -301,7 +268,6 @@ def extract_weekly_plan_docx(all_rows):
                 seen_header = True
             continue
 
-        # Lewati baris legenda "(1)" "(2)" ... "(8)" -- itu bukan data.
         non_empty_cells = [c.strip() for c in row if c.strip()]
         if non_empty_cells and all(re.fullmatch(r"\(\d{1,2}\)", c) for c in non_empty_cells):
             continue
@@ -311,23 +277,10 @@ def extract_weekly_plan_docx(all_rows):
         if not pekan_match:
             continue
 
-        # PENTING: pakai indeks TETAP sesuai posisi kolom baku (0=Pekan,
-        # 1=Sub-CPMK, 2=Indikator, 3=Teknik&Kriteria, 4=Luring, 5=Daring,
-        # 6=Materi, 7=Bobot) -- JANGAN filter sel kosong dulu seperti di
-        # pendekatan PDF, karena di docx baris sudah konsisten jumlah selnya;
-        # kalau difilter, sel kosong (mis. Daring yang memang tidak diisi)
-        # akan bikin kolom-kolom sesudahnya ikut geser posisi.
+        # index kolom tetap: 0=pekan, 1=sub-cpmk, 2=indikator, 3=teknik&kriteria, 4=luring, 5=daring, 6=materi, 7=bobot
         def get(i):
             return row[i] if i < len(row) else ""
 
-        # Lewati baris minggu evaluasi (UTS/UAS) -- lihat penjelasan di
-        # EVALUATION_WEEK_PATTERN di atas. SENGAJA cuma cek kolom Sub-CPMK
-        # (get(1)), BUKAN seluruh baris -- soalnya minggu ajar biasa juga
-        # sering menyebut "UTS (5%)" sebagai salah satu komponen bobot di
-        # kolom Teknik & Kriteria Penilaian (get(3)); kalau ikut dicek di
-        # situ, minggu ajar biasa itu keliru ikut ke-skip juga. Baris
-        # evaluasi asli isinya CUMA frasa evaluasi di kolom Sub-CPMK
-        # (sel gabungan), tidak ada deskripsi capaian pembelajaran lain.
         if EVALUATION_WEEK_PATTERN.search(get(1)):
             continue
 
@@ -384,12 +337,8 @@ def extract(docx_path):
     identity = extract_identity_docx(identity_rows)
     otorisasi = extract_otorisasi_docx(identity_rows)
 
-    # PENTING: identitas/otorisasi SELALU ada di tabel pertama (anchor), tapi
-    # bagian CP-tree / Asesmen / blok naratif / rencana mingguan KADANG
-    # berlanjut ke tabel Word TERPISAH sesudahnya (bukan di sel bersarang
-    # tabel yang sama) -- jadi jangan cuma baca identity_rows utk itu semua,
-    # gabungkan dulu dengan tabel-tabel top-level berikutnya sampai ketemu
-    # tabel lampiran yang jelas tidak terkait (rubrik/tugas terstruktur).
+    # identity/otorisasi selalu di tabel pertama (anchor), tapi cp-tree/asesmen/naratif/mingguan
+    # kadang lanjut ke tabel word berikutnya. gabung semua sampai ketemu stop section
     combined_table_indices = [anchor_idx]
     combined_rows = list(identity_rows)
     for idx in range(anchor_idx + 1, len(tables_as_rows)):
@@ -399,22 +348,8 @@ def extract(docx_path):
         combined_table_indices.append(idx)
         combined_rows.extend(rows)
 
-    # Sel dengan tabel bersarang (nested table) -- ini tempat tabel
-    # "Korelasi antara CP dan Asesmen" biasanya berada (di dalam salah satu
-    # sel baris "Capaian Pembelajaran (CP)"), dicari di SEMUA tabel yang ikut
-    # digabung di atas, bukan cuma tabel anchor.
-    # PENTING: simpan objek elemen lxml `cell._tc` itu sendiri di set, BUKAN
-    # `id(cell._tc)`. `row.cells` membuat wrapper Cell python-docx yang BARU
-    # tiap kali diakses, jadi objek lama bisa langsung di-garbage-collect --
-    # begitu itu terjadi, `id()`-nya (alamat memori) BISA DIPAKAI ULANG oleh
-    # objek lain yang benar-benar berbeda (gotcha klasik id() di Python).
-    # Akibatnya baris tabel yang JAUH dari baris "Capaian Pembelajaran (CP)"
-    # (mis. baris ke-21 dari 25 baris) bisa salah kedeteksi "sudah pernah
-    # dilihat" padahal itu sel yang berbeda -- tabel Korelasi-nya jadi
-    # DIAM-DIAM TERLEWATI walau sebetulnya ADA (bug nyata yang ditemukan pada
-    # RPS Bahasa Indonesia, Arsitektur Sistem Operasi, dkk.). Menyimpan objek
-    # elemen-nya langsung (bukan id-nya) sekaligus menahan referensi supaya
-    # tidak ke-garbage-collect, jadi perbandingan identitasnya valid terus.
+    # cari nested table di dalam sel (tabel "korelasi cp & asesmen" biasanya di sini).
+    # simpen objek cell._tc-nya sendiri di set (bukan id()) biar identity check-nya valid.
     nested_tables_rows = []
     seen_tcs = set()
     for idx in combined_table_indices:
@@ -426,21 +361,7 @@ def extract(docx_path):
                 for nested in cell.tables:
                     nested_tables_rows.append(table_to_rows(nested))
 
-    # Baris CP-tree: baris "Capaian Pembelajaran (CP)" punya label vMerge
-    # berulang di kolom pertama -- itu bukan kode, cuma label dekoratif, jadi
-    # dibuang dulu sebelum diserahkan ke extract_cp_tree (yang mengharapkan
-    # sel pertama berisi KODE, bukan label section).
-    #
-    # PENTING: dulu baris ini difilter SATU-SATU berdasarkan label "Capaian
-    # Pembelajaran" di sel pertama. Itu salah kalau tabel CP-tree terpotong
-    # jadi 2 tabel Word terpisah di batas halaman (bukan 1 tabel yang sama
-    # tapi cuma "kelihatan" menyambung) -- baris lanjutan di tabel kedua
-    # (mis. "CPMK3 | subCPMK4: ...") kehilangan label vMerge-nya (sel pertama
-    # jadi kosong), sehingga tidak match filter label dan diam-diam KEBUANG
-    # (bikin CPMK/Sub-CPMK di tabel lanjutan itu hilang seluruhnya dari hasil
-    # ekstraksi). Perbaikannya: ambil SEMUA baris dalam rentang kontinu dari
-    # baris "CPL-PRODI yang dibebankan" pertama sampai baris "Korelasi antara
-    # CP dan Asesmen" (inklusif), apa pun isi sel pertamanya masing-masing.
+    # ambil range baris cp-tree: dari label "capaian pembelajaran" pertama sampai "korelasi cp & asesmen"
     cp_start_idx = None
     cp_end_idx = None
     for i, row in enumerate(combined_rows):
@@ -466,31 +387,17 @@ def extract(docx_path):
             cp_rows_stripped.append(row)
 
     cp_all_tables = [cp_rows_stripped] + nested_tables_rows
-    # PENTING: pemetaan "CPMKx, Sub-CPMKy" yang tak-ambigu (dipakai utk
-    # mengoreksi tebakan posisi saat kode CPMK & Sub-CPMK sama-sama tergabung
-    # jadi 1 sel ringkasan) HARUS dicari di `combined_rows` yang lebih luas,
-    # BUKAN di `cp_rows_raw`/`cp_all_tables` saja -- tabel Rencana
-    # Pembelajaran Mingguan (tempat pemetaan eksplisit itu biasanya ada)
-    # seringkali sudah terpotong dari `cp_rows_raw` begitu ketemu section
-    # "Korelasi antara CP dan Asesmen", padahal tabel mingguannya sendiri
-    # baru muncul beberapa baris SESUDAH itu.
+    # pemetaan cpmk<->subcpmk yg jelas (authoritative_owners) dicari di combined_rows yg lebih luas,
+    # soalnya suka ada di tabel rencana mingguan yg udah kepotong dari cp_rows_raw
     authoritative_owners = find_authoritative_subcpmk_owners([combined_rows] + nested_tables_rows)
     cpl_list, cpmk_list, subcpmk_list = extract_cp_tree(cp_all_tables, authoritative_owners=authoritative_owners)
 
-    # "weekly" dihitung DI SINI (lebih awal dari sebelumnya) karena dipakai
-    # juga sebagai fallback Formatif/Sumatif di bawah -- lihat catatan di situ.
+    # weekly dihitung duluan di sini krn dipakai juga sbg fallback formatif/sumatif di bawah
     weekly = extract_weekly_plan_docx(combined_rows)
 
-    # PENTING: dipanggil 2x terpisah, BUKAN digabung jadi 1 list
-    # (nested_tables_rows + [combined_rows]). Baris teks pemicu "Korelasi
-    # antara CP dan Asesmen" cuma ada di combined_rows (baris tabel utama),
-    # SEDANGKAN isi rincian Kuis/Tugas/Ujian yg sesungguhnya sering ada di
-    # tabel bersarang (nested_tables_rows) yang TIDAK memuat teks pemicu itu
-    # sendiri. Kalau nested_tables_rows diproses duluan (urutan lama), mode
-    # "in_section" masih False saat baris datanya dibaca -> seluruh isinya
-    # kebuang. Nested table di sini sudah pasti scope-nya dalam Korelasi
-    # (asalnya dari sel-sel di rentang cp_rows_raw), jadi langsung anggap
-    # assume_in_section=True tanpa perlu pemicu teks.
+    # dipanggil 2x terpisah (bukan digabung 1 list): trigger text "korelasi cp & asesmen" cuma
+    # ada di combined_rows, sedangkan isi kuis/tugas/ujian beneran sering di nested table.
+    # nested table di sini udah pasti scope-nya korelasi, jadi assume_in_section=True langsung.
     assessment_rows = {
         **extract_assessment_rows(nested_tables_rows, assume_in_section=True),
         **extract_assessment_rows([combined_rows]),
@@ -502,16 +409,8 @@ def extract(docx_path):
             or info.get("ujian") or info.get("pjbl") or info.get("presentasi") or info.get("lainnya")
         )
 
-        # Fallback dihitung SELALU (bukan cuma kalau Korelasi table kosong
-        # total) -- karena sebagian dokumen punya tabel Korelasi yang HANYA
-        # memuat sebagian bucket (mis. Kuis/Tugas/Ujian/PjBL saja), sementara
-        # Presentasi (atau bucket lain) cuma disebut di teks bebas "Teknik &
-        # Kriteria Penilaian" tabel rencana mingguan. Kalau fallback ini cuma
-        # dipanggil saat has_korelasi_data == False (all-or-nothing per
-        # Sub-CPMK), bucket yang "ketinggalan" itu akan PERMANEN kosong
-        # walau infonya sebenarnya ADA, cuma di tempat lain -- ini akar bug
-        # yang dilaporkan: Presentasi tidak pernah terekstraksi walau
-        # Kuis/Tugas/Ujian/PjBL dari tabel Korelasi berhasil.
+        # fallback dihitung selalu, bukan cuma pas has_korelasi_data == false, soalnya tabel korelasi
+        # kadang cuma punya sebagian bucket (mis. presentasi cuma disebut di teks bebas mingguan)
         week_detail = weekly[idx] if idx < len(weekly) else None
         parsed = parse_embedded_assessment((week_detail or {}).get("teknik_kriteria", ""))
 
@@ -528,13 +427,8 @@ def extract(docx_path):
             sub["bentuk_pembelajaran"] = info.get("bentuk_pembelajaran", "")
             sub["metode_pembelajaran"] = info.get("metode_pembelajaran", "")
         else:
-            # Tabel Korelasi sama sekali tidak punya data utk Sub-CPMK ini --
-            # rincian Formatif/Sumatif (mis. "Kuis 1 (5%)", "Laporan Singkat 1
-            # (10%)") malah ditulis sebagai teks bebas di sel Teknik & Kriteria
-            # Penilaian pada tabel rencana mingguan. Sub-CPMK ke-n (urutan
-            # dokumen) berpasangan dengan baris mingguan ke-n, sama seperti
-            # pemetaan yang dipakai rpsDocxParser.js untuk field lain
-            # (indikator, materi, dst).
+            # ga ada tabel korelasi sama sekali -> rincian formatif/sumatif ditulis bebas
+            # di kolom teknik&kriteria mingguan. sub-cpmk ke-n dipasangin ke baris mingguan ke-n.
             if parsed["formatif"] or parsed["formatif_bobot"] or parsed["kuis"] or parsed["tugas"] or parsed["ujian"] or parsed["pjbl"] or parsed["presentasi"] or parsed["lainnya"]:
                 sub["formatif_nama"] = parsed["formatif"]
                 sub["formatif_bobot"] = parsed["formatif_bobot"]
@@ -545,14 +439,8 @@ def extract(docx_path):
                 sub["presentasi"] = parsed["presentasi"]
                 sub["lainnya"] = parsed["lainnya"]
 
-    # Sama seperti CP-tree di atas: kalau blok naratif (Materi Kajian/Pustaka/
-    # Dosen/dst) kepotong jadi tabel Word terpisah di batas halaman, baris
-    # lanjutannya (mis. isi "Pendukung:" yang menyambung ke tabel berikutnya)
-    # kehilangan label vMerge di sel pertama (jadi kosong) dan diam-diam
-    # KEBUANG kalau difilter satu-satu berdasar label. Jadi ambil rentang
-    # kontinu dari label naratif PERTAMA yang ketemu sampai baris header
-    # rencana mingguan ("Pekan"/"Mg Ke"), apa pun isi sel pertama tiap
-    # barisnya -- bukan filter per baris berdasarkan label.
+    # sama kayak cp-tree: ambil range kontinu dari label naratif pertama sampai header
+    # rencana mingguan, bukan filter per baris (biar baris lanjutan yg ga ada labelnya ga kebuang)
     narrative_start_idx = None
     narrative_end_idx = None
     for i, row in enumerate(combined_rows):

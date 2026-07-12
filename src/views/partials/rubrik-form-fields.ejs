@@ -8,9 +8,14 @@ const defaultSkala = [
   { skor: '2', label: '' },
   { skor: '1', label: '' }
 ];
-const skalaList = rubrik ? rubrik.skala : defaultSkala;
+const skalaList = rubrik ? rubrik.skala : defaultSkala; // rubrik null (form tambah baru) -> pakai 4 skor default
 const kriteriaList = rubrik && rubrik.kriteria.length ? rubrik.kriteria : [{ aspek: '', deskripsi: skalaList.map(() => '') }];
 %>
+<!-- PENTING: input skor/label/aspek/deskripsi di bawah ini SENGAJA ga dikasih atribut
+     "name" di sini. nama field yg beneran (skala[0][skor], kriteria[0][aspek], dst) baru
+     ditentukan belakangan oleh javascript reindexRubrikForm() pas form mau disubmit --
+     lihat penjelasannya di rubrik-tabel.ejs. jadi kalau javascript-nya ga jalan/dimatiin,
+     form ini ga akan berhasil kesimpen (field-nya ga punya nama). -->
 <div data-form="<%= fid %>">
     <div class="mb-4">
         <label class="label">Nama Rubrik</label>

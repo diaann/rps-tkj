@@ -1,7 +1,11 @@
 <%- include('partials/header') %>
 
 <%
-// Helper kecil: bikin id form yang aman dipakai sebagai selector/attribute.
+// kode di dalam blok ini jalan di SERVER (bukan di browser), pas halaman lagi dirakit.
+// helper kecil: bikin "kode unik" per rubrik (misal "r3" utk rubrik id 3, atau "new" utk
+// form tambah rubrik baru) -- dipakai sbg penanda di HTML (atribut data-form="...") biar
+// javascript nanti bisa tau form/tombol mana yg lagi diutak-atik kalau ada BANYAK rubrik
+// sekaligus di 1 halaman.
 function formIdFor(rubrik) { return rubrik ? ('r' + rubrik.id) : 'new'; }
 %>
 
@@ -101,6 +105,11 @@ function formIdFor(rubrik) { return rubrik ? ('r' + rubrik.id) : 'new'; }
 
                     <!-- Mode edit (tersembunyi sampai tombol Edit ditekan) -->
                     <div data-edit="<%= fid %>" class="hidden">
+                        <!-- onsubmit="return reindexRubrikForm(...)" -- ini trik penting: SEBELUM
+                             form ini beneran terkirim ke server, javascript reindexRubrikForm()
+                             dijalanin dulu (lihat definisinya di <script> paling bawah). kalau
+                             fungsi itu mengembalikan false, PENGIRIMAN FORM DIBATALKAN (berguna
+                             buat validasi: kalau ada yg belum diisi, munculin alert & batalin submit) -->
                         <form method="POST" action="/rubrik/mk/<%= rpsItem.id %>/<%= rb.id %>/edit" onsubmit="return reindexRubrikForm('<%= fid %>')">
                             <%- include('partials/rubrik-form-fields', { fid: fid, rubrik: rb }) %>
                             <div class="mt-4 flex justify-end gap-2">
@@ -127,31 +136,41 @@ function formIdFor(rubrik) { return rubrik ? ('r' + rubrik.id) : 'new'; }
     </div>
 
     <script>
+        // semua kode di dalam <script> ini jalan di BROWSER (bukan server), sesudah
+        // halaman HTML-nya kekirim & tampil ke user.
+
         // --- Tab switching (persis pola di Tabel Penilaian) ---
+        // dipanggil tiap kali tombol tab (nama rubrik / "Tambah Rubrik") diklik.
+        // caranya: SEMBUNYIIN semua panel & non-aktifin semua tombol tab dulu,
+        // BARU tampilin panel yg dipilih & tandain tombolnya sbg "aktif" (warna biru).
         function showRubrikTab(targetId, btnEl) {
             document.querySelectorAll('.rubrik-tab-panel').forEach(function (panel) {
-                panel.classList.add('hidden');
+                panel.classList.add('hidden'); // class "hidden" = css buat display:none
             });
             document.querySelectorAll('.rubrik-tab-btn').forEach(function (btn) {
                 btn.classList.remove('bg-white', 'border-blue-500', 'text-blue-700');
                 btn.classList.add('bg-gray-50', 'border-transparent', 'text-gray-500');
             });
             const target = document.getElementById(targetId);
-            if (target) target.classList.remove('hidden');
+            if (target) target.classList.remove('hidden'); // tampilin panel yg dipilih
             if (btnEl) {
+                // kasih warna "aktif" ke tombol yg baru diklik
                 btnEl.classList.remove('bg-gray-50', 'border-transparent', 'text-gray-500');
                 btnEl.classList.add('bg-white', 'border-blue-500', 'text-blue-700');
             }
         }
 
         // --- Toggle lihat/edit untuk satu rubrik ---
+        // tiap rubrik punya 2 tampilan yg saling GANTIAN (bukan bareng2): mode "lihat"
+        // (tabel biasa, cuma buat diliat) dan mode "edit" (form yg bisa diubah).
+        // fungsi ini yg nuker antara 2 mode itu pas tombol "Edit"/"Batal" diklik.
         function toggleRubrikEdit(fid) {
             const viewEl = document.querySelector('[data-view="' + fid + '"]');
             const editEl = document.querySelector('[data-edit="' + fid + '"]');
             if (!viewEl || !editEl) return;
-            const showEdit = editEl.classList.contains('hidden');
-            viewEl.classList.toggle('hidden', showEdit);
-            editEl.classList.toggle('hidden', !showEdit);
+            const showEdit = editEl.classList.contains('hidden'); // lagi disembunyiin -> berarti mau ditampilin
+            viewEl.classList.toggle('hidden', showEdit);  // kalau mode edit mau ditampilin, mode lihat disembunyiin
+            editEl.classList.toggle('hidden', !showEdit); // dan sebaliknya
         }
 
         // --- Kolom skala (Skor N + Label): tambah selalu di akhir, hapus cuma yang paling akhir.

@@ -1,12 +1,16 @@
-//module yg bertugas menjembatani dunia node.js dan skrip python
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
-const crypto = require('crypto');
-const { spawnSync } = require('child_process');
+// module ini "menjembatani" dunia Node.js (server, req/res) dengan skrip Python yg beneran
+// baca isi file .docx. alurnya: Node terima file upload -> file-nya dikasih ke skrip Python
+// lewat runPythonExtractor() -> hasil bacaan Python dirakit jadi rpsData siap simpan
+// lewat buildRpsObjectFromExtraction(). satu2nya fungsi yg dipanggil dari luar (dari
+// src/routes/index.js) adalah parseRpsDocxBuffer, di paling bawah file ini.
+const path = require('path');       // buat nyusun alamat file dgn aman
+const fs = require('fs');           // baca/tulis file di disk
+const os = require('os');           // buat tau folder "temp" bawaan sistem operasi
+const crypto = require('crypto');   // buat bikin nama file acak yg unik
+const { spawnSync } = require('child_process'); // buat nyalain program lain (python) dari node
 
-const cplsPath = path.join(__dirname, '..', 'database', 'cpls.json');
-const DOCX_PYTHON_SCRIPT = path.join(__dirname, 'docx_extractor.py');
+const cplsPath = path.join(__dirname, '..', 'database', 'cpls.json'); // database CPL baku yg dikelola admin
+const DOCX_PYTHON_SCRIPT = path.join(__dirname, 'docx_extractor.py'); // lokasi skrip python yg mau dijalankan
 
 const INDONESIAN_MONTHS = {
   januari: 1, februari: 2, maret: 3, april: 4, mei: 5, juni: 6,
@@ -148,10 +152,7 @@ function loadCplDescriptionsFromDatabase(activeCplId = '') {
 }
 
 // ---------------------------------------------------------------------------
-// Jembatan ke docx_extractor.py (python-docx). Skrip Python membaca struktur
-// tabel asli di .docx sehingga Rumpun MK / Semester / Tanggal / Otorisasi /
-// CPL-CPMK-Sub-CPMK terekstrak sesuai posisi kolomnya, bukan ditebak dari teks
-// mentah yang dilinearkan.
+// jembatan ke docx_extractor.py. baca struktur tabel asli, bukan tebak dari teks
 // ---------------------------------------------------------------------------
 
 // jalankan skrip python docx_extractor.py sbg proses terpisah dan mengembalikan hasilnya sbg objek js
@@ -365,22 +366,16 @@ function buildRpsObjectFromExtraction(extraction, options = {}) {
     rpsData.extraction_notes.push('Rencana pembelajaran mingguan tidak terdeteksi jelas dari dokumen (format tabel mingguan bisa berbeda-beda antar template). Silakan lengkapi lewat Edit RPS.');
   }
 
-  // ID CPMK internal harus selalu format sekuensial "CPMKxx" (dua digit)
-  // berapa pun/apa pun format penomoran asli di dokumen sumber
-  // sebagian RPS menomori CPMK mengikuti CPL yang menaunginya, mis. "CPMK06.4"
-  // (CPMK ke-4 di bawah CPL06), bukan "CPMK1, CPMK2, ...". Kalau id mentah ini
-  // dipakai apa adanya sebagai key, seluruh bagian lain sistem (tampilan RPS, form edit, export Word, tabel penilaian)
-  // yang mencocokkan key pakai regex
-  // /^CPMK\d+$/ akan gagal cocok gara-gara tanda titik di id. datanya ada di rps.json tapi dianggap tidak ada sama sekali di semua fitur tsb.
-  // Jadi di sini ID mentah dari dokumen HANYA dipakai sebagai kunci pemetaan
-  // sementara (cpmkIdMap) utk menyambungkan Sub-CPMK ke CPMK induknya yang benar. 
-  // teks penomoran aslinya sendiri tetap utuh di dalam field deskripsi CPMK, jadi tidak ada informasi yang hilang.
-  // iterasi daftar cpmk hasil ekstraksi dan diberi id
-  const cpmkCplMap = {};
-  const cpmkIdMap = {};
+  // id cpmk internal dipaksa format "CPMKxx" (regex /^CPMK\d+$/ dipakai di seluruh sistem,
+  // titik kayak "CPMK06.4" bikin ga match). cpmkIdMap cuma buat nyambungin sub-cpmk ke cpmk aslinya.
+  const cpmkCplMap = {};  // simpen "cpmk ini turunan cpl yg mana", dipakai lagi pas nyusun sub-cpmk di bawah
+  const cpmkIdMap = {};   // peta dari id ASLI di dokumen -> id BAKU "CPMKxx" (lihat penjelasan di atas)
+  // loop ke tiap cpmk hasil ekstraksi, kasih id baku berurutan (CPMK01, CPMK02, dst),
+  // terus TULIS field-nya langsung ke rpsData pakai notasi kurung, sama persis kayak
+  // format yg dikirim form Edit RPS manual (cpmk[CPMKxx][field] = nilai).
   cpmks.forEach((cpmk, idx) => {
-    const cpmkId = padCode('CPMK', idx + 1);
-    if (cpmk.id) cpmkIdMap[cpmk.id] = cpmkId;
+    const cpmkId = padCode('CPMK', idx + 1); // idx dimulai dari 0, makanya +1 (item pertama = CPMK01)
+    if (cpmk.id) cpmkIdMap[cpmk.id] = cpmkId; // catat pemetaan id asli -> id baku
     const cplCode = cpmk.cpl_code || cplList[0] || '';
     rpsData[`cpmk[${cpmkId}][cpl_code]`] = cplCode;
     rpsData[`cpmk[${cpmkId}][cpl_description]`] = cpmk.cpl_description || cplDescriptions[cplCode] || '';
@@ -388,12 +383,18 @@ function buildRpsObjectFromExtraction(extraction, options = {}) {
     cpmkCplMap[cpmkId] = cplCode;
   });
 
-  const defaultCpmkId = padCode('CPMK', 1) || 'CPMK01';
-  const localCounters = {};
+  // sama kayak loop cpmks di atas, tapi buat sub-cpmk: tiap sub-cpmk ditulis ke rpsData
+  // pakai notasi sub_cpmk[CPMKxx][nomor_lokal][nama_field] = nilai. loop ini yg paling
+  // panjang di file ini krn sub-cpmk punya BANYAK field (deskripsi, pekan, bobot,
+  // formatif, sumatif kuis/tugas/ujian/pjbl/presentasi, dst).
+  const defaultCpmkId = padCode('CPMK', 1) || 'CPMK01'; // kalau cpmk induknya ga ketauan, taruh di CPMK01 aja
+  const localCounters = {}; // penghitung nomor lokal per cpmk, misal {CPMK01: 2, CPMK02: 1}
   subCpmks.forEach(sub => {
-    const cpmkId = cpmkIdMap[sub.cpmk_id] || defaultCpmkId;
-    localCounters[cpmkId] = (localCounters[cpmkId] || 0) + 1;
+    const cpmkId = cpmkIdMap[sub.cpmk_id] || defaultCpmkId; // cari cpmk induknya (id baku, bukan id asli dokumen)
+    localCounters[cpmkId] = (localCounters[cpmkId] || 0) + 1; // nomor lokal sub-cpmk ini di dalam cpmk-nya (1, 2, 3, ...)
     const localIndex = localCounters[cpmkId];
+    // sub-cpmk ke-n biasanya berpasangan dgn baris ke-n di tabel rencana mingguan (weekly),
+    // krn di situ ada info tambahan (pekan, indikator, teknik&kriteria, dll) yg lebih lengkap.
     const weekDetail = weekly[(sub.globalSubNumber || localIndex) - 1] || null;
     const weekGuess = sub.globalSubNumber || localIndex;
     const pekanAwal = weekDetail ? weekDetail.pekan_awal : String(weekGuess);
@@ -423,6 +424,8 @@ function buildRpsObjectFromExtraction(extraction, options = {}) {
     rpsData[`sub_cpmk[${cpmkId}][${localIndex}][pengalaman_belajar]`] = '';
     rpsData[`sub_cpmk[${cpmkId}][${localIndex}][bentuk_penilaian]`] = '';
     const rawBobot = (sub.bobot || (weekDetail && weekDetail.bobot) || '0').toString();
+    // ganti koma jadi titik dulu (dokumen indonesia suka nulis desimal pakai koma, misal "4,5"),
+    // baru ambil pola angkanya, biar nilai bobot yg tersimpan SELALU pakai titik.
     const bobotNormalized = rawBobot.replace(',', '.').match(/\d+(?:\.\d+)?/);
     rpsData[`sub_cpmk[${cpmkId}][${localIndex}][bobot]`] = bobotNormalized ? bobotNormalized[0] : '0';
 

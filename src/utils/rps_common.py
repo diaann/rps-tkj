@@ -2,15 +2,9 @@
 """
 rps_common.py
 
-Util & logika ekstraksi yang dipakai oleh docx_extractor.py (Word,
-python-docx).
-
-Begitu data sudah dalam bentuk generik "daftar tabel -> daftar baris ->
-daftar sel (string atau None)", logika buat mengenali kode CPL/CPMK/Sub-CPMK,
-mengklasifikasi kolom Sumatif (Kuis/Tugas/Ujian/PjBL/Lainnya), dan membaca
-blok naratif (Deskripsi Singkat, Materi Kajian, Pustaka, Dosen Pengampu, Mata
-Kuliah Syarat) dikumpulkan di sini supaya terpisah rapi dari kode baca tabel
-docx-nya sendiri.
+util & logic ekstraksi yg dipakai docx_extractor.py. input-nya generik:
+list of table -> list of row -> list of cell (string/None).
+isinya: kenalin kode cpl/cpmk/sub-cpmk, klasifikasi kolom sumatif, baca blok naratif.
 """
 
 import re
@@ -77,21 +71,6 @@ def pad_code(prefix, number):
 
 # cari pola "CPMKx ... Sub-CPMKy" yg nempel di 1 sel yg sama -> pasangan CPMK-SubCPMK yg pasti benar
 def find_authoritative_subcpmk_owners(all_tables):
-    """Kalau ada SATU SEL yang menuliskan kombinasi eksplisit "CPMK<kode>,
-    Sub-CPMK<n>" bersamaan (mis. pada tabel Rencana Pembelajaran Mingguan:
-    "CPL6, CPMK06.1, Sub-CPMK1: Mampu ..."), pemetaan itu TIDAK ambigu --
-    dipakai sbg rujukan utk mengoreksi tebakan posisi pada baris ringkasan
-    "CPMK ⇒ Sub-CPMK" yang sel kode CPMK & Sub-CPMK-nya sama-sama tergabung
-    (vertical merge di Word jadi 1 sel per kolom, memuat banyak kode/Sub-CPMK
-    sekaligus) -- di baris ringkasan itu urutan CPMK vs Sub-CPMK sudah tidak
-    lagi berkorespondensi 1-ke-1 begitu ada CPMK yang menaungi lebih/kurang
-    dari 1 Sub-CPMK, jadi tebakan posisi gampang salah (lihat pemakainya di
-    bawah). SENGAJA dicek per SEL individual (bukan gabungan satu baris),
-    supaya kode CPMK terakhir pada baris ringkasan tsb -- yang di teks
-    gabungan satu baris kebetulan "menempel" persis di depan Sub-CPMK
-    PERTAMA (krn 2 sel berbeda yang digabung jadi satu string) -- tidak ikut
-    kebaca seolah itu pasangan asli.
-    """
     owners = {}
     pattern = re.compile(r"CPMK\s*0*(\d+(?:\.\d+)?)\D{0,20}?Sub[\s\-]*CPMK\s*0*(\d+)\b", re.I | re.S)
     for table in all_tables:
@@ -106,21 +85,10 @@ def find_authoritative_subcpmk_owners(all_tables):
     return owners
 
 
-# fungsi paling penting di file ini: susun pohon CPL -> CPMK -> Sub-CPMK dari baris2 tabel
+# fungsi paling penting di file ini: susun CPL -> CPMK -> Sub-CPMK dari baris2 tabel
 def extract_cp_tree(all_tables, authoritative_owners=None):
-    """
-    Menyusuri baris-baris tabel (semua halaman) dan membangun pohon
-    CPL -> CPMK -> Sub-CPMK berdasarkan kode yang terdeteksi di kolom kiri
-    tiap baris tabel, dipasangkan dengan teks deskripsi di kolom kanannya.
-
-    authoritative_owners: dict {sub_num: cpmk_id} hasil
-    find_authoritative_subcpmk_owners(), IDEALNYA dihitung oleh pemanggil
-    dari rentang baris yang LEBIH LUAS daripada `all_tables` (mis. termasuk
-    tabel Rencana Pembelajaran Mingguan yang seringkali sudah dipotong/tidak
-    ikut disertakan di `all_tables` karena beririsan dengan section "Korelasi
-    antara CP dan Asesmen"). Kalau tidak diberikan, dihitung sendiri dari
-    `all_tables` saja sebagai fallback (lebih terbatas cakupannya).
-    """
+    # susuri semua baris tabel, bangun cpl -> cpmk -> sub-cpmk dari kode di kolom + deskripsinya.
+    # authoritative_owners (opsional): pemetaan sub-cpmk->cpmk yg udah pasti benar, biar ga cuma nebak posisi
     if authoritative_owners is None:
         authoritative_owners = find_authoritative_subcpmk_owners(all_tables)
 
@@ -168,10 +136,7 @@ def extract_cp_tree(all_tables, authoritative_owners=None):
             is_pure_cpl = bool(re.fullmatch(r"CPL-?0*\d+", first_cell_nows, re.I))
             is_pure_cpmk = bool(re.fullmatch(r"CPMK-?0*\d+(?:\.\d+)?", first_cell_nows, re.I))
 
-            # --- Pola "3 sel terpisah": [KodeCPL, KodeCPMK, deskripsi] --
-            # ditemukan di beberapa template (mis. Arsitektur Sistem Operasi,
-            # Dasar Keamanan Siber) yang TIDAK menggabung kode+deskripsi dalam
-            # 1 sel seperti template lain, tapi memisahkannya per kolom.
+            # pola 1: 3 sel terpisah [cpl, cpmk, deskripsi]
             if is_pure_cpl and rest_cells and re.fullmatch(r"CPMK\s*0*\d+(?:\.\d+)?", rest_cells[0].strip(), re.I):
                 cpl_code = pad_code("CPL", re.search(r"\d+", first_cell_stripped).group())
                 current_cpl = cpl_code
@@ -187,7 +152,7 @@ def extract_cp_tree(all_tables, authoritative_owners=None):
                     cpmk_map[cpmk_code]["deskripsi"] = (cpmk_map[cpmk_code]["deskripsi"] + " " + desc).strip()
                 continue
 
-            # --- Pola "3 sel terpisah": [KodeCPMK, "Sub-CPMK N", deskripsi] ---
+            # pola 2: 3 sel terpisah [cpmk, "sub-cpmk n", deskripsi]
             if is_pure_cpmk and len(rest_cells) >= 2:
                 sub_label_match = re.fullmatch(r"Sub[\s\-]*CPMK\s*0*(\d+)\s*[:\-]?\s*", rest_cells[0].strip(), re.I)
                 if sub_label_match:
@@ -206,9 +171,7 @@ def extract_cp_tree(all_tables, authoritative_owners=None):
                         subcpmk_map[sub_key]["deskripsi"] = (subcpmk_map[sub_key]["deskripsi"] + " " + desc).strip()
                     continue
 
-            # --- Pola "2 sel": [KodeCPMK, "Sub-CPMK N: deskripsi..."] --
-            # deskripsi Sub-CPMK menyatu LANGSUNG di sel yang sama (bukan sel
-            # terpisah), bisa juga berisi BEBERAPA Sub-CPMK sekaligus. ---
+            # pola 3: 2 sel [cpmk, "sub-cpmk n: deskripsi..."], sel ke-2 bisa berisi beberapa sub-cpmk sekaligus
             if is_pure_cpmk and len(rest_cells) == 1 and re.match(r"^Sub[\s\-]*CPMK", rest_cells[0].strip(), re.I):
                 cpmk_id_match = re.search(r"\d+(?:\.\d+)?", first_cell_stripped)
                 cpmk_id = pad_code("CPMK", cpmk_id_match.group()) if cpmk_id_match else ""
@@ -231,8 +194,7 @@ def extract_cp_tree(all_tables, authoritative_owners=None):
                         subcpmk_map[sub_key]["deskripsi"] = (subcpmk_map[sub_key]["deskripsi"] + " " + desc).strip()
                 continue
 
-            # --- Pola "2 sel": [KodeCPMK, deskripsi] -- kolom CPL kosong
-            # karena rowspan (barisnya lanjutan dari CPL yang sama). ---
+            # pola 4: 2 sel [cpmk, deskripsi], kolom cpl kosong krn rowspan (lanjutan cpl yg sama)
             if is_pure_cpmk and rest_cells and not re.match(r"^Sub[\s\-]*CPMK", rest_cells[0].strip(), re.I):
                 cpmk_id_match = re.search(r"\d+(?:\.\d+)?", first_cell_stripped)
                 cpmk_code = pad_code("CPMK", cpmk_id_match.group()) if cpmk_id_match else ""
@@ -245,23 +207,15 @@ def extract_cp_tree(all_tables, authoritative_owners=None):
                     cpmk_map[cpmk_code]["deskripsi"] = (cpmk_map[cpmk_code]["deskripsi"] + " " + desc).strip()
                 continue
 
-            # Sel kode bisa memuat lebih dari satu kode bertumpuk (rowspan
-            # tervisualisasikan sebagai baris-baris teks dalam 1 sel), mis.
-            # "CPMK1\nCPMK2\nCPMK3". Pecah dulu jadi token per baris.
-            # Kadang satu kode tunggal kepotong jadi 2 baris gara-gara lebar
-            # kolom sempit (mis. "CPM\nK2" seharusnya "CPMK2"). Coba dulu
-            # anggap seluruh sel (tanpa spasi/newline) sebagai SATU kode;
-            # baru kalau itu tidak cocok, baru dianggap beberapa kode
-            # bertumpuk dan dipecah per baris seperti biasa.
+            # sel kode bisa berisi banyak kode bertumpuk ("CPMK1\nCPMK2"), pecah jadi token per baris.
+            # anggap 1 sel = 1 kode utuh (jaga2 kepotong 2 baris kayak "CPM\nK2"),
+            # baru fallback ke pecah per baris kalau ga cocok.
             whole_cell_as_code = re.sub(r"\s+", "", first_cell)
             if re.fullmatch(r"CPL-?0*\d+", whole_cell_as_code, re.I) or re.fullmatch(r"CPMK-?0*\d+(?:\.\d+)?", whole_cell_as_code, re.I):
                 code_tokens = [whole_cell_as_code]
             else:
                 raw_tokens = [t.strip() for t in re.split(r"[\n,]+", first_cell) if t.strip()]
-                # Kadang "CPMK" dan nomornya kepisah jadi 2 baris/token sendiri
-                # (mis. baris "CPMK" lalu baris "06.1" di paragraf berikutnya).
-                # Gabungkan pasangan token "CPMK"/"CPL" polos + token angka
-                # yang mengikutinya jadi satu kode utuh.
+                # gabung token "CPMK"/"CPL" polos + angka di token berikutnya jadi 1 kode utuh
                 code_tokens = []
                 i = 0
                 while i < len(raw_tokens):
@@ -280,8 +234,7 @@ def extract_cp_tree(all_tables, authoritative_owners=None):
             has_subcpmk_marker_in_rest = bool(re.search(r"Sub[\s\-]*CPMK\s*0*\d+", rest, re.I))
             has_cpmk_marker_in_rest = bool(re.search(r"CPMK\s*0*\d+(?:\.\d+)?", rest, re.I))
 
-            # --- Baris kelanjutan lintas-halaman (1 sel saja, tanpa kolom kode
-            # terpisah karena rowspan terpotong batas halaman) ---
+            # baris lanjutan lintas-halaman (cuma 1 sel, rowspan kepotong batas halaman)
             if len(cells) == 1 and re.match(r"^Sub[\s\-]*CPMK\s*0*\d+", first_cell, re.I):
                 target_cpmk = current_cpmk or (cpmk_order[-1] if cpmk_order else None)
                 if target_cpmk:
@@ -310,7 +263,7 @@ def extract_cp_tree(all_tables, authoritative_owners=None):
                     cpmk_map[cpmk_id]["deskripsi"] = (cpmk_map[cpmk_id]["deskripsi"] + " " + desc).strip()
                 continue
 
-            # --- Baris kode CPL (satu atau lebih kode bertumpuk dalam 1 sel) ---
+            # baris kode cpl (1 atau lebih kode bertumpuk dalam 1 sel)
             if cpl_tokens and not cpmk_tokens and not has_subcpmk_marker_in_rest and not has_cpmk_marker_in_rest:
                 for code in cpl_tokens:
                     current_cpl = code
@@ -320,12 +273,7 @@ def extract_cp_tree(all_tables, authoritative_owners=None):
                         cpl_desc[code] = rest
                 continue
 
-            # --- Baris "CPL02  CPMK01: deskripsi..." (kolom CPL diulang di tabel CPMK).
-            # Satu sel "rest" ini kadang berisi BEBERAPA entri CPMK sekaligus
-            # (dipisah newline antar paragraf), jadi harus di-looping (finditer),
-            # bukan diambil satu match saja -- kalau cuma satu match, sisa
-            # CPMK lain di sel yang sama akan ketelan jadi bagian deskripsi
-            # CPMK pertama saja (bug yang sempat kejadian). ---
+            # baris "CPL02 CPMK01: deskripsi..." 1 sel bisa berisi beberapa cpmk, makanya loop finditer
             if cpl_tokens and has_cpmk_marker_in_rest:
                 current_cpl = cpl_tokens[-1]
                 cpmk_matches = list(re.finditer(
@@ -343,8 +291,7 @@ def extract_cp_tree(all_tables, authoritative_owners=None):
                         cpmk_map[cpmk_id]["deskripsi"] = (cpmk_map[cpmk_id]["deskripsi"] + " " + desc).strip()
                 continue
 
-            # --- Baris kode CPMK (satu atau lebih kode bertumpuk) berpasangan
-            # dengan sel Sub-CPMK yang berisi beberapa subCPMKn sekaligus ---
+            # baris kode cpmk (bertumpuk) berpasangan dgn sel sub-cpmk yg isinya beberapa sub-cpmk
             if cpmk_tokens and has_subcpmk_marker_in_rest:
                 for cpmk_id in cpmk_tokens:
                     if cpmk_id not in cpmk_map:
@@ -359,16 +306,8 @@ def extract_cp_tree(all_tables, authoritative_owners=None):
                 for i, sub_match in enumerate(sub_matches):
                     sub_num = int(sub_match.group(1))
                     desc = clean(sub_match.group(2))
-                    # Prioritaskan pemetaan tak-ambigu dari
-                    # find_authoritative_subcpmk_owners (mis. baris Rencana
-                    # Pembelajaran Mingguan yang eksplisit menulis "CPMKx,
-                    # Sub-CPMKy" bersamaan) kalau tersedia. BARU kalau tidak
-                    # ada rujukan sama sekali, jatuh ke tebakan posisi
-                    # berpasangan urut (indeks ke-i Sub-CPMK <-> indeks ke-i
-                    # CPMK; sisa yang kelebihan ikut kode CPMK terakhir) --
-                    # tebakan ini SERING SALAH begitu satu CPMK menaungi
-                    # jumlah Sub-CPMK yang tidak rata, jadi cuma dipakai
-                    # sebagai upaya terakhir.
+                    # prioritas: pemetaan pasti dari authoritative_owners. fallback: tebak posisi
+                    # berpasangan urut (sub-cpmk ke-i <-> cpmk ke-i) ini sering salah, upaya terakhir aja
                     owner = authoritative_owners.get(sub_num) or (
                         cpmk_tokens[i] if i < len(cpmk_tokens) else cpmk_tokens[-1]
                     )
@@ -393,19 +332,8 @@ def extract_cp_tree(all_tables, authoritative_owners=None):
 
     cpl_list = [{"code": c, "deskripsi": cpl_desc.get(c, "")} for c in cpl_order]
     cpmk_list = [cpmk_map[i] for i in cpmk_order]
-    # PENTING: subcpmk_map dikunci per (cpmk_id, nomor_asli_di_dokumen) supaya
-    # dua Sub-CPMK milik CPMK BERBEDA yang kebetulan diberi nomor lokal sama
-    # oleh dosen (mis. template yang menomori Sub-CPMK ulang dari 1 di tiap
-    # CPMK, bukan menerus) tidak saling tertimpa/tergabung jadi satu entri --
-    # itu akar masalah "1 CPMK harusnya cuma py 1 Sub-CPMK tapi kebaca 3" dan
-    # sebaliknya. Nomor tampil (global_number) di-generate ULANG di sini
-    # secara berurutan sesuai urutan kemunculan asli di dokumen, BUKAN dari
-    # angka mentah hasil parsing teks -- supaya selalu 1,2,3,... rapi, tidak
-    # "acak" mengikuti apa pun angka yang kebetulan tertulis di sumbernya.
-    # "raw_number" (nomor asli hasil parsing teks) dipertahankan terpisah
-    # karena tabel "Korelasi antara CP dan Asesmen" (extract_assessment_rows)
-    # mengacu ke Sub-CPMK pakai nomor MENTAH yang sama seperti tertulis di
-    # dokumen, bukan nomor tampilan yang sudah diurutkan ulang di atas.
+    # key subcpmk_map = (cpmk_id, nomor asli) biar sub-cpmk beda cpmk yg kebetulan
+    # nomornya sama (template reset nomor tiap cpmk) ga saling ketiban
     subcpmk_list = []
     for idx, key in enumerate(subcpmk_order):
         entry = dict(subcpmk_map[key])
@@ -424,22 +352,12 @@ SUMATIF_BUCKET_PATTERNS = [
     ("tugas", re.compile(r"tugas|laporan|refleksi|rekomendasi", re.I)),
     ("ujian", re.compile(r"ujian|\buts\b|\buas\b", re.I)),
     ("pjbl", re.compile(r"pjbl", re.I)),
-    # HANYA "pjbl" (Project Based Learning), BUKAN "pbl" (Problem Based
-    # Learning) -- dua istilah beda yang kebetulan mirip. Jangan pernah
-    # tambahkan "pbl" ke pattern ini; PBL harus tetap jatuh ke "lainnya".
-    # Terima juga varian salah eja umum "Persentasi" (tertukar dgn kata
-    # "persentase") -- beberapa dokumen RPS memang menulisnya begitu.
     ("presentasi", re.compile(r"presentasi|persentasi", re.I)),
 ]
 
 
 # nama kolom Sumatif (mis. "Tes Tertulis") -> salah 1 bucket tetap: kuis/tugas/ujian/pjbl/presentasi/lainnya
 def classify_sumatif_column(label_text):
-    """Petakan nama kolom Sumatif dari dokumen ke salah satu bucket tetap
-    (Kuis/Tugas/Ujian/PjBL/Presentasi), atau 'lainnya' kalau tidak cocok
-    satupun -- supaya PBL/Studi Kasus/Proyek/Unjuk Kerja/Praktik/dst yang
-    berbeda-beda per dokumen tidak hilang, tapi tetap tertampung (di
-    Lainnya) alih-alih dibuang."""
     for bucket, pattern in SUMATIF_BUCKET_PATTERNS:
         if pattern.search(label_text):
             return bucket
@@ -448,30 +366,15 @@ def classify_sumatif_column(label_text):
 
 # baca tabel "Korelasi antara CP dan Asesmen": bobot Formatif & Sumatif per Sub-CPMK
 def extract_assessment_rows(all_tables, assume_in_section=False):
-    """Baris tabel 'Korelasi antara CP dan Asesmen': untuk tiap Sub-CPMK,
-    ambil Formatif + rincian Sumatif (Kuis/Tugas/Ujian/PjBL/Lainnya) sesuai
-    kolom yang BENERAN ada di dokumen tsb -- bukan filter dulu baru tebak, karena
-    itu yang bikin datanya ketuker/hilang (kolom kosong ikut kebuang, posisi
-    kolom jadi geser). Di sini baris mentah (termasuk sel kosong/None) tetap
-    dipertahankan supaya index kolom Sub-CPMK tsb selalu sama artinya dengan
-    index kolom yang sama di baris header.
-
-    assume_in_section: set True kalau `all_tables` yang diberikan SUDAH
-    dipastikan berasal dari dalam bagian Korelasi (mis. tabel bersarang/
-    nested table hasil docx_extractor.py) sehingga tidak perlu lagi menunggu
-    baris teks "Korelasi antara CP dan Asesmen" utk mengaktifkan mode baca --
-    penting karena tabel bersarang itu ikut sel yang justru muncul SEBELUM
-    baris teks pemicu tsb kalau dibaca terpisah dari tabel utamanya, jadi
-    kalau tetap menunggu pemicu, seluruh isi tabel bersarang keburu
-    terlewati/tidak pernah dianggap "in_section" (bug yang sempat kejadian).
-    """
+    # assume_in_section=True: skip nunggu trigger text "korelasi cp & asesmen",
+    # langsung anggap semua baris di dalam section (dipakai buat nested table)
     rows_out = {}
     in_section = assume_in_section
     col_bucket = {}   # index kolom -> 'kuis'/'tugas'/'ujian'/'pjbl'/'lainnya'
     col_label = {}    # index kolom -> label asli (dipakai sebagai nama utk 'lainnya')
     formatif_idx = None
     bp_mp_idx = None  # index kolom "Bentuk dan Metode Pembelajaran" (di antara Sub-CPMK & Formatif)
-    bp_mp_label = ""  # label asli kolom tsb -- dipakai untuk menentukan bentuk vs metode saat fallback
+    bp_mp_label = ""  # label asli kolom tsb dipakai untuk menentukan bentuk vs metode saat fallback
     header_seen = False
     pending_header = None  # kandidat header TERAKHIR yang dilihat, di-commit begitu baris data pertama muncul
 
@@ -498,50 +401,12 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
             if not in_section:
                 continue
 
-            # Baris header sub-kolom Sumatif: tabel RPS sering punya header
-            # berlapis 2-3 baris (mis. "BENTUK ASESMEN" -> "FORMATIF"/
-            # "SUMATIF" -> nama kategori asli seperti "Tugas"/"Tes Tertulis"/
-            # "Laporan"). Kita HARUS ambil baris level-TERDALAM (paling
-            # rinci), bukan yang pertama ketemu -- kalau langsung commit di
-            # baris pertama yang punya sel "FORMATIF", baris "SUMATIF" (1 sel
-            # gabungan) bisa keburu terkunci sebagai header alih-alih baris
-            # sesudahnya yang sudah dipecah per kategori. Makanya tiap baris
-            # yang MASIH terlihat seperti header (ada sel "FORMATIF" persis,
-            # atau >=2 sel cocok kata kunci kategori) hanya disimpan sbg
-            # KANDIDAT ("pending_header", menimpa kandidat sebelumnya) --
-            # baru di-commit begitu baris PERTAMA yang BUKAN header (mis.
-            # baris data asli) ditemukan.
+            # header sumatif sering berlapis 2-3 baris ("bentuk asesmen" -> "formatif"/"sumatif" ->
+            # nama kategori asli). ambil level PALING DALAM: tiap baris yg masih mirip header cuma
+            # disimpen jadi kandidat (pending_header), baru di-commit pas ketemu baris data pertama.
             if not header_seen:
                 formatif_hit = next((i for i, c in enumerate(display_cells) if c and re.fullmatch(r"formatif", c, re.I)), None)
-                # PENTING: baris DATA kadang menyebut kata kunci kategori di
-                # dalam kalimat deskriptif juga (mis. "Quiz dan Tanya jawab.
-                # (2%)" sebagai isi Formatif, atau "Tes Tertulis.(13%)" sbg
-                # isi Sumatif) -- itu BUKAN baris header, cuma kebetulan
-                # memuat kata yang sama. Bedanya: sel LABEL header tidak
-                # pernah memuat angka persen SUNGGUHAN (mis. "Tugas (%)"
-                # cuma placeholder tanpa angka), sedangkan sel DATA punya
-                # angka persen konkret (mis. "(2%)"). Jadi sel yang sudah
-                # mengandung "angka%" dikeluarkan dari kandidat "hits" supaya
-                # baris data tidak disangka baris header lain (bug yang
-                # sempat kejadian: pending_header tidak pernah ke-commit
-                # karena baris data terus dianggap header baru).
-                #
-                # Kasus serupa yang TIDAK tertangkap exclusion "angka%" di atas:
-                # sel data naratif tanpa angka sama sekali, mis. kolom "Bentuk
-                # dan Metode Pembelajaran" berisi "BP: Praktikum, Seminar\nMP:
-                # Demonstrasi, Diskusi, PBL", atau kolom Formatif berisi
-                # "Partisipasi, Tanya Jawab, Kuis" -- keduanya kebetulan
-                # menyebut kata kunci ("Praktikum"/"PBL"/"Kuis") tapi jelas
-                # BUKAN label kolom (label kolom asli selalu 1 kata/frasa
-                # pendek tanpa koma ataupun baris baru, mis. "PjBL", "Kuis",
-                # "Tes Tertulis"). Tanpa exclusion ini, SETIAP baris data pada
-                # tabel Korelasi (bukan cuma 1 baris) ikut lolos jadi kandidat
-                # header baru silih berganti -- baris data TERAKHIR yang
-                # kebetulan lolos jadi pending_header yang ke-commit, bukan
-                # baris header sungguhan -- sehingga SEMUA baris data asli
-                # (Sub-CPMK & bobot PjBL/Kuis/Presentasi-nya) hilang total,
-                # dianggap header dan dibuang (bug nyata: RPS "-Pulung" yang
-                # bobot Sumatif-nya ketuker/nyasar jadi teks mentah di Formatif).
+
                 hits = [
                     (i, c) for i, c in enumerate(display_cells)
                     if c and re.search(
@@ -559,7 +424,7 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                 if is_header_candidate:
                     bp_mp_hit = next(
                         (i for i, c in enumerate(display_cells)
-                         if c and re.search(r"bentuk.{0,20}pembelajaran|metode.{0,20}pembelajaran", c, re.I)),
+                        if c and re.search(r"bentuk.{0,20}pembelajaran|metode.{0,20}pembelajaran", c, re.I)),
                         None
                     )
                     bobot_total_hit = next(
@@ -578,21 +443,6 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                     elif bobot_total_hit is not None and bobot_total_hit > range_start:
                         range_end = bobot_total_hit
                     else:
-                        # JANGAN batasi range_end ke kata kunci terakhir yang
-                        # dikenali (hit_indices) -- kalau dokumen punya kategori
-                        # Sumatif yang namanya TIDAK ada di whitelist manapun
-                        # (mis. "Proyek", "Praktik", "Rubrik/Portofolio") dan
-                        # kebetulan diletakkan di ekor baris header, kolom itu
-                        # akan terpotong dari range dan datanya hilang total --
-                        # bukan cuma gagal diklasifikasi, TAPI SAMA SEKALI TIDAK
-                        # PERNAH DIBACA (bug yang dilaporkan: kategori selain
-                        # Kuis/Tugas/Ujian/PjBL/Presentasi tidak pernah masuk ke
-                        # Lainnya). Sebagai gantinya, cakup sampai sel BERLABEL
-                        # (bukan kosong, bukan penanda Formatif/Sumatif/Bobot,
-                        # bukan sel data berisi "angka%") TERAKHIR di baris ini --
-                        # apa pun nama kategorinya tetap tertampung, nanti
-                        # classify_sumatif_column yang menentukan bucket-nya
-                        # (atau "lainnya" kalau tidak cocok satupun).
                         last_labelish = None
                         for i in range(range_start, len(display_cells)):
                             c = display_cells[i]
@@ -628,19 +478,11 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                     bp_mp_idx = pending_header["bp_mp_idx"]
                     bp_mp_label = pending_header["bp_mp_label"]
                     header_seen = True
-                    # SENGAJA tidak "continue" -- baris ini sendiri adalah
-                    # baris data pertama, lanjut diproses di bawah.
+                    # ga "continue" baris ini baris data pertama, lanjut diproses di bawah
                 else:
                     continue
 
-            # Nomor Sub-CPMK: coba dulu cari sel yang secara eksplisit
-            # berlabel "Sub-CPMK N" / "SUB-CPMK N" (format yang dipakai
-            # banyak template, mis. "SUB-CPMK 1") -- ini tidak ambigu sama
-            # sekali, jadi dicek DULU sebelum heuristik angka polos di bawah.
-            # Tanpa ini, sel seperti "CPL 01"/"CPMK 1" (berisi spasi) akan
-            # keburu memicu kondisi "break" di heuristik lama sebelum sempat
-            # mencapai sel Sub-CPMK yang sesungguhnya -- baris jadi terlewati
-            # dan bobot Kuis/Tugas/Ujian-nya hilang seluruhnya.
+            # cari sel yg eksplisit berlabel "sub-cpmk n"
             sub_idx = None
             sub_num = None
             for i, c in enumerate(display_cells):
@@ -653,11 +495,8 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                     break
 
             if sub_idx is None:
-                # Fallback: kolom digit pendek TERAKHIR sebelum mentok ke teks
-                # panjang (deskripsi Bentuk/Metode Pembelajaran) atau ke kolom
-                # asesmen. Bukan sekadar "digit pertama yang ketemu", karena
-                # kolom CPL/CPMK di depannya juga sering berupa angka polos
-                # (mis. "03") yang gampang ketuker sama nomor Sub-CPMK.
+                # fallback: digit pendek TERAKHIR sebelum mentok teks panjang, bukan digit pertama,
+                # soalnya kolom cpl/cpmk di depan juga sering angka polos yg gampang ketuker
                 for i, c in enumerate(display_cells):
                     if i in col_bucket or i == formatif_idx:
                         break
@@ -698,11 +537,7 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                 if metode:
                     entry["metode_pembelajaran"] = metode
                 if not bentuk and not metode:
-                    # Tidak ada penanda "BP:"/"MP:" eksplisit di isi selnya --
-                    # tentukan field tujuan dari LABEL HEADER kolom itu sendiri
-                    # (mis. kolom yang cuma berjudul "Metode Pembelajaran" tanpa
-                    # "Bentuk" sama sekali harusnya masuk metode_pembelajaran,
-                    # bukan bentuk_pembelajaran).
+                    # ga ada penanda "bp:"/"mp:" eksplisit -> tentuin dari label header kolomnya sendiri
                     is_metode_only = bool(re.search(r"metode", bp_mp_label, re.I)) and not re.search(r"bentuk", bp_mp_label, re.I)
                     if is_metode_only:
                         entry["metode_pembelajaran"] = clean(bp_mp_text)
@@ -715,13 +550,8 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                 val = clean_multiline(raw_val) if raw_val else ""
                 if not val:
                     continue
-                # Ambil bobot & nama dengan hati-hati: JANGAN asal ambil angka
-                # pertama yang ketemu di teks, karena nama item sendiri bisa
-                # mengandung angka (mis. "Kuis 1", "Tugas 2") yang BUKAN bobot.
-                # Prioritas: (1) kalau seluruh isi sel cuma angka polos (boleh
-                # ada %), itu langsung bobotnya, tanpa nama. (2) kalau ada pola
-                # "angka%" (dengan/tanpa kurung) di dalam teks, itu yang jadi
-                # bobot, sisanya jadi nama. (3) fallback: angka di ujung teks.
+                # ambil bobot & nama, prioritas: (1) sel cuma angka polos = bobot tanpa nama,
+                # (2) ada pola "angka%" di tengah teks = bobot + sisanya nama, (3) fallback angka di ujung
                 val_stripped = val.strip()
                 bare_match = re.fullmatch(r"(\d{1,3}(?:[.,]\d+)?)\s*%?", val_stripped)
                 if bare_match:
@@ -740,18 +570,7 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                         else:
                             bobot = ""
                             name_part = clean(val)
-                # Sebagian template pakai header kolom GENERIK "Lainnya" sebagai
-                # satu-satunya kolom "tampung semua", padahal ISI selnya per
-                # baris sebenarnya menyebutkan nama asesmen yang jelas (mis.
-                # header cuma "Lainnya" tapi isinya "Presentasi 1 (15%)").
-                # Kalau cuma percaya klasifikasi dari HEADER, item seperti itu
-                # akan SELALU nyangkut di 'lainnya' walau sebenarnya cocok
-                # bucket tetap (Presentasi/dst) -- bug nyata yang dilaporkan:
-                # bobot Presentasi tidak pernah masuk ke field Presentasi sama
-                # sekali walau kolomnya ADA dan datanya kebaca (cuma salah
-                # ditampung sebagai 'lainnya'). Jadi kalau bucket dari header
-                # adalah 'lainnya', coba klasifikasi ULANG dari nama itemnya
-                # sendiri -- yang lebih spesifik & lebih dipercaya di sini.
+
                 effective_bucket = bucket
                 if bucket == "lainnya" and name_part:
                     refined = classify_sumatif_column(name_part)
@@ -768,22 +587,17 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                     if prev is None:
                         entry[effective_bucket] = {"nama": name_part, "bobot": bobot}
                     else:
-                        # Dua kolom/baris berbeda kebetulan diklasifikasi ke
-                        # bucket yang sama (mis. kolom "Tugas" DAN "Laporan"
-                        # sama-sama cocok bucket 'tugas') -- daripada yang
-                        # kedua diam-diam hilang, taruh di Lainnya supaya
-                        # tetap tertampung.
+                        # 2 kolom beda kebetulan sama-sama masuk bucket ini -> yg kedua ke lainnya
                         entry["lainnya"].append({
                             "nama": name_part or col_label.get(i, "Lainnya"),
                             "bobot": bobot
                         })
 
-            # Bobot total baris = sel numerik TERAKHIR YANG TERISI (bukan
-            # cells[-1] harfiah -- sering ada sel kosong/None trailing di
-            # ekor baris akibat kolom tabel yang tidak selalu genap kena).
+            # bobot total = sel numerik TERAKHIR yg keisi (bukan cells[-1] literal,
+            # suka ada sel kosong nyangkut di ekor baris)
             trailing_numeric = next(
                 (m.group(1) for c in reversed(display_cells)
-                 for m in [re.fullmatch(r"(\d{1,3}(?:[.,]\d+)?)\s*%?", c.strip())] if m),
+                for m in [re.fullmatch(r"(\d{1,3}(?:[.,]\d+)?)\s*%?", c.strip())] if m),
                 None
             )
             if trailing_numeric:
@@ -792,28 +606,8 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
     return rows_out
 
 
-# fallback kalau dokumen TIDAK punya tabel Korelasi: baca bobot dari teks bebas "Formatif:/Sumatif:"
+# fallback kalau dokumen tidak punya tabel Korelasi: baca bobot dari teks bebas "Formatif:/Sumatif:"
 def parse_embedded_assessment(text):
-    """Fallback untuk template RPS yang SAMA SEKALI TIDAK punya tabel
-    'Korelasi antara CP dan Asesmen' terpisah -- rincian Formatif/Sumatif
-    (Kuis/Tugas/Ujian/PjBL beserta bobotnya) malah ditulis sebagai teks bebas
-    di dalam sel 'Teknik & Kriteria Penilaian' pada tabel rencana mingguan itu
-    sendiri, misalnya:
-
-        Bentuk Penilaian
-        Formatif:
-        Partisipasi diskusi, tanya jawab di kelas.
-        Sumatif:
-        Kuis 1 (5%)
-        Laporan Singkat 1 (10%)
-
-    atau digabung 1 baris dengan koma ("Kuis 2 (5%), Tugas Analisis 2 (10%),
-    UTS (5%)"). Dipanggil HANYA sebagai fallback ketika tabel Korelasi
-    terpisah tidak ditemukan/kosong untuk Sub-CPMK tsb -- supaya bobot
-    Kuis/Tugas/Ujian/PjBL/Lainnya tetap tertangkap alih-alih hilang begitu
-    saja (bug yang dilaporkan: dokumen dengan format ini bobot sumatifnya
-    sama sekali tidak masuk, padahal field nama+bobot sudah tersedia).
-    """
     result = {
         "formatif": "", "formatif_bobot": "",
         "kuis": None, "tugas": None, "ujian": None, "pjbl": None, "presentasi": None, "lainnya": [],
@@ -822,13 +616,6 @@ def parse_embedded_assessment(text):
     if not text:
         return result
 
-    # PENTING: ambil kemunculan TERAKHIR dari tiap penanda "Formatif"/
-    # "Sumatif", bukan yang PERTAMA ditemukan (re.search biasa). Beberapa
-    # dokumen menulis label gabungan di awal sel, mis. "Bentuk Penilaian
-    # Sumatif:" (cuma judul kolom, bukan isi) SEBELUM penanda "Formatif:" /
-    # "Sumatif:" yang sesungguhnya -- kalau ambil kemunculan pertama, isi
-    # Formatif malah ikut ketelan jadi bagian daftar Sumatif juga (bug yang
-    # sempat kejadian: 1 butir Formatif nyasar dobel ke Lainnya).
     formatif_markers = list(re.finditer(r"Formatif\s*:?", text, re.I))
     sumatif_markers = list(re.finditer(r"Sumatif\s*:?", text, re.I))
     sumatif_marker = sumatif_markers[-1] if sumatif_markers else None
@@ -855,16 +642,14 @@ def parse_embedded_assessment(text):
         return result
     sumatif_text = re.split(r"\bKriteria\s*:", text[sumatif_marker.end():], maxsplit=1, flags=re.I)[0]
 
-    # Tiap butir Sumatif dipisah newline ATAU koma -- dokumen menulisnya
-    # dengan gaya yang tidak konsisten (satu butir per baris, atau digabung
-    # dalam 1 baris dipisah koma).
+    # tiap butir sumatif dipisah newline atau koma (dokumen ga konsisten nulisnya)
     for raw in re.split(r"[\n,]+", sumatif_text):
         raw = raw.strip(" .;:")
         if not raw:
             continue
         item_match = re.match(r"(.*?)\(?\s*(\d{1,3}(?:[.,]\d+)?)\s*%\s*\)?\s*$", raw)
         if not item_match:
-            continue  # butir tanpa bobot numerik (mis. "MCQ" saja) -- lewati
+            continue  # butir tanpa bobot numerik (mis. "MCQ" saja) lewati
         name = clean(item_match.group(1)).strip(" :()-")
         if not name:
             continue
@@ -875,21 +660,11 @@ def parse_embedded_assessment(text):
         else:
             result["lainnya"].append({"nama": name, "bobot": bobot})
 
-    # "bobot_total" (bobot keseluruhan minggu tsb) SENGAJA tidak dihitung di
-    # sini -- pemanggil (docx_extractor.py) sudah punya sumber lebih andal
-    # untuk itu: kolom "Bobot Penilaian (%)" milik tabel rencana mingguan itu
-    # sendiri (satu angka utuh per minggu).
     return result
 
 
 # ---------------------------------------------------------------------------
-# Blok naratif (Deskripsi Singkat, Materi Kajian, Pustaka, Dosen Pengampu,
-# Mata Kuliah Syarat) -- dibaca dari BARIS TABEL (extract_tables), bukan dari
-# teks polos. Bagian-bagian ini selalu tampil sebagai baris [label, isi] pada
-# tabel identitas RPS; kalau dibaca sebagai teks linear, label yang melipat
-# ke banyak baris (mis. "Dosen" / "Pengampu" pada baris terpisah) malah
-# nyasar nyatu dengan isi kolom lain -- ini akar masalah "Dosen Pengampu
-# tidak terbaca" pada pendekatan lama.
+# Blok naratif (Deskripsi Singkat, Materi Kajian, Pustaka, Dosen Pengampu, Mata Kuliah Syarat)
 # ---------------------------------------------------------------------------
 
 # baca blok naratif: Deskripsi Singkat, Materi Kajian, Pustaka, Dosen Pengampu, MK Syarat
@@ -902,9 +677,7 @@ def extract_narrative_sections(all_tables):
     syarat_parts = []
 
     mode = None  # None | 'materi' | 'pustaka_utama' | 'pustaka_pendukung' | 'dosen' | 'syarat'
-    passed_weekly = False  # sekali True, berhenti permanen (hindari kontaminasi dari
-    # lampiran "Rancangan Tugas" dsb. di halaman-halaman jauh setelah rencana mingguan,
-    # yang kadang memakai label serupa seperti "Dosen Pengampu" untuk keperluan lain).
+    passed_weekly = False  # sekali true, permanen biar lampiran jauh setelah minggu ke-16 ga ikut kebaca
 
     for table in all_tables:
         for row in table:
@@ -917,9 +690,7 @@ def extract_narrative_sections(all_tables):
             label_flat = re.sub(r"\s+", " ", cells[0]).strip()
             rest = cells[1:]
 
-            # Baris header rencana mingguan menandakan blok naratif sudah selesai
-            # untuk seterusnya (bagian identitas RPS selalu tampil sekali saja,
-            # sebelum tabel rencana mingguan, di semua contoh template yang diuji).
+            # header rencana mingguan = blok naratif udah selesai
             if re.match(r"^Pekan\b|^Mg\s*Ke", label_flat, re.I) or label_flat == "(1)":
                 mode = None
                 passed_weekly = True
@@ -936,16 +707,6 @@ def extract_narrative_sections(all_tables):
                 continue
 
             if re.match(r"^Pustaka$", label_flat, re.I):
-                # "Pustaka" bisa terulang sebagai sel pertama di SETIAP baris
-                # (bukan cuma sekali di baris tag) -- baik untuk baris tag
-                # "Utama:"/"Pendukung:" itu sendiri MAUPUN baris isi
-                # sesudahnya. Mode HANYA boleh berganti kalau baris ini
-                # benar-benar berisi sel tag "Utama:"/"Pendukung:"; kalau
-                # tidak (baris isi biasa), pertahankan mode yang sedang
-                # berjalan -- sebelumnya mode ditebak ulang dari isi baris
-                # ini setiap kali, jadi baris isi Pendukung yang kebetulan
-                # tidak menyebut kata "Pendukung" di teksnya sendiri ketimpa
-                # balik jadi dianggap Utama.
                 tag_cell = next(
                     (r for r in rest if re.fullmatch(r"(?:Utama|Pendukung)\s*:?", r.strip(), re.I)),
                     None,
@@ -978,11 +739,7 @@ def extract_narrative_sections(all_tables):
                 mode = "syarat"
                 continue
 
-            # Baris kelanjutan (1 sel saja, tanpa label baru) -- masuk ke mode aktif.
-            # "dosen" & "mk syarat" selalu pendek (beberapa nama / 1 baris syarat);
-            # dibatasi jumlah baris supaya kalau ada tabel lain di halaman jauh
-            # setelahnya kebetulan cocok pola "1 sel tanpa label", dia tidak ikut
-            # "nyasar" tertampung terus-menerus ke field ini.
+            # dosen & mk syarat dibatasin jumlah barisnya, jaga2 tabel lain kebetulan cocok pola ini
             if not rest and mode:
                 if mode == "materi":
                     materi_parts.append(cells[0])

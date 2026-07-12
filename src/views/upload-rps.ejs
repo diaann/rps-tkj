@@ -1,5 +1,10 @@
 <%- include('partials/header') %>
 
+<!--
+  ini halaman form Upload RPS. bagian <style> di bawah cuma buat tampilan visual
+  (kotak biru drag-and-drop dsb), ga ada logika penting -- yg penting justru di
+  bagian <form> (baris ~109 ke bawah) dan <script> di paling akhir file.
+-->
 <style>
     .upload-wrapper {
         max-width: 1100px;
@@ -87,6 +92,10 @@
             Upload File RPS
         </h2>
 
+        <!-- tanda kurung persen di bawah ini sintaks EJS: kodenya jalan di SERVER pas
+             halaman lagi dibikin, hasilnya baru langsung berupa HTML biasa pas sampai
+             ke browser. blok ini nampilin kotak merah error CUMA kalau variabel "error"
+             dikirim dari route (lihat res.render('upload-rps', {error: '...'}) di routes/index.js) -->
         <% if (typeof error !== 'undefined' && error) { %>
             <div class="mb-5 p-4 rounded-lg border border-red-200 bg-red-50 text-red-700">
                 <i class="fas fa-exclamation-triangle mr-2"></i>
@@ -94,6 +103,7 @@
             </div>
         <% } %>
 
+        <!-- sama kayak di atas, tapi buat kotak hijau "berhasil" -->
         <% if (typeof success !== 'undefined' && success) { %>
             <div class="mb-5 p-4 rounded-lg border border-green-200 bg-green-50 text-green-700">
                 <i class="fas fa-check-circle mr-2"></i>
@@ -105,7 +115,11 @@
             Setelah tersimpan, data masih dapat diubah melalui tombol <strong>Edit</strong>.
         </div>
 
-        <!-- data ditangkap oleh middleware multer di sisi server -->
+        <!-- method="POST" = form ini NGIRIM data (bukan cuma minta halaman).
+             enctype="multipart/form-data" WAJIB ada tiap kali form-nya ada upload file --
+             tanpa ini, isi file ga akan ikut terkirim, cuma nama filenya doang.
+             begitu tombol Upload diklik, browser ngirim ke url /upload-rps (lihat action=),
+             yg ditangkep oleh middleware multer di src/routes/index.js -->
         <form action="/upload-rps" method="POST" enctype="multipart/form-data">
             <div class="upload-wrapper">
                 <label class="upload-dropzone" for="rpsFileInput" id="dropzone">

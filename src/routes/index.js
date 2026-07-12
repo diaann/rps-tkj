@@ -1,60 +1,83 @@
 
 const express = require('express');
-const router = express.Router();
+const router = express.Router(); // wadah kumpulan route (url) di file ini, nanti dipasang ke app utama di src/index.js
 const fs = require('fs');
 const path = require('path');
-let multer = null; //memuat  package multer (middleware express untuk menangani upload)
+
+// multer = library yg menangkap file yg diupload lewat form (<input type="file">).
+// dibungkus try/catch: kalau package-nya belum di-install (npm install belum jalan),
+// multer tetap bernilai null dan aplikasi tetap jalan (cuma fitur upload yg dimatikan
+// otomatis, lihat pengecekan "if (!uploadRpsFile)" di route POST /upload-rps di bawah).
+let multer = null;
 try {
   multer = require('multer');
 } catch (error) {
   console.warn('[UPLOAD RPS] Package multer belum terinstall. Jalankan npm install untuk mengaktifkan upload RPS.');
 }
-const { parseRpsDocxBuffer } = require('../utils/rpsDocxParser'); //impor fungsi parseRpsDocxBuffer dari modul rpsDocxParser.js. jembatan menuji logika ekstraksi python
+// fungsi yg baca isi file .docx & panggil python (lihat src/utils/rpsDocxParser.js)
+const { parseRpsDocxBuffer } = require('../utils/rpsDocxParser');
 
-const usersPath = path.join(__dirname, '..', 'database', 'users.json'); //mendefinisikan path berkas2 json
+// alamat file2 "database" (json) yg dipakai di file ini
+const usersPath = path.join(__dirname, '..', 'database', 'users.json');
 const rpsPath = path.join(__dirname, '..', 'database', 'rps.json');
-const rpsHistoryPath = path.join(__dirname, '..', 'database', 'rps_history.json');
+const rpsHistoryPath = path.join(__dirname, '..', 'database', 'rps_history.json'); // tempat riwayat revisi disimpan
 const cplsPath = path.join(__dirname, '..', 'database', 'cpls.json');
 const configPath = path.join(__dirname, '..', 'database', 'config.json');
-const uploadRpsDir = path.join(__dirname, '..', '..', 'uploads', 'rps-docx');
+const uploadRpsDir = path.join(__dirname, '..', '..', 'uploads', 'rps-docx'); // folder taruh file .docx yg diupload
 
-function ensureUploadDir() { //fungsi yg membuat folder scr rekursif jika belumada
+// bikin folder uploads/rps-docx kalau belum ada. { recursive: true } artinya kalau folder
+// induknya juga belum ada, ikut dibikinkan semua sekaligus (tidak perlu bikin satu-satu).
+function ensureUploadDir() {
   if (!fs.existsSync(uploadRpsDir)) {
     fs.mkdirSync(uploadRpsDir, { recursive: true });
   }
 }
 
-function safeUnlink(filePath) { //fungsi yg menghapus file tanpa adanya error jika gagal
+// hapus 1 file dari disk. dibungkus supaya kalau gagal (misal filenya sudah kehapus),
+// tidak bikin error, cuma lewat saja (callback kosong `() => {}`).
+function safeUnlink(filePath) {
   if (!filePath) return;
   fs.unlink(filePath, () => {});
 }
 
-const uploadRpsFile = multer ? multer({ //objek multer
+// konfigurasi multer: aturan bagaimana file yg diupload itu diterima & disimpan.
+// kalau multer null (belum diinstall), uploadRpsFile null juga.
+const uploadRpsFile = multer ? multer({
+  // storage = ke mana & dgn nama apa file yg diupload disimpan di disk
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
+      // "destination" = folder tujuan. ensureUploadDir() dipanggil dulu tiap kali
+      // ada upload, jaga2 kalau foldernya terhapus.
       ensureUploadDir();
       cb(null, uploadRpsDir);
     },
     filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname || '').toLowerCase() || '.docx';
-      const safeBase = path.basename(file.originalname || 'rps', ext)
-        .replace(/[^a-z0-9-_]+/gi, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 80) || 'rps';
+      // "filename" = nama file yg dipakai pas disimpan (bukan nama asli dari user,
+      // biar tidak ada 2 file numpuk dengan nama yg sama).
+      const ext = path.extname(file.originalname || '').toLowerCase() || '.docx'; // ambil ekstensi, misal ".docx"
+      const safeBase = path.basename(file.originalname || 'rps', ext) // ambil nama file tanpa ekstensi
+        .replace(/[^a-z0-9-_]+/gi, '-') // ganti karakter aneh (spasi, simbol, dll) jadi strip "-"
+        .replace(/-+/g, '-')            // rapikan strip yg dobel jadi 1 strip 
+        .replace(/^-|-$/g, '')          // buang strip di paling awal/akhir
+        .slice(0, 80) || 'rps';         // batasi panjang nama, kalau ujung2nya kosong pakai "rps"
+      // nama file akhir = angka waktu sekarang + nama yg sudah dibersihkan + ekstensi.
+      // angka waktu di depan (Date.now()) bikin nama filenya pasti unik walau 2 orang upload
+      // file dgn nama asli yg sama persis di waktu yg beda.
       cb(null, `${Date.now()}-${safeBase}${ext}`);
     }
   }),
-  fileFilter: (req, file, cb) => { //menolak file yg ekstensi nya bukan docx
+  // fileFilter = aturan tolak file sebelum disimpan, kalau tidak sesuai syarat
+  fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname || '').toLowerCase();
     const isDocx = ext === '.docx' ||
       file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
     if (!isDocx) {
+      // panggil cb dgn error = tolak file, nanti errornya tertangkap di route POST /upload-rps
       return cb(new Error('File harus berformat Word (.docx).'));
     }
-    cb(null, true);
+    cb(null, true); // cb(null, true) = file diterima, lanjut disimpan
   },
-  limits: { fileSize: 15 * 1024 * 1024 } //max filenya 15mb
+  limits: { fileSize: 15 * 1024 * 1024 } // batas ukuran file: 15 x 1024 x 1024 byte = 15 MB
 }) : null;
 
 function ensureArray(value) {
@@ -67,10 +90,10 @@ function ensureArray(value) {
 function buildCplDescriptionMap(rpsData) {
   const selectedCpls = ensureArray(rpsData.cpl && rpsData.cpl.length ? rpsData.cpl : rpsData['cpl[]']);
   // jangan fallback ke rpsData.cpl_descriptions
-  // rpsData.cpl_descriptions adalah OBJECT map {kode: deskripsi}, bukan array
+  // rpsData.cpl_descriptions adalah object map {kode: deskripsi}, bukan array
   // yang urut sesuai selectedCpls. ensureArray() akan membungkusnya jadi
   // [ {seluruh object} ], sehingga saat di-assign per-index di bawah, elemen
-  // pertama selectedCpls (mis. CPL02) malah ditimpa dengan OBJECT utuh
+  // pertama selectedCpls (mis. CPL02) ditimpa dengan object utuh
   // -> muncul sebagai "[object Object]" saat dirender.
   const submittedDescriptions = ensureArray(
     rpsData['cpl_deskripsi[]'] !== undefined ? rpsData['cpl_deskripsi[]']
@@ -140,43 +163,59 @@ function normalizeRpsPayload(payload) {
 }
 
 
+// util umum
+// baca 1 file json dari disk, ubah jadi array/object javascript.
 function readJsonFile(filePath, fallbackValue) {
   try {
     if (!fs.existsSync(filePath)) {
+      // filenya belum ada sama sekali -> bikin baru isinya fallbackValue (misal [])
       fs.writeFileSync(filePath, JSON.stringify(fallbackValue, null, 2));
       return Array.isArray(fallbackValue) ? [...fallbackValue] : { ...fallbackValue };
     }
 
-    const raw = fs.readFileSync(filePath, 'utf8');
+    const raw = fs.readFileSync(filePath, 'utf8'); // baca isi file sbg teks
     if (!raw.trim()) {
+      // filenya ada tapi kosong -> anggap belum ada, pakai fallback
       return Array.isArray(fallbackValue) ? [...fallbackValue] : { ...fallbackValue };
     }
 
-    return JSON.parse(raw);
+    return JSON.parse(raw); // ubah teks json jadi array/object javascript
   } catch (error) {
+    // kalau ada apa pun yg gagal (misal isi filenya rusak/bukan json valid),
+    // jangan bikin sistem crash. catat errornya ke konsol, kembalikan fallback.
     console.error(`Gagal membaca file JSON: ${filePath}`, error);
     return Array.isArray(fallbackValue) ? [...fallbackValue] : { ...fallbackValue };
   }
 }
 
+// kebalikan dari readJsonFile: ambil data javascript, ubah jadi teks json, timpa ke file.
 function writeJsonFile(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 
-// salin dalam2 (deep copy) sebuah objek RPS, biar aman disimpan sbg snapshot revisi tanpa ikut kebawa perubahan
+// bikin salinan dari sebuah objek (deep copy)
+// dengan cara bah objeknya jadi teks json (JSON.stringify), lalu ubah balik jadi objek baru (JSON.parse)
+// penting untuk fitur Riwayat Revisi
+// setelah itu snapshot RPS ke riwayat, snapshot itu harus jadi objek yg berdiri sendiri, kalau RPS
+// aslinya diubah, snapshot lama di riwayat tidak boleh ikut berubah.
 function clonePlainObject(value) {
   return JSON.parse(JSON.stringify(value || {}));
 }
 
+// ambil semua data user dari users.json
 function getAllUsers() {
   return readJsonFile(usersPath, []);
 }
 
+// cari 1 user berdasarkan id-nya
 function getUserById(userId) {
   return getAllUsers().find(u => String(u.id) === String(userId));
 }
 
-// bungkus data user jadi bentuk ringkas {id, username, email, role} buat dicatat sbg pembuat revisi
+// data user (dari users.json) isinya lumayan banyak (password, dll). fungsi ini
+// "meringkas" jadi 4 info penting yg perlu dicatat sbg "siapa yg buat revisi ini", yaitu
+// id, username, email, role. kalau usernya null/kosong (misal revisi dibuat otomatis
+// oleh sistem, bukan oleh aksi user beneran), dipakai fallbackName sbg nama penggantinya.
 function getEditorFromUser(user, fallbackName = 'System') {
   return {
     id: user && user.id ? user.id : null,
@@ -186,17 +225,20 @@ function getEditorFromUser(user, fallbackName = 'System') {
   };
 }
 
+// cari 1 RPS dari daftar RPS berdasarkan id
 function getRpsById(rpsList, rpsId) {
   return rpsList.find(r => String(r.id) === String(rpsId));
 }
 
-// cek RPS ini boleh diakses user yg login: admin bebas, dosen cuma boleh RPS miliknya sendiri
+// cek user yg login boleh buka/ubah RPS ini atau tidak. hasilnya true kalau dia admin
+// atau kalau dia adalah pemilik RPS itu sendiri
+// (userId di data RPS sama dgn id user yg login). selain itu, hasilnya false.
 function canAccessRps(req, rpsItem) {
   if (!req.session.user || !rpsItem) return false;
   return req.session.user.role === 'admin' || String(rpsItem.userId) === String(req.session.user.id);
 }
 
-// kamus: nama field mentah RPS -> label yg enak dibaca, dipakai di halaman Riwayat Revisi
+// kamus/label nama field mentah RPS -> label yg enak dibaca, dipakai di halaman Riwayat Revisi
 const FIELD_LABELS = {
   nama_mk: 'Nama Mata Kuliah',
   kode_mk: 'Kode MK',
@@ -231,7 +273,7 @@ const FIELD_LABELS = {
   'cpl_deskripsi[]': 'Deskripsi CPL'
 };
 
-// sama, tapi khusus nama field di dalam Sub-CPMK (durasi, bobot, dst)
+// khusus nama field di dalam Sub-CPMK (durasi, bobot, dst)
 const SUB_CPMK_FIELD_LABELS = {
   cpl: 'CPL terkait',
   durasi: 'Durasi',
@@ -268,28 +310,37 @@ const SUB_CPMK_FIELD_LABELS = {
   global_number: 'Nomor Urut'
 };
 
-// Ubah nama field mentah (mis. "sub_cpmk[CPMK01][1][durasi]") jadi label yang
-// gampang dibaca manusia (mis. "Sub-CPMK CPMK01.1 - Durasi").
+// data RPS itu isinya field2 mentah kayak "sub_cpmk[CPMK01][1][durasi]", nama field
+// seperti itu jelas tdk bagus kalau ditampilkan apa adanya ke user di halaman Riwayat Revisi.
+// fungsi ini mengubah hal tsb menjadi kalimat yg enak dibaca, misal jadi "Sub-CPMK CPMK01.1 - Durasi".
 function humanizeFieldName(key) {
+  // cek apa formatnya "sub_cpmk[KODE][NOMOR][NAMA_FIELD]"?
   let m = key.match(/^sub_cpmk\[(CPMK\d+)\]\[(\d+)\]\[(\w+)\]/);
   if (m) {
-    const label = SUB_CPMK_FIELD_LABELS[m[3]] || m[3];
+    // m[1]=kode cpmk, m[2]=nomor lokal, m[3]=nama field asli (misal "durasi")
+    const label = SUB_CPMK_FIELD_LABELS[m[3]] || m[3]; // cari label di kamus. kalau tidak ada, pakai apa adanya
     return `Sub-CPMK ${m[1]}.${m[2]} - ${label}`;
   }
+  // kalau bukan, cek format "cpmk[KODE][NAMA_FIELD]"
   m = key.match(/^cpmk\[(CPMK\d+)\]\[(\w+)\]/);
   if (m) {
     const fieldLabels = { deskripsi: 'Deskripsi', cpl_code: 'Kode CPL', cpl_description: 'Deskripsi CPL' };
     return `${m[1]} - ${fieldLabels[m[2]] || m[2]}`;
   }
+  // bukan keduanya -> berarti field tingkat-RPS biasa (misal "nama_mk"), cari di kamus FIELD_LABELS
   return FIELD_LABELS[key] || key;
 }
 
-// Ratakan nilai supaya perbandingan tidak salah anggap "berubah" hanya
-// karena urutan checkbox/array beda atau ada spasi/kosong yang tidak
-// signifikan (mis. array kosong vs undefined vs string kosong).
+// nilai sebuah field perlu "diratakan" sebelum dibandingkan, biar tidak salah dianggap
+// "berubah" padahal sebenernya isinya sama. contoh kasus yg mau dihindari:
+//   - array ['a', 'b'] vs ['b', 'a'] isinya sama, cuma urutannya beda -> harus dianggap sama
+//   - undefined vs '' (string kosong) dua-duanya sama2 "kosong" -> harus dianggap sama
 function normalizeValueForCompare(value) {
   if (value === undefined || value === null) return '';
   if (Array.isArray(value)) {
+    // .sort() di sini yg membuat urutan array tidak dianggap penting, semua array
+    // diurutkan dulu sebelum digabung jadi 1 string, jadi ['a','b'] dan ['b','a']
+    // akan menghasilkan string perbandingan yg sama.
     return value.map(v => String(v).trim()).filter(v => v !== '').sort().join(' ');
   }
   if (typeof value === 'object') {
@@ -298,46 +349,48 @@ function normalizeValueForCompare(value) {
   return String(value).trim();
 }
 
-// Bandingkan dua snapshot RPS dan kembalikan daftar KEY MENTAH (mis.
-// "sub_cpmk[CPMK01][1][durasi]") yang nilainya benar-benar beda. Dipakai baik
-// untuk membuat ringkasan label (getChangedFieldNames) maupun untuk menandai
-// field mana yang berubah langsung di halaman detail RPS (lihat view-rps.ejs).
+// FUNGSI PENTING: bandingin 2 snapshot RPS (before = versi lama, after = versi baru),
+// hasilnya daftar NAMA FIELD MENTAH yg nilainya beda. dipakai di 2 tempat:
+// 1) getChangedFieldNames di bawah (bikin daftar label "apa saja yg berubah")
+// 2) langsung di halaman detail RPS (view-rps.ejs), untuk highlight kuning bagian yg berubah
 function getChangedFieldKeys(before, after) {
-  // cpl_descriptions cuma peta turunan yang dihitung ulang otomatis dari
-  // cpl_deskripsi[] tiap kali simpan -- membandingkannya cuma menduplikasi
-  // sinyal yang sudah ditangkap oleh cpl_deskripsi[] dan bikin noise.
-  // Field seperti "pustaka_pendukung" (tanpa []) juga cuma cermin dari
-  // "pustaka_pendukung[]" -- normalizeRpsPayload() selalu mengisi keduanya
-  // dengan nilai yang SAMA, jadi kalau tidak dikecualikan, satu perubahan
-  // bisa kehitung 2x (satu dari versi bracket, satu dari versi non-bracket).
+  // field ini dilewatkan (tidak ikut dibandingin), krn isinya hanya "cerminan"
+  // otomatis dari field lain. misal "pustaka_pendukung" (tanpa []) selalu diisi sama
+  // persis kayak "pustaka_pendukung[]" oleh normalizeRpsPayload(). jadi kalau
+  // tidak dilewatkan, 1 perubahan pustaka bisa terhitung 2x jadi keliatan "berubah 2 field".
   const ignoredFields = new Set([
     'updated_at', 'updated_by', 'updated_by_username', 'cpl_descriptions',
     'dosen_pengampu', 'pustaka_utama', 'pustaka_pendukung', 'cpl', 'dosen_pengembang_rps'
   ]);
   const beforeObj = before || {};
   const afterObj = after || {};
+  // gabungkan semua nama field yg ada di versi lama dan versi baru (pakai Set biar tidak dobel)
   const keys = new Set([...Object.keys(beforeObj), ...Object.keys(afterObj)]);
   const changedKeys = [];
 
   keys.forEach(key => {
-    if (ignoredFields.has(key)) return;
+    if (ignoredFields.has(key)) return; // skip field yg dikecualikan di atas
     const beforeValue = normalizeValueForCompare(beforeObj[key]);
     const afterValue = normalizeValueForCompare(afterObj[key]);
     if (beforeValue !== afterValue) {
-      changedKeys.push(key);
+      changedKeys.push(key); // nilainya beda -> field ini dianggap "berubah"
     }
   });
 
   return changedKeys;
 }
 
-// sama seperti getChangedFieldKeys, tapi hasilnya label yg enak dibaca (buat ditampilkan ke user)
+// sama kayak getChangedFieldKeys, tapi hasil akhirnya udah dalam bentuk label yg enak
+// dibaca (lewat humanizeFieldName), bukan nama field mentah. inilah yg dipakai buat
+// nampilin daftar "field apa aja yg berubah" di halaman Riwayat Revisi.
 function getChangedFieldNames(before, after) {
   const seenLabels = new Set();
   const labels = [];
   getChangedFieldKeys(before, after).sort().forEach(key => {
     const label = humanizeFieldName(key);
     if (!seenLabels.has(label)) {
+      // dicek dulu biar label yg sama (misal 2 field beda tp label akhirnya kebetulan sama)
+      // tidak muncul dobel di daftar
       seenLabels.add(label);
       labels.push(label);
     }
@@ -345,19 +398,20 @@ function getChangedFieldNames(before, after) {
   return labels;
 }
 
-// cek satu nilai field dianggap "kosong" apa nggak (dipakai buat klasifikasi added/removed/modified)
+// cek 1 nilai field: dianggap "kosong" apa nggak. dipakai sama classifyFieldChange di bawah.
 function isEmptyFieldValue(value) {
   if (value === undefined || value === null) return true;
-  if (Array.isArray(value)) return value.every(v => String(v).trim() === '');
-  if (typeof value === 'object') return Object.keys(value).length === 0;
+  if (Array.isArray(value)) return value.every(v => String(v).trim() === ''); // semua elemennya kosong
+  if (typeof value === 'object') return Object.keys(value).length === 0; // objek tanpa isi
   return String(value).trim() === '';
 }
 
-// Klasifikasikan satu perubahan field: "added" (sebelumnya kosong, sekarang
-// ada isi), "removed" (sebelumnya ada isi, sekarang kosong ATAU untuk field
-// berisi daftar/checkbox seperti pustaka/dosen -- jumlah itemnya berkurang,
-// walau daftarnya belum sampai kosong total), atau "modified" (isi beda tapi
-// bukan sekadar tambah/kurang item).
+// buat 1 field yg diketahui berubah, tentuin jenis perubahannya termasuk yg mana:
+// - "added"    = sebelumnya kosong, sekarang keisi (dosen NAMBAHIN sesuatu)
+// - "removed"  = sebelumnya keisi, sekarang kosong (ATAU khusus field berbentuk daftar
+//                kayak pustaka/dosen, kalau jumlah itemnya BERKURANG walau belum kosong total)
+// - "modified" = selain 2 kasus di atas (isinya diubah, bukan cuma ditambah/dikurangi)
+// hasil klasifikasi ini yg nentuin warna badge +/-/~ di halaman Riwayat Revisi.
 function classifyFieldChange(beforeValue, afterValue) {
   const beforeEmpty = isEmptyFieldValue(beforeValue);
   const afterEmpty = isEmptyFieldValue(afterValue);
@@ -375,9 +429,9 @@ function classifyFieldChange(beforeValue, afterValue) {
   return 'modified';
 }
 
-// Hitung berapa field yang DITAMBAH, DIHAPUS/berkurang isinya, dan DIUBAH --
-// supaya badge di halaman History menunjukkan +/- yang sesuai isi
-// sebenarnya, bukan cuma berdasar jenis aksi (edit/revert).
+// hitung TOTAL berapa banyak field yg ke-ADD, ke-REMOVE, dan ke-MODIFY antara 2 snapshot.
+// hasilnya (mis. {added: 2, removed: 0, modified: 1}) dipakai nampilin badge "+2 ~1" di
+// halaman Riwayat Revisi, biar user langsung tau seberapa besar suatu revisi mengubah RPS.
 function getChangeStats(before, after) {
   const beforeObj = before || {};
   const afterObj = after || {};
@@ -390,71 +444,86 @@ function getChangeStats(before, after) {
   return stats;
 }
 
-// Cari data revisi TEPAT SEBELUM revisi tertentu (berdasarkan revision_number)
-// untuk keperluan diff -- null kalau revisi ini yang paling pertama.
+// cari data revisi yg PERSIS 1 langkah SEBELUM revisi tertentu (revisions harus sudah
+// terurut dari lama ke baru). dipakai buat bandingin "versi ini" vs "versi sebelumnya".
+// hasilnya null kalau revisi yg dimaksud adalah yg PERTAMA (ga ada versi sebelumnya).
 function getPreviousRevisionData(revisions, targetRevision) {
   const idx = revisions.findIndex(rev => String(rev.id) === String(targetRevision.id));
   if (idx <= 0) return null;
   return revisions[idx - 1].data;
 }
 
-// ID angka berikutnya buat item baru (RPS baru / revisi baru), tinggal +1 dari yg terbesar
+// hitung id angka berikutnya buat item baru (dipakai baik utk id RPS baru maupun id revisi baru).
+// caranya: cari angka id TERBESAR yg udah ada di antara semua item, lalu +1.
 function getNextNumericId(items) {
-  if (!items || items.length === 0) return 1;
+  if (!items || items.length === 0) return 1; // belum ada item sama sekali -> mulai dari 1
   return Math.max(...items.map(item => parseInt(item.id || 0, 10))) + 1;
 }
 
-// Mengambil revisi RPD berdasarkan rps_id
+// ambil SEMUA revisi milik 1 RPS tertentu dari rps_history.json, diurutkan dari
+// revisi paling lama (v1) ke paling baru, biar gampang ditelusuri urutannya.
 function getRpsRevisions(rpsId) {
   const history = readJsonFile(rpsHistoryPath, []);
   return history
-    .filter(item => String(item.rps_id) === String(rpsId))
+    .filter(item => String(item.rps_id) === String(rpsId)) // ambil punya RPS ini aja
     .sort((a, b) => (parseInt(a.revision_number, 10) || 0) - (parseInt(b.revision_number, 10) || 0));
 }
 
-// INTI fitur Riwayat Revisi: simpan 1 entri revisi baru (snapshot lengkap RPS saat ini) ke rps_history.json
+// **FUNGSI PALING PENTING DI FITUR RIWAYAT REVISI.**
+// tugasnya: bikin 1 entri revisi baru & simpan ke rps_history.json.
+// dipanggil setiap kali RPS dibuat/diubah/dipulihkan, lihat pemanggilannya di
+// route upload (di atas), route edit-rps, dan route revert (di bawah).
 function createRpsRevision(rpsItem, editorUser, options = {}) {
-  const history = readJsonFile(rpsHistoryPath, []);
+  const history = readJsonFile(rpsHistoryPath, []); // ambil SEMUA revisi (dari SEMUA RPS)
   const rpsId = parseInt(rpsItem.id, 10);
   const revisionsForRps = history.filter(item => parseInt(item.rps_id, 10) === rpsId);
-  // nomor revisi berikutnya (v1, v2, v3, ...) khusus utk RPS ini
+  // nomor revisi berikutnya (v1, v2, v3, ...) KHUSUS untuk RPS ini aja
   const revisionNumber = revisionsForRps.length
     ? Math.max(...revisionsForRps.map(item => parseInt(item.revision_number || 0, 10))) + 1
-    : 1;
+    : 1; // belum ada revisi sama sekali -> ini jadi v1
 
   const editor = getEditorFromUser(editorUser, options.fallbackEditorName || 'System');
+  // ini objek 1 entri revisi yg bakal disimpan
   const revision = {
     id: getNextNumericId(history),
     rps_id: rpsId,
     revision_number: revisionNumber,
-    revision_name: `v${revisionNumber}`,
-    action: options.action || 'edit',
-    message: options.message || '',
+    revision_name: `v${revisionNumber}`, // nama yg ditampilin ke user, misal "v3"
+    action: options.action || 'edit', // jenis aksi: 'edit'/'upload_docx'/'revert'/'initial'/dst
+    message: options.message || '', // pesan bebas, misal "RPS diperbarui"
     edited_at: options.edited_at || new Date().toISOString(),
     edited_by: editor.id,
     edited_by_username: editor.username,
     edited_by_email: editor.email,
     edited_by_role: editor.role,
-    changed_fields: Array.isArray(options.changed_fields) ? options.changed_fields : [],
-    change_stats: options.change_stats || null,
-    source_revision_id: options.source_revision_id || null,
+    changed_fields: Array.isArray(options.changed_fields) ? options.changed_fields : [], // daftar label field yg berubah
+    change_stats: options.change_stats || null, // {added, removed, modified} dari getChangeStats
+    source_revision_id: options.source_revision_id || null, // diisi kalau ini hasil revert dari revisi lain
     source_revision_name: options.source_revision_name || null,
-    data: clonePlainObject(rpsItem) // <- salinan LENGKAP RPS saat ini, bukan cuma daftar perubahannya
+    // BAGIAN PALING PENTING: salinan LENGKAP data RPS pada saat ini, bukan cuma catatan
+    // "apa yg berubah". inilah yg bikin fitur ini bisa nampilin isi lengkap versi manapun,
+    // atau memulihkan (revert) ke versi manapun, kapan pun dibutuhkan.
+    data: clonePlainObject(rpsItem)
   };
 
-  history.push(revision);
-  writeJsonFile(rpsHistoryPath, history);
+  history.push(revision); // tambahin revisi baru ke daftar
+  writeJsonFile(rpsHistoryPath, history); // simpan balik SELURUH daftar revisi ke file
   return revision;
 }
 
-// buat "versi awal" utk RPS lama yg belum pernah tercatat revisinya (biar tetap bisa dipulihkan nanti)
+// RPS yg dibuat SEBELUM fitur Riwayat Revisi ini ada, otomatis belum punya riwayat sama
+// sekali. fungsi ini mastiin setiap RPS minimal punya 1 revisi ("versi awal") sebelum
+// dilanjut diedit/dipulihkan. kalau tidak begini, RPS lama itu tidak akan pernah bisa
+// "dipulihkan ke kondisi sebelum diedit pertama kali", soalnya tidak ada snapshot-nya.
 function ensureInitialRevision(rpsItem, editorUser) {
   if (!rpsItem || !rpsItem.id) return null;
   const existingRevisions = getRpsRevisions(rpsItem.id);
   if (existingRevisions.length > 0) {
+    // udah pernah punya revisi -> tidak usah bikin apa2 lagi, cukup balikin yg pertama
     return existingRevisions[0];
   }
 
+  // belum pernah punya revisi sama sekali -> bikinin 1 sbg "titik awal"
   const owner = editorUser || getUserById(rpsItem.userId) || null;
   return createRpsRevision(rpsItem, owner, {
     action: 'initial',
@@ -745,34 +814,38 @@ router.get('/history', isAuthenticated, (req, res) => {
   res.render('history', { title: 'History', user: req.session.user, rps: userRps });
 });
 
-// View detail RPS
+// ROUTE tampilkan detail 1 RPS versi TERKINI (bukan versi arsip). ini yg dibuka
+// pas user klik "Lihat" di halaman daftar RPS.
 router.get('/history/view/:id', isAuthenticated, (req, res) => {
   const rpsId = req.params.id;
   const rawData = fs.readFileSync(rpsPath);
   const rps = JSON.parse(rawData);
   let item;
   if (req.session.user.role === 'admin') {
-    item = rps.find(r => String(r.id) === String(rpsId));
+    item = rps.find(r => String(r.id) === String(rpsId)); // admin boleh liat RPS siapa aja
   } else {
-    item = rps.find(r => String(r.id) === String(rpsId) && r.userId === req.session.user.id);
+    item = rps.find(r => String(r.id) === String(rpsId) && r.userId === req.session.user.id); // dosen cuma boleh liat miliknya
   }
 
-  // Tandai field yang berubah sejak revisi sebelumnya (kalau ada riwayatnya)
-  // supaya kelihatan langsung di dalam dokumen, bukan cuma di halaman History.
+  // cari tau field mana aja yg berubah di revisi PALING TERAKHIR, biar bisa disorot
+  // kuning langsung di halaman detailnya (bukan cuma keliatan di halaman Riwayat Revisi).
   let changedFieldKeys = [];
   if (item) {
     const revisions = getRpsRevisions(item.id);
     if (revisions.length >= 2) {
+      // minimal harus ada 2 revisi (biar ada "versi sebelumnya" buat dibandingin)
       const latest = revisions[revisions.length - 1];
       changedFieldKeys = getChangedFieldKeys(getPreviousRevisionData(revisions, latest), latest.data);
     }
   }
 
+  // changedFieldKeys dikirim ke view-rps.ejs, dipakai di sana buat kasih class css
+  // "highlight kuning" ke bagian2 yg berubah (lihat sub-bab soal changedClass di view-rps.ejs)
   res.render('view-rps', { title: 'Detail RPS', user: req.session.user, rps: item, changedFieldKeys });
 });
 
 
-// Riwayat revisi satu dokumen RPS
+// ROUTE tampilkan daftar SEMUA revisi milik 1 RPS (halaman "Riwayat Revisi").
 router.get('/history/rps/:id', isAuthenticated, (req, res) => {
   const rpsId = req.params.id;
   const rps = readJsonFile(rpsPath, []);
@@ -782,13 +855,16 @@ router.get('/history/rps/:id', isAuthenticated, (req, res) => {
     return res.status(404).send('RPS not found or you do not have permission to view its history.');
   }
 
-  // Untuk dokumen lama yang belum punya history, buat versi awal otomatis.
+  // kalau RPS ini dibuat sebelum fitur Riwayat Revisi ada (jadi belum ada riwayatnya
+  // sama sekali), bikinin dulu "versi awal" biar halaman ini tidak kosong melompong.
   ensureInitialRevision(item, getUserById(item.userId) || req.session.user);
 
+  // ambil semua revisi punya RPS ini, terus "dandanin" tiap entrinya dgn info tambahan
+  // yg dibutuhin tampilan (nama pengedit, jumlah field yg berubah).
   const revisions = getRpsRevisions(rpsId).map(revision => {
     const editor = getUserById(revision.edited_by);
     return {
-      ...revision,
+      ...revision, // semua field revisi asli tetap ikut
       editorName: revision.edited_by_username || (editor ? editor.username : 'System'),
       editorEmail: revision.edited_by_email || (editor ? editor.email : ''),
       changedCount: Array.isArray(revision.changed_fields) ? revision.changed_fields.length : 0
@@ -803,7 +879,8 @@ router.get('/history/rps/:id', isAuthenticated, (req, res) => {
   });
 });
 
-// Lihat isi RPS pada versi/revisi tertentu
+// ROUTE tampilkan isi RPS pada 1 VERSI ARSIP tertentu (bukan versi terkini).
+// dibuka pas user klik "Lihat" pada salah satu baris di daftar Riwayat Revisi.
 router.get('/history/rps/:id/revision/:revisionId', isAuthenticated, (req, res) => {
   const rpsId = req.params.id;
   const revisionId = req.params.revisionId;
@@ -823,6 +900,11 @@ router.get('/history/rps/:id/revision/:revisionId', isAuthenticated, (req, res) 
   const previousData = getPreviousRevisionData(revisions, revision);
   const changedFieldKeys = previousData ? getChangedFieldKeys(previousData, revision.data) : [];
 
+  // PERHATIKAN: rps yg dikirim ke view di sini adalah revision.data (data versi ARSIP-nya),
+  // BUKAN data RPS yg aktif sekarang. isRevision:true & backUrl dipakai view-rps.ejs buat
+  // nampilin banner kuning "kamu lagi liat versi lama" + tombol kembali ke daftar riwayat
+  // (bukan ke halaman detail RPS biasa) jadi 1 halaman view-rps.ejs bisa dipakai
+  // buat 2 keperluan sekaligus: liat versi terkini ATAUPUN liat versi arsip.
   res.render('view-rps', {
     title: `Detail RPS ${revision.revision_name}`,
     user: req.session.user,
@@ -834,7 +916,8 @@ router.get('/history/rps/:id/revision/:revisionId', isAuthenticated, (req, res) 
   });
 });
 
-// Kembalikan RPS ke versi/revisi tertentu
+// ROUTE proses tombol "Pulihkan versi ini". mengganti RPS yg lagi aktif dgn isi
+// dari salah satu versi arsip yg dipilih user.
 router.post('/history/rps/:id/revision/:revisionId/revert', isAuthenticated, (req, res) => {
   const rpsId = parseInt(req.params.id, 10);
   const revisionId = req.params.revisionId;
@@ -851,10 +934,11 @@ router.post('/history/rps/:id/revision/:revisionId/revert', isAuthenticated, (re
     return res.status(404).send('Revision not found.');
   }
 
-  const currentRps = rps[index];
-  const restoredRps = clonePlainObject(revision.data);
+  const currentRps = rps[index]; // RPS yg lagi aktif SEBELUM dipulihkan (dipakai buat hitung apa yg berubah)
+  const restoredRps = clonePlainObject(revision.data); // salinan data dari versi arsip yg dipilih
 
-  // ID dan kepemilikan dokumen tetap mengikuti dokumen aktif saat ini.
+  // walaupun isinya diambil dari versi lama, id/kepemilikan/tanggal-dibuat HARUS tetap ikut
+  // dokumen yg AKTIF SEKARANG biar RPS-nya tetap "RPS yg sama", cuma isinya yg dipulihkan.
   restoredRps.id = rpsId;
   restoredRps.userId = currentRps.userId;
   restoredRps.created_at = currentRps.created_at || restoredRps.created_at || null;
@@ -862,12 +946,15 @@ router.post('/history/rps/:id/revision/:revisionId/revert', isAuthenticated, (re
   restoredRps.updated_by = req.session.user.id;
   restoredRps.updated_by_username = req.session.user.username;
 
+  // hitung apa aja yg berubah akibat pemulihan ini (dibandingin dgn kondisi SEBELUM dipulihkan)
   const changedFields = getChangedFieldNames(currentRps, restoredRps);
   const changeStats = getChangeStats(currentRps, restoredRps);
-  rps[index] = restoredRps;
+  rps[index] = restoredRps; // RPS aktif sekarang resmi jadi versi yg dipulihkan
   writeJsonFile(rpsPath, rps);
 
-  // pemulihan JUGA dicatat sbg revisi baru (bukan menghapus riwayat di antaranya)
+  // pemulihan ini SENDIRI dicatat lagi sbg revisi BARU (bukan menghapus revisi2 yg ada
+  // di antaranya) jadi kalau ternyata pemulihannya salah pilih, masih bisa dilacak
+  // & dipulihkan lagi ke versi lain kapan pun, tidak ada jejak yg hilang.
   createRpsRevision(restoredRps, req.session.user, {
     action: 'revert',
     message: `Dikembalikan ke ${revision.revision_name}`,
@@ -934,10 +1021,13 @@ router.get('/edit-rps/:id', isAuthenticated, (req, res) => {
   });
 });
 
-// Update RPS data
+// ROUTE INI DIPANGGIL TIAP KALI TOMBOL "Update RPS" DITEKAN DI HALAMAN EDIT RPS.
+// selain nyimpen perubahannya, di sinilah revisi baru tercipta (lihat createRpsRevision
+// di bagian bawah fungsi ini) jadi route ini jadi salah satu "sumber utama" data
+// yg masuk ke fitur Riwayat Revisi.
 router.post('/edit-rps/:id', isAuthenticated, (req, res) => {
   const rpsId = parseInt(req.params.id, 10);
-  const updatedRpsData = normalizeRpsPayload(req.body);
+  const updatedRpsData = normalizeRpsPayload(req.body); // rapiin data form yg baru dikirim
 
   const rawData = fs.readFileSync(rpsPath);
   let rps = JSON.parse(rawData);
@@ -948,29 +1038,32 @@ router.post('/edit-rps/:id', isAuthenticated, (req, res) => {
     return res.status(404).send('RPS not found.');
   }
 
-  // Hanya izinkan user yg membuat atau admin untuk mengedit
+  // cuma pemilik RPS atau admin yg boleh nyimpen perubahan
   if (rps[index].userId !== req.session.user.id && req.session.user.role !== 'admin') {
     return res.status(403).send('You do not have permission to edit this RPS.');
   }
 
-  // Gabungkan data lama dengan data baru
-  const originalRps = rps[index];
+  // gabungin data LAMA dgn data BARU dari form (data baru menimpa yg lama kalau ada field yg sama)
+  const originalRps = rps[index]; // simpan dulu versi SEBELUM diedit, dipakai buat perbandingan nanti
   const newRpsData = normalizeRpsPayload({ ...originalRps, ...updatedRpsData });
 
-  // Preserve original userId - don't change ownership when admin edits
+  // walaupun admin yg ngedit, kepemilikan RPS-nya (userId) TETAP milik dosen aslinya, tidak ikut pindah
   newRpsData.userId = originalRps.userId;
 
-  // Hapus data cpmk dan sub_cpmk lama untuk diganti dengan yang baru
+  // field cpmk[...] & sub_cpmk[...] yg LAMA dibuang dulu, biar nanti diganti TOTAL sama yg
+  // baru dari form. kalau tidak gini, sub-cpmk yg dihapus user di form tidak akan beneran
+  // kehapus dari data tersimpan (soalnya cuma "ditimpa sebagian", bukan diganti semua).
   const fieldsToKeep = Object.keys(newRpsData).filter(k => !k.startsWith('cpmk[') && !k.startsWith('sub_cpmk['));
   let cleanedRps = {};
   fieldsToKeep.forEach(k => {
     cleanedRps[k] = newRpsData[k];
   });
 
-  // Gabungkan dengan data cpmk dan sub_cpmk yang baru dari form
+  // baru sekarang gabungin lagi dgn cpmk/sub_cpmk yg BARU dari form
   const finalRpsData = normalizeRpsPayload({ ...cleanedRps, ...updatedRpsData });
 
-  // Pastikan ID tidak berubah
+  // kunci ulang field2 penting supaya tidak ikut berubah gara2 isi form (jaga2 kalau ada
+  // field tersembunyi yg ke-utak-atik)
   finalRpsData.id = rpsId;
   finalRpsData.userId = originalRps.userId;
   finalRpsData.created_at = originalRps.created_at || null;
@@ -978,17 +1071,22 @@ router.post('/edit-rps/:id', isAuthenticated, (req, res) => {
   finalRpsData.updated_by = req.session.user.id;
   finalRpsData.updated_by_username = req.session.user.username;
 
+  // BAGIAN RIWAYAT REVISI DIMULAI DI SINI:
+  // bandingin versi SEBELUM (originalRps) & SESUDAH (finalRpsData) diedit, buat tau
+  // field apa aja yg berubah + statistiknya (added/removed/modified).
   const changedFields = getChangedFieldNames(originalRps, finalRpsData);
   const changeStats = getChangeStats(originalRps, finalRpsData);
 
-  // Jika RPS lama belum punya riwayat, simpan versi awalnya agar bisa direvert.
+  // kalau RPS ini blm pernah punya riwayat sama sekali (RPS lama dari sebelum fitur ini
+  // ada), bikinin dulu "versi awal"-nya, biar nanti masih bisa dipulihkan ke kondisi
+  // SEBELUM edit yg pertama kali ini terjadi.
   ensureInitialRevision(originalRps, getUserById(originalRps.userId) || req.session.user);
 
-  rps[index] = finalRpsData;
+  rps[index] = finalRpsData; // RPS aktif resmi diganti dgn versi baru
 
-  writeJsonFile(rpsPath, rps);
+  writeJsonFile(rpsPath, rps); // simpan ke rps.json
 
-  // Simpan snapshot setelah edit sebagai revisi baru.
+  // catat hasil edit ini sbg 1 revisi baru di riwayat (lihat createRpsRevision di atas)
   createRpsRevision(finalRpsData, req.session.user, {
     action: 'edit',
     message: 'RPS diperbarui',
@@ -996,7 +1094,8 @@ router.post('/edit-rps/:id', isAuthenticated, (req, res) => {
     change_stats: changeStats
   });
 
-  // Return JSON response instead of redirecting for consistency
+  // halaman Edit RPS ngirim form-nya pakai fetch() javascript (bukan submit form biasa),
+  // jadi responnya harus JSON, bukan redirect ke halaman lain.
   res.json({ success: true, message: 'RPS berhasil diperbarui!', id: rpsId });
 });
 
@@ -1018,7 +1117,7 @@ router.post('/delete-rps/:id', isAuthenticated, (req, res) => {
   if (rps.length < before) {
     fs.writeFileSync(rpsPath, JSON.stringify(rps, null, 2));
 
-    // Ikut hapus semua riwayat edit (rps_history) milik RPS ini -- kalau
+    // Ikut hapus semua riwayat edit (rps_history) milik RPS ini. kalau
     // tidak, entrinya jadi sampah yatim yang tetap nyangkut di rps_history.json
     // tanpa RPS induk yang bisa diakses lagi.
     const history = readJsonFile(rpsHistoryPath, []);
@@ -1204,13 +1303,22 @@ router.post('/admin/cpl/delete/:id', isAuthenticated, isAdmin, (req, res) => {
   }
 });
 
-// route get untuk menampilkan halaman (merender halaman upload-rps.ejs), post untuk memproses berkas yg diunggah
+// ROUTE GET. dibuka pas user klik menu "Upload RPS". tugasnya cuma nampilin
+// halaman formnya (upload-rps.ejs), belum ada proses apa2. error & success sengaja
+// dikirim null krn ini kondisi awal (baru buka halaman, belum ada aksi apa2 yg terjadi).
 router.get('/upload-rps', isAuthenticated, (req, res) => {
   res.render('upload-rps', { title: 'Upload RPS', user: req.session.user, error: null, success: null });
 });
 
+// ROUTE POST. ini yg jalan pas user klik tombol "Upload" di form. alurnya:
+// 1) tangkep file yg diupload lewat multer
+// 2) file-nya dibaca & "dibedah" isinya (manggil skrip python di belakang layar)
+// 3) hasil bedahannya dirapiin jadi RPS baru & disimpan
+// 4) user diarahkan ke halaman detail RPS yg baru jadi
 router.post('/upload-rps', isAuthenticated, (req, res) => {
-  if (!uploadRpsFile) { // multer belum ke-install -> fitur upload dimatikan, kasih pesan error
+  if (!uploadRpsFile) {
+    // uploadRpsFile null artinya package multer belum ke-install (lihat bagian atas file ini).
+    // daripada aplikasi error/crash, kasih pesan yg jelas ke user apa yg harus dilakukan.
     return res.status(500).render('upload-rps', {
       title: 'Upload RPS',
       user: req.session.user,
@@ -1219,9 +1327,15 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
     });
   }
 
-  // memanggil uploadRpsFile. middleware membaca field file bernama "rpsFile" dari body dan hasilnya ditaruh di req.file
+  // uploadRpsFile.single('rpsFile') = middleware multer yg nangkep 1 file dari field
+  // bernama "rpsFile" (harus sama persis dgn name="rpsFile" di <input> pada form html-nya).
+  // setelah file ketangkep & disimpan ke disk (sesuai konfigurasi storage di atas),
+  // hasilnya (nama file, path di disk, dst) otomatis ditaruh di req.file, lalu callback
+  // async (uploadError) => {...} ini dijalankan.
   uploadRpsFile.single('rpsFile')(req, res, async (uploadError) => {
-    if (uploadError) { // gagal pas proses upload-nya sendiri (mis. bukan .docx, kelewat besar)
+    if (uploadError) {
+      // gagal pas proses upload itu sendiri, misal: file bukan .docx (ditolak fileFilter),
+      // atau ukurannya kelewat 15MB (ditolak limits.fileSize).
       return res.status(400).render('upload-rps', {
         title: 'Upload RPS',
         user: req.session.user,
@@ -1230,7 +1344,8 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
       });
     }
 
-    if (!req.file) { // menangani error
+    if (!req.file) {
+      // req.file kosong artinya user klik "Upload" tanpa milih file sama sekali
       return res.status(400).render('upload-rps', {
         title: 'Upload RPS',
         user: req.session.user,
@@ -1239,10 +1354,20 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
       });
     }
 
+    // dari sini file-nya UDAH ADA & VALID di disk (di req.file.path).
+    // try/catch dipasang krn proses baca .docx (lewat python) bisa gagal macem2
+    // (dokumen rusak, format tidak dikenali, python error, dst).
     try {
-      const config = readJsonFile(configPath, {});
-      const fileBuffer = fs.readFileSync(req.file.path);
-      const { rpsData } = await parseRpsDocxBuffer(fileBuffer, { //berhubungan dgn ekstraksi python
+      const config = readJsonFile(configPath, {}); // config.json isinya nilai2 default (mis. nama penjamin mutu)
+      const fileBuffer = fs.readFileSync(req.file.path); // baca isi file dari disk sbg data mentah (Buffer)
+
+      // INI BAGIAN INTINYA: fileBuffer dikasih ke parseRpsDocxBuffer, yg di baliknya bakal
+      // manggil skrip python buat "membedah" tabel di dalam file .docx (lihat rpsDocxParser.js
+      // & docx_extractor.py). hasilnya (rpsData) itu data RPS yg formatnya udah sama kayak
+      // kalau user isi form Edit RPS manual, siap langsung dipakai/disimpan.
+      // "fallback" isinya nilai cadangan kalau ada bagian dokumen yg gagal kebaca, misal
+      // kalau nama penjamin mutu tidak ketemu di dokumen, dipakai config.penjamin_mutu.
+      const { rpsData } = await parseRpsDocxBuffer(fileBuffer, {
         fileName: req.file.originalname,
         fallback: {
           username: req.session.user.username,
@@ -1252,36 +1377,44 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
         }
       });
 
-
-      // menyimpan data ke rps.json
-      const rps = readJsonFile(rpsPath, []);
-      const newId = getNextNumericId(rps);
+      // sampai sini rpsData udah siap. sekarang tinggal disimpan jadi RPS baru:
+      const rps = readJsonFile(rpsPath, []); // ambil semua RPS yg udah ada
+      const newId = getNextNumericId(rps); // hitung id baru (angka terbesar + 1)
       const now = new Date().toISOString();
 
+      // gabungin hasil ekstraksi (rpsData) dgn info kepemilikan & waktu.
+      // normalizeRpsPayload = fungsi yg merapikan struktur field2-nya (didefinisikan di
+      // bagian lain file ini), supaya bentuknya konsisten sama RPS yg dibuat lewat form manual.
       const finalRpsData = normalizeRpsPayload({
         ...rpsData,
         id: newId,
-        userId: req.session.user.id,
+        userId: req.session.user.id, // penanda "RPS ini punya siapa"
         created_at: now,
         updated_at: now,
         updated_by: req.session.user.id,
         updated_by_username: req.session.user.username
       });
 
-      rps.push(finalRpsData);
-      writeJsonFile(rpsPath, rps);
+      rps.push(finalRpsData); // tambahin RPS baru ke daftar
+      writeJsonFile(rpsPath, rps); // simpan balik SELURUH daftar RPS (lama + baru) ke rps.json
 
-      // mencatat riwayat edit/revisi pertama
+      // langsung catat sbg revisi PERTAMA di riwayat (lihat createRpsRevision di bawah,
+      // bagian Riwayat Revisi) jadi RPS hasil upload otomatis punya jejak riwayat sejak awal,
+      // bukan baru punya riwayat pas diedit yg pertama kali.
       createRpsRevision(finalRpsData, req.session.user, {
         action: 'upload_docx',
         message: `RPS dibuat dari upload Word: ${req.file.originalname || 'file'}`
       });
 
-      safeUnlink(req.file.path); // arahkan user ke halaman detail rps yg baru dibuat
+      safeUnlink(req.file.path); // file .docx yg tadi disimpan sementara di disk, hapus (udah tidak perlu lagi)
+      // arahkan browser ke halaman detail RPS yg baru dibuat. ?uploaded=1 dipakai halaman
+      // tujuan buat nampilin notifikasi "berhasil diupload".
       return res.redirect(`/history/view/${newId}?uploaded=1`);
-    } catch (error) { // ekstraksi python gagal (dokumen rusak/format tidak dikenali, dst)
+    } catch (error) {
+      // apa pun yg gagal di blok try di atas (paling sering: python gagal baca dokumen)
+      // ditangkep di sini, biar user dikasih pesan yg jelas, bukan halaman error putih polos.
       console.error('[UPLOAD RPS] Gagal mengekstrak file:', error);
-      safeUnlink(req.file && req.file.path);
+      safeUnlink(req.file && req.file.path); // bersihin file sementara meskipun gagal
       return res.status(500).render('upload-rps', {
         title: 'Upload RPS',
         user: req.session.user,
