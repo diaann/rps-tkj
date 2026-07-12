@@ -354,7 +354,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div>
                         <label class="label">Durasi Waktu Pembelajaran (menit)</label>
-                        <input class="input" name="sub_cpmk[${cpmkId}][${index}][durasi]" type="number" min="1" value="${data.durasi || ''}" required>
+                        <input class="input" name="sub_cpmk[${cpmkId}][${index}][durasi]" type="number" min="1" value="${data.durasi || ''}">
                     </div>
                     <div>
                         <label class="label">Indikator Penilaian</label>
@@ -401,11 +401,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     <!-- Metode removed per request: Edit RPS should not include generic 'metode' field -->
                     <div>
                         <label class="label">Media</label>
-                        <textarea class="input" name="sub_cpmk[${cpmkId}][${index}][media]" rows="2" required>${data.media || ''}</textarea>
+                        <textarea class="input" name="sub_cpmk[${cpmkId}][${index}][media]" rows="2">${data.media || ''}</textarea>
                     </div>
                     <div>
                         <label class="label">Sumber Belajar</label>
-                        <textarea class="input" name="sub_cpmk[${cpmkId}][${index}][sumber_belajar]" rows="2" required>${data.sumber_belajar || ''}</textarea>
+                        <textarea class="input" name="sub_cpmk[${cpmkId}][${index}][sumber_belajar]" rows="2">${data.sumber_belajar || ''}</textarea>
                     </div>
                     <div>
                         <label class="label">Alat dan Bahan</label>
