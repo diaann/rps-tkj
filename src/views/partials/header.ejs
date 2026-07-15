@@ -54,15 +54,38 @@
                         </div>
                     </div>
                     <% if (typeof user !=='undefined' && user.role==='admin' ) { %>
-                        <a href="/admin"
-                            class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
-                            <i class="fas fa-users mr-1"></i>Kelola User
-                        </a>
+                        <!-- Kelola User Dropdown -->
+                        <div class="relative dropdown-container">
+                            <button 
+                                id="user-dropdown-btn"
+                                class="flex items-center text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 focus:outline-none">
+                                <i class="fas fa-users mr-1"></i>
+                                Kelola User
+                                <i class="fas fa-chevron-down ml-1 text-xs transition-transform"></i>
+                            </button>
+
+                            <!-- Dropdown Menu -->
+                            <div id="user-dropdown-menu" 
+                                class="absolute hidden right-0 mt-2 w-56 bg-white shadow-xl rounded-md py-2 z-50 border border-gray-100">
+                                <a href="/admin" 
+                                class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600">
+                                    <i class="fas fa-users mr-3 text-gray-400"></i>
+                                    Daftar User
+                                </a>
+                                
+                                <a href="/admin/mahasiswa" 
+                                class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-600">
+                                    <i class="fas fa-user-plus mr-3 text-gray-400"></i>
+                                    Tambah Mahasiswa
+                                </a>
+                            </div>
+                        </div>
+
                         <a href="/admin/cpl"
-                            class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
+                            class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
                             <i class="fas fa-file-alt mr-1"></i>Kelola CPL
                         </a>
-                        <% } %>
+                    <% } %>
                             <% if (typeof user !=='undefined' ) { %>
                                 <span class="text-gray-600 text-sm whitespace-nowrap">
                                     <i class="fas fa-user mr-1"></i>
@@ -291,4 +314,63 @@
                 window.location.href = '/logout';
             });
         });
+    </script>
+    <script>
+    // Simple Dropdown Handler
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropdowns = document.querySelectorAll('.dropdown-container');
+        
+        dropdowns.forEach(container => {
+            const button = container.querySelector('button');
+            const menu = container.querySelector('.dropdown-menu');
+            
+            if (!button || !menu) return;
+
+            // Hover support
+            container.addEventListener('mouseenter', () => {
+                menu.classList.remove('hidden');
+            });
+            
+            container.addEventListener('mouseleave', () => {
+                menu.classList.add('hidden');
+            });
+
+            // Click support (mobile + backup)
+            button.addEventListener('click', function(e) {
+                e.stopPropagation();
+                menu.classList.toggle('hidden');
+            });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                menu.classList.add('hidden');
+            });
+        });
+    });
+    </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const btn = document.getElementById('user-dropdown-btn');
+        const menu = document.getElementById('user-dropdown-menu');
+        
+        if (!btn || !menu) return;
+
+        // Toggle dropdown on button click
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            menu.classList.toggle('hidden');
+        });
+
+        // Close dropdown when clicking anywhere else
+        document.addEventListener('click', function () {
+            menu.classList.add('hidden');
+        });
+
+        // Prevent menu from closing when clicking inside it
+        menu.addEventListener('click', function (e) {
+            e.stopPropagation();
+        });
+    });
     </script>
