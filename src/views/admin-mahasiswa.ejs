@@ -56,12 +56,20 @@
     </form>
 
     <hr class="my-6">
-
+    
+    <!-- Form daftar Mahasiswa-->
     <h3 class="font-semibold mb-3">Daftar Mahasiswa</h3>
-
     <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+      <!--Pagination 20 per page-->
+      <% const perPage = (typeof pageSize !== 'undefined' && pageSize) ? pageSize : 20; %>
+      <% const pageNumber = Math.max(1, parseInt(currentPage || 1, 10)); %>
+      <!--Determine the first and last visible item for the current page-->
+      <% const startItem = (totalItems || 0) > 0 ? ((pageNumber - 1) * perPage) + 1 : 0; %>
+      <% const endItem = (totalItems || 0) > 0 ? Math.min(pageNumber * perPage, totalItems || 0) : 0; %>
+      <!--Show the actual number of rows on this page, including the last page with fewer items-->
+      <% const visibleCount = (totalItems || 0) > 0 ? Math.max(0, endItem - startItem + 1) : 0; %>
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4 text-sm text-gray-600">
-        <div>Menampilkan <%= totalItems || 0 %> data, halaman <%= currentPage || 1 %> dari <%= totalPages %></div>
+        <div>Menampilkan <%= visibleCount %> data (dari <%= totalItems || 0 %>)</div>
         <div class="flex gap-2">
           <% if ((currentPage || 1) > 1) { %>
             <a href="/admin/mahasiswa?page=<%= (currentPage || 1) - 1 %>" class="px-3 py-1 border rounded hover:bg-gray-100">Sebelumnya</a>
@@ -141,8 +149,14 @@
     </div>
 
     <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+      <!--Same pagination summary for the bottom pager so the page count stays consistent-->
+      <% const perPageBottom = (typeof pageSize !== 'undefined' && pageSize) ? pageSize : 20; %>
+      <% const pageNumberBottom = Math.max(1, parseInt(currentPage || 1, 10)); %>
+      <% const startItemBottom = (totalItems || 0) > 0 ? ((pageNumberBottom - 1) * perPageBottom) + 1 : 0; %>
+      <% const endItemBottom = (totalItems || 0) > 0 ? Math.min(pageNumberBottom * perPageBottom, totalItems || 0) : 0; %>
+      <% const visibleCountBottom = (totalItems || 0) > 0 ? Math.max(0, endItemBottom - startItemBottom + 1) : 0; %>
       <div class="flex flex-wrap items-center justify-between gap-3 mt-4 text-sm text-gray-600">
-        <div>Menampilkan <%= totalItems || 0 %> data, halaman <%= currentPage || 1 %> dari <%= totalPages %></div>
+        <div>Menampilkan <%= visibleCountBottom %> data (dari <%= totalItems || 0 %>)</div>
         <div class="flex gap-2">
           <% if ((currentPage || 1) > 1) { %>
             <a href="/admin/mahasiswa?page=<%= (currentPage || 1) - 1 %>" class="px-3 py-1 border rounded hover:bg-gray-100">Sebelumnya</a>
