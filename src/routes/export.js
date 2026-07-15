@@ -176,7 +176,7 @@ function buildDataFromItem(item) {
   // menjadi field siap-tampil untuk template Word. Bobot disimpan sebagai angka
   // saja di data, dan tanda "%" baru ditambahkan di sini saat export.
   // "Lainnya" bisa berisi lebih dari 1 komponen (nama+bobot) -- karena kolom
-  // Word untuk Lainnya cuma 1 kolom fisik (lihat README_PDF_EXTRACTION.md
+  // Word untuk Lainnya cuma 1 kolom fisik (lihat README_DOCX_EXTRACTION.md
   // soal batasan tabel Word), semua item digabung jadi teks multi-baris
   // dalam SATU sel itu saja.
   function buildAsesmenDisplay(sub) {

@@ -22,7 +22,7 @@ pertama.
   Syarat). Dipisah dari `docx_extractor.py` supaya logika generik ini rapi
   terpisah dari kode baca tabel docx-nya sendiri.
 - `src/utils/docx_extractor.py` -- mesin ekstraksi Word (python-docx). Output
-  JSON-nya dikonsumsi oleh `src/utils/rpsPdfParser.js` (`parseRpsDocxBuffer`)
+  JSON-nya dikonsumsi oleh `src/utils/rpsDocxParser.js` (`parseRpsDocxBuffer`)
   lewat `child_process.spawnSync`, lalu dirakit jadi `rpsData` yang formatnya
   sama seperti input manual -- tidak ada perbedaan di routes/views setelahnya.
 
