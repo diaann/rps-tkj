@@ -195,59 +195,6 @@ function writeJsonFile(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 
-function sortMahasiswa(mahasiswaList) {
-  return [...(Array.isArray(mahasiswaList) ? mahasiswaList : [])].sort((a, b) => {
-    const parseKelas = (item) => {
-      const raw = String(item && item.kelasId ? item.kelasId : '').trim();
-      const match = raw.match(/^(\d+)([A-Za-z])$/i);
-      if (!match) {
-        return [Number.MAX_SAFE_INTEGER, 0, raw];
-      }
-
-      const tingkat = parseInt(match[1], 10) || 0;
-      const kelompok = match[2].toUpperCase();
-      return [tingkat, kelompok === 'A' ? 0 : 1, raw];
-    };
-
-    const left = parseKelas(a);
-    const right = parseKelas(b);
-
-    if (left[0] !== right[0]) return left[0] - right[0];
-    if (left[1] !== right[1]) return left[1] - right[1];
-
-    const namaA = String(a && a.nama ? a.nama : '').toLowerCase();
-    const namaB = String(b && b.nama ? b.nama : '').toLowerCase();
-    if (namaA !== namaB) return namaA.localeCompare(namaB);
-
-    const nimA = String(a && a.nim ? a.nim : '');
-    const nimB = String(b && b.nim ? b.nim : '');
-    if (nimA !== nimB) return nimA.localeCompare(nimB);
-
-    return String(a && a.id ? a.id : '').localeCompare(String(b && b.id ? b.id : ''));
-  });
-}
-
-function generateStudentId(mahasiswaList, kelasId, existingId) {
-  const baseKelas = String(kelasId || '').trim();
-  const existingIds = (Array.isArray(mahasiswaList) ? mahasiswaList : [])
-    .map(item => String(item && item.id ? item.id : ''))
-    .filter(Boolean)
-    .filter(id => !existingId || String(id) !== String(existingId));
-
-  const prefix = `${baseKelas}-`;
-  const usedNumbers = existingIds
-    .filter(id => String(id).startsWith(prefix))
-    .map(id => parseInt(String(id).split('-').pop(), 10))
-    .filter(number => !Number.isNaN(number));
-
-  let nextNumber = 1;
-  while (usedNumbers.includes(nextNumber)) {
-    nextNumber += 1;
-  }
-
-  return `${baseKelas}-${String(nextNumber).padStart(2, '0')}`;
-}
-
 // bikin salinan dari sebuah objek (deep copy)
 // dengan cara bah objeknya jadi teks json (JSON.stringify), lalu ubah balik jadi objek baru (JSON.parse)
 // penting untuk fitur Riwayat Revisi
@@ -1501,7 +1448,8 @@ router.get('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
     req,
     currentPage: safePage,
     totalPages,
-    totalItems: sortedMahasiswa.length
+    totalItems: sortedMahasiswa.length,
+    pageSize
   });
 });
 
@@ -1575,5 +1523,58 @@ router.post('/admin/mahasiswa/delete/:id', isAuthenticated, isAdmin, (req, res) 
   writeJsonFile(mahasiswaPath, filtered);
   return res.redirect('/admin/mahasiswa?deleted=1');
 });
+
+function sortMahasiswa(mahasiswaList) {
+  return [...(Array.isArray(mahasiswaList) ? mahasiswaList : [])].sort((a, b) => {
+    const parseKelas = (item) => {
+      const raw = String(item && item.kelasId ? item.kelasId : '').trim();
+      const match = raw.match(/^(\d+)([A-Za-z])$/i);
+      if (!match) {
+        return [Number.MAX_SAFE_INTEGER, 0, raw];
+      }
+
+      const tingkat = parseInt(match[1], 10) || 0;
+      const kelompok = match[2].toUpperCase();
+      return [tingkat, kelompok === 'A' ? 0 : 1, raw];
+    };
+
+    const left = parseKelas(a);
+    const right = parseKelas(b);
+
+    if (left[0] !== right[0]) return left[0] - right[0];
+    if (left[1] !== right[1]) return left[1] - right[1];
+
+    const namaA = String(a && a.nama ? a.nama : '').toLowerCase();
+    const namaB = String(b && b.nama ? b.nama : '').toLowerCase();
+    if (namaA !== namaB) return namaA.localeCompare(namaB);
+
+    const nimA = String(a && a.nim ? a.nim : '');
+    const nimB = String(b && b.nim ? b.nim : '');
+    if (nimA !== nimB) return nimA.localeCompare(nimB);
+
+    return String(a && a.id ? a.id : '').localeCompare(String(b && b.id ? b.id : ''));
+  });
+}
+
+function generateStudentId(mahasiswaList, kelasId, existingId) {
+  const baseKelas = String(kelasId || '').trim();
+  const existingIds = (Array.isArray(mahasiswaList) ? mahasiswaList : [])
+    .map(item => String(item && item.id ? item.id : ''))
+    .filter(Boolean)
+    .filter(id => !existingId || String(id) !== String(existingId));
+
+  const prefix = `${baseKelas}-`;
+  const usedNumbers = existingIds
+    .filter(id => String(id).startsWith(prefix))
+    .map(id => parseInt(String(id).split('-').pop(), 10))
+    .filter(number => !Number.isNaN(number));
+
+  let nextNumber = 1;
+  while (usedNumbers.includes(nextNumber)) {
+    nextNumber += 1;
+  }
+
+  return `${baseKelas}-${String(nextNumber).padStart(2, '0')}`;
+}
 
 module.exports = router;
