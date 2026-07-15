@@ -1425,4 +1425,100 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
   });
 });
 
+// Admin: manage mahasiswa page
+router.get('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
+  const mahasiswa = readJsonFile(mahasiswaPath, []);
+  const kelas = readJsonFile(kelasPath, []);
+  const page = Math.max(1, parseInt(req.query.page || '1', 10));
+  const pageSize = 20;
+
+  const sortedMahasiswa = sortMahasiswa(mahasiswa);
+  const totalPages = Math.max(1, Math.ceil(sortedMahasiswa.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const startIndex = (safePage - 1) * pageSize;
+  const pagedMahasiswa = sortedMahasiswa.slice(startIndex, startIndex + pageSize);
+
+  res.render('admin-mahasiswa', {
+    title: 'Admin - Kelola Mahasiswa',
+    user: req.session.user,
+    mahasiswa: pagedMahasiswa,
+    kelas,
+    req,
+    currentPage: safePage,
+    totalPages,
+    totalItems: sortedMahasiswa.length
+  });
+});
+
+router.post('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
+  const nim = String(req.body.nim || '').trim();
+  const nama = String(req.body.nama || '').trim();
+  const kelasId = String(req.body.kelasId || '').trim();
+
+  if (!nim || !nama || !kelasId) {
+    return res.redirect('/admin/mahasiswa?error=missing');
+  }
+
+  const mahasiswa = readJsonFile(mahasiswaPath, []);
+  const exists = mahasiswa.some(item => String(item.nim) === nim);
+
+  if (exists) {
+    return res.redirect('/admin/mahasiswa?error=duplicate');
+  }
+
+  const id = generateStudentId(mahasiswa, kelasId);
+
+  mahasiswa.push({ id, nim, nama, kelasId });
+  writeJsonFile(mahasiswaPath, mahasiswa);
+
+  return res.redirect('/admin/mahasiswa?saved=1');
+});
+
+router.post('/admin/mahasiswa/update/:id', isAuthenticated, isAdmin, (req, res) => {
+  const currentId = String(req.params.id || '').trim();
+  const nim = String(req.body.nim || '').trim();
+  const nama = String(req.body.nama || '').trim();
+  const kelasId = String(req.body.kelasId || '').trim();
+
+  if (!nim || !nama || !kelasId) {
+    return res.redirect('/admin/mahasiswa?error=missing');
+  }
+
+  const mahasiswa = readJsonFile(mahasiswaPath, []);
+  const index = mahasiswa.findIndex(item => String(item.id) === currentId);
+
+  if (index === -1) {
+    return res.redirect('/admin/mahasiswa?error=not-found');
+  }
+
+  const duplicate = mahasiswa.some((item, idx) => {
+    if (idx === index) return false;
+    return String(item.nim) === nim;
+  });
+
+  if (duplicate) {
+    return res.redirect('/admin/mahasiswa?error=duplicate');
+  }
+
+  const generatedId = generateStudentId(mahasiswa, kelasId, mahasiswa[index].id);
+
+  mahasiswa[index] = { ...mahasiswa[index], id: generatedId, nim, nama, kelasId };
+  writeJsonFile(mahasiswaPath, mahasiswa);
+
+  return res.redirect('/admin/mahasiswa?updated=1');
+});
+
+router.post('/admin/mahasiswa/delete/:id', isAuthenticated, isAdmin, (req, res) => {
+  const currentId = String(req.params.id || '').trim();
+  const mahasiswa = readJsonFile(mahasiswaPath, []);
+  const filtered = mahasiswa.filter(item => String(item.id) !== currentId);
+
+  if (filtered.length === mahasiswa.length) {
+    return res.redirect('/admin/mahasiswa?error=not-found');
+  }
+
+  writeJsonFile(mahasiswaPath, filtered);
+  return res.redirect('/admin/mahasiswa?deleted=1');
+});
+
 module.exports = router;
