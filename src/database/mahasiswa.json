@@ -1,33 +1,152 @@
 [
-  { "id": "1A-01", "nim": "20250101", "nama": "Ahmad Fadillah", "kelasId": "1A" },
-  { "id": "1A-02", "nim": "20250102", "nama": "Siti Nurhaliza", "kelasId": "1A" },
-  { "id": "1A-03", "nim": "20250103", "nama": "Muh. Rizky Ramadhan", "kelasId": "1A" },
-
-  { "id": "1B-01", "nim": "20250151", "nama": "Nur Aisyah", "kelasId": "1B" },
-  { "id": "1B-02", "nim": "20250152", "nama": "Bayu Setiawan", "kelasId": "1B" },
-  { "id": "1B-03", "nim": "20250153", "nama": "Putri Amelia", "kelasId": "1B" },
-
-  { "id": "2A-01", "nim": "20240201", "nama": "Andi Pratama", "kelasId": "2A" },
-  { "id": "2A-02", "nim": "20240202", "nama": "Dewi Lestari", "kelasId": "2A" },
-  { "id": "2A-03", "nim": "20240203", "nama": "Fajar Nugroho", "kelasId": "2A" },
-
-  { "id": "2B-01", "nim": "20240251", "nama": "Indah Permata", "kelasId": "2B" },
-  { "id": "2B-02", "nim": "20240252", "nama": "Rian Hidayat", "kelasId": "2B" },
-  { "id": "2B-03", "nim": "20240253", "nama": "Sri Wahyuni", "kelasId": "2B" },
-
-  { "id": "3A-01", "nim": "20230301", "nama": "Hendra Gunawan", "kelasId": "3A" },
-  { "id": "3A-02", "nim": "20230302", "nama": "Melati Anggraini", "kelasId": "3A" },
-  { "id": "3A-03", "nim": "20230303", "nama": "Yusuf Maulana", "kelasId": "3A" },
-
-  { "id": "3B-01", "nim": "20230351", "nama": "Rina Marlina", "kelasId": "3B" },
-  { "id": "3B-02", "nim": "20230352", "nama": "Doni Saputra", "kelasId": "3B" },
-  { "id": "3B-03", "nim": "20230353", "nama": "Fitriani", "kelasId": "3B" },
-
-  { "id": "4A-01", "nim": "20220401", "nama": "Agus Salim", "kelasId": "4A" },
-  { "id": "4A-02", "nim": "20220402", "nama": "Novita Sari", "kelasId": "4A" },
-  { "id": "4A-03", "nim": "20220403", "nama": "Taufik Hidayat", "kelasId": "4A" },
-
-  { "id": "4B-01", "nim": "20220451", "nama": "Wulan Sari", "kelasId": "4B" },
-  { "id": "4B-02", "nim": "20220452", "nama": "Eko Prasetyo", "kelasId": "4B" },
-  { "id": "4B-03", "nim": "20220453", "nama": "Lina Marlina", "kelasId": "4B" }
+  {
+    "id": "1A-01",
+    "nim": "20250101",
+    "nama": "Ahmad Fadillah",
+    "kelasId": "1A"
+  },
+  {
+    "id": "1A-02",
+    "nim": "20250102",
+    "nama": "Siti Nurhaliza",
+    "kelasId": "1A"
+  },
+  {
+    "id": "1A-03",
+    "nim": "20250103",
+    "nama": "Muh. Rizky Ramadhan",
+    "kelasId": "1A"
+  },
+  {
+    "id": "1B-01",
+    "nim": "20250151",
+    "nama": "Nur Aisyah",
+    "kelasId": "1B"
+  },
+  {
+    "id": "1B-02",
+    "nim": "20250152",
+    "nama": "Bayu Setiawan",
+    "kelasId": "1B"
+  },
+  {
+    "id": "1B-03",
+    "nim": "20250153",
+    "nama": "Putri Amelia",
+    "kelasId": "1B"
+  },
+  {
+    "id": "2A-01",
+    "nim": "20240201",
+    "nama": "Andi Pratama",
+    "kelasId": "2A"
+  },
+  {
+    "id": "2A-02",
+    "nim": "20240202",
+    "nama": "Dewi Lestari",
+    "kelasId": "2A"
+  },
+  {
+    "id": "2A-03",
+    "nim": "20240203",
+    "nama": "Fajar Nugroho",
+    "kelasId": "2A"
+  },
+  {
+    "id": "2B-01",
+    "nim": "20240251",
+    "nama": "Indah Permata",
+    "kelasId": "2B"
+  },
+  {
+    "id": "2B-02",
+    "nim": "20240252",
+    "nama": "Rian Hidayat",
+    "kelasId": "2B"
+  },
+  {
+    "id": "2B-03",
+    "nim": "20240253",
+    "nama": "Sri Wahyuni",
+    "kelasId": "2B"
+  },
+  {
+    "id": "3A-01",
+    "nim": "20230301",
+    "nama": "Hendra Gunawan",
+    "kelasId": "3A"
+  },
+  {
+    "id": "3A-02",
+    "nim": "20230302",
+    "nama": "Melati Anggraini",
+    "kelasId": "3A"
+  },
+  {
+    "id": "3A-03",
+    "nim": "20230303",
+    "nama": "Yusuf Maulana",
+    "kelasId": "3A"
+  },
+  {
+    "id": "3B-01",
+    "nim": "20230351",
+    "nama": "Rina Marlina",
+    "kelasId": "3B"
+  },
+  {
+    "id": "3B-02",
+    "nim": "20230352",
+    "nama": "Doni Saputra",
+    "kelasId": "3B"
+  },
+  {
+    "id": "3B-03",
+    "nim": "20230353",
+    "nama": "Fitriani",
+    "kelasId": "3B"
+  },
+  {
+    "id": "4A-01",
+    "nim": "20220401",
+    "nama": "Agus Salim",
+    "kelasId": "4A"
+  },
+  {
+    "id": "4A-02",
+    "nim": "20220402",
+    "nama": "Novita Sari",
+    "kelasId": "4A"
+  },
+  {
+    "id": "4A-03",
+    "nim": "20220403",
+    "nama": "Taufik Hidayat",
+    "kelasId": "4A"
+  },
+  {
+    "id": "4B-01",
+    "nim": "20220451",
+    "nama": "Wulan Sari",
+    "kelasId": "4B"
+  },
+  {
+    "id": "4B-02",
+    "nim": "20220452",
+    "nama": "Eko Prasetyo",
+    "kelasId": "4B"
+  },
+  {
+    "id": "4B-03",
+    "nim": "20220453",
+    "nama": "Lina Marlina",
+    "kelasId": "4B"
+  },
+  {
+    "id": "1B-04",
+    "nim": "42519032",
+    "nama": "Dian R",
+    "kelasId": "1B"
+  }
 ]
