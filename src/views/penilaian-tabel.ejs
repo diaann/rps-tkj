@@ -149,7 +149,7 @@
 
                 <div id="tb-panel-rekap" class="penilaian-tab-panel <%= (typeof activeTab !== 'undefined' && activeTab === 'tb-panel-rekap') ? '' : 'hidden' %>">
                     <div class="mb-4 p-4 bg-gray-50 border rounded-lg">
-                        <div class="text-gray-800">Ringkasan nilai akhir seluruh mahasiswa berdasarkan data yang sudah di input pada semua tab Sub-CPMK.</div>
+                        <div class="text-gray-800">Ringkasan nilai akhir per komponen berdasarkan data yang sudah di input pada semua tab Sub-CPMK.</div>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -159,6 +159,7 @@
                                     <th class="px-3 py-2 border text-left text-xs font-semibold">No</th>
                                     <th class="px-3 py-2 border text-left text-xs font-semibold">NIM</th>
                                     <th class="px-3 py-2 border text-left text-xs font-semibold">Nama Mahasiswa</th>
+                                    <th class="px-3 py-2 border text-left text-xs font-semibold">Komponen</th>
                                     <th class="px-3 py-2 border text-center text-xs font-semibold">Nilai Akhir</th>
                                     <th class="px-3 py-2 border text-center text-xs font-semibold">Status</th>
                                 </tr>
@@ -169,10 +170,23 @@
                                         <td class="px-3 py-2 border text-sm"><%= idx + 1 %></td>
                                         <td class="px-3 py-2 border text-sm"><%= item.nim %></td>
                                         <td class="px-3 py-2 border text-sm"><%= item.nama %></td>
-                                        <td class="px-3 py-2 border text-sm text-center"><%= Number(item.nilaiAkhir).toFixed(2) %></td>
-                                        <td class="px-3 py-2 border text-sm text-center">
-                                            <span class="px-2 py-1 rounded-full text-xs font-medium <%= item.status === 'Lulus' ? 'bg-green-100 text-green-700' : item.status === 'Remedial' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700' %>">
-                                                <%= item.status %>
+                                        <td class="px-3 py-2 border text-sm">
+                                            <select class="w-full border rounded px-2 py-1 text-sm" data-student-id="<%= item.id %>" onchange="updateRekapRow(this)">
+                                                <% (typeof rekapComponents !== 'undefined' && Array.isArray(rekapComponents) ? rekapComponents : []).forEach(function(option) { %>
+                                                    <% const optionScore = item.componentScores && item.componentScores[option.key] ? item.componentScores[option.key] : {}; %>
+                                                    <option value="<%= option.key %>"
+                                                        data-score="<%= optionScore.nilaiAkhir || 0 %>"
+                                                        data-status="<%= optionScore.status || 'Belum dinilai' %>"
+                                                        <%= option.key === item.selectedComponentKey ? 'selected' : '' %>>
+                                                        <%= option.label %>
+                                                    </option>
+                                                <% }); %>
+                                            </select>
+                                        </td>
+                                        <td class="px-3 py-2 border text-sm text-center" data-rekap-score-cell="<%= item.id %>"><%= isNaN(item.selectedNilaiAkhir) ? '0.00' : Number(item.selectedNilaiAkhir).toFixed(2) %></td>
+                                        <td class="px-3 py-2 border text-sm text-center" data-rekap-status-cell="<%= item.id %>">
+                                            <span class="px-2 py-1 rounded-full text-xs font-medium <%= item.selectedStatus === 'Lulus' ? 'bg-green-100 text-green-700' : item.selectedStatus === 'Remedial' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700' %>">
+                                                <%= item.selectedStatus %>
                                             </span>
                                         </td>
                                     </tr>
@@ -199,6 +213,33 @@
     </div>
 
     <script>
+        function updateRekapRow(selectEl) {
+            const studentId = selectEl.getAttribute('data-student-id');
+            const selectedOption = selectEl.options[selectEl.selectedIndex];
+            const scoreCell = document.querySelector('[data-rekap-score-cell="' + studentId + '"]');
+            const statusCell = document.querySelector('[data-rekap-status-cell="' + studentId + '"]');
+
+            if (!selectedOption) {
+                return;
+            }
+
+            const score = selectedOption.getAttribute('data-score');
+            const status = selectedOption.getAttribute('data-status');
+
+            if (scoreCell) {
+                scoreCell.textContent = Number(score || 0).toFixed(2);
+            }
+
+            if (statusCell) {
+                const statusClass = status === 'Lulus'
+                    ? 'bg-green-100 text-green-700'
+                    : status === 'Remedial'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-gray-100 text-gray-700';
+                statusCell.innerHTML = '<span class="px-2 py-1 rounded-full text-xs font-medium ' + statusClass + '">' + status + '</span>';
+            }
+        }
+
         // ganti tab Sub-CPMK yg aktif; semua tab tetap 1 <form> yg sama jadi nilai ga hilang pas pindah tab
         function showPenilaianTab(targetId, btnEl) {
             document.querySelectorAll('.penilaian-tab-panel').forEach(function (panel) {
