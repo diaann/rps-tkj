@@ -132,154 +132,69 @@ function buildSubCpmkListForPenilaian(rpsItem) {
 }
 
 function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
-  const componentDefs = [];
-  const fallbackComponents = [
-    { key: 'formatif', label: 'Formatif' },
-    { key: 'kuis', label: 'Kuis' },
-    { key: 'tugas', label: 'Tugas' },
-    { key: 'ujian', label: 'Ujian' },
-    { key: 'pjbl', label: 'PjBL' },
-    { key: 'presentasi', label: 'Presentasi' }
-  ];
-
-  subCpmkList.forEach((sub) => {
-    const standardComponents = [
-      { key: 'formatif', label: 'Formatif', bobot: sub.formatifBobot, name: sub.formatifNama },
-      { key: 'kuis', label: 'Kuis', bobot: sub.kuisBobot, name: sub.kuisNama },
-      { key: 'tugas', label: 'Tugas', bobot: sub.tugasBobot, name: sub.tugasNama },
-      { key: 'ujian', label: 'Ujian', bobot: sub.ujianBobot, name: sub.ujianNama },
-      { key: 'pjbl', label: 'PjBL', bobot: sub.pjblBobot, name: sub.pjblNama },
-      { key: 'presentasi', label: 'Presentasi', bobot: sub.presentasiBobot, name: sub.presentasiNama }
-    ];
-
-    standardComponents.forEach((component) => {
-      const hasDefinition = !!(component.bobot || component.name);
-      if (!hasDefinition) return;
-      if (!componentDefs.some(def => def.key === component.key)) {
-        componentDefs.push({ key: component.key, label: component.label });
-      }
-    });
-
-    (sub.lainnya || []).forEach((item) => {
-      if (!item.bobot) return;
-      const label = item.nama || 'Lainnya';
-      if (!componentDefs.some(def => def.key === `lainnya:${label}`)) {
-        componentDefs.push({ key: `lainnya:${label}`, label });
-      }
-    });
-  });
-
-  if (componentDefs.length === 0) {
-    fallbackComponents.forEach((component) => {
-      componentDefs.push({ key: component.key, label: component.label });
-    });
-  }
+  const subCpmkColumns = subCpmkList.map((sub) => ({
+    key: `subcpmk-${sub.globalNumber}`,
+    label: `TB ${sub.globalNumber}`
+  }));
 
   const rows = [];
 
   mahasiswaList.forEach((m) => {
-    const componentScores = {};
+    const subCpmkScores = {};
 
-    componentDefs.forEach((componentDef) => {
+    subCpmkList.forEach((sub) => {
       const entries = [];
+      const components = [
+        { key: 'kuis', bobot: sub.kuisBobot, name: sub.kuisNama },
+        { key: 'tugas', bobot: sub.tugasBobot, name: sub.tugasNama },
+        { key: 'ujian', bobot: sub.ujianBobot, name: sub.ujianNama },
+        { key: 'pjbl', bobot: sub.pjblBobot, name: sub.pjblNama },
+        { key: 'presentasi', bobot: sub.presentasiBobot, name: sub.presentasiNama }
+      ];
 
-      subCpmkList.forEach((sub) => {
-        if (componentDef.key === 'formatif' && (sub.formatifBobot || sub.formatifNama)) {
-          const fieldName = `nilai[${sub.globalNumber}][${m.id}][formatif]`;
-          const rawValue = savedValues[fieldName];
-          const value = parseFloat(rawValue);
-          if (!Number.isNaN(value)) {
-            const bobot = parseFloat(sub.formatifBobot) || 0;
-            entries.push({ value, bobot: bobot > 0 ? bobot : 1 });
-          }
-        } else if (componentDef.key === 'kuis' && (sub.kuisBobot || sub.kuisNama)) {
-          const fieldName = `nilai[${sub.globalNumber}][${m.id}][kuis]`;
-          const rawValue = savedValues[fieldName];
-          const value = parseFloat(rawValue);
-          if (!Number.isNaN(value)) {
-            const bobot = parseFloat(sub.kuisBobot) || 0;
-            entries.push({ value, bobot: bobot > 0 ? bobot : 1 });
-          }
-        } else if (componentDef.key === 'tugas' && (sub.tugasBobot || sub.tugasNama)) {
-          const fieldName = `nilai[${sub.globalNumber}][${m.id}][tugas]`;
-          const rawValue = savedValues[fieldName];
-          const value = parseFloat(rawValue);
-          if (!Number.isNaN(value)) {
-            const bobot = parseFloat(sub.tugasBobot) || 0;
-            entries.push({ value, bobot: bobot > 0 ? bobot : 1 });
-          }
-        } else if (componentDef.key === 'ujian' && (sub.ujianBobot || sub.ujianNama)) {
-          const fieldName = `nilai[${sub.globalNumber}][${m.id}][ujian]`;
-          const rawValue = savedValues[fieldName];
-          const value = parseFloat(rawValue);
-          if (!Number.isNaN(value)) {
-            const bobot = parseFloat(sub.ujianBobot) || 0;
-            entries.push({ value, bobot: bobot > 0 ? bobot : 1 });
-          }
-        } else if (componentDef.key === 'pjbl' && (sub.pjblBobot || sub.pjblNama)) {
-          const fieldName = `nilai[${sub.globalNumber}][${m.id}][pjbl]`;
-          const rawValue = savedValues[fieldName];
-          const value = parseFloat(rawValue);
-          if (!Number.isNaN(value)) {
-            const bobot = parseFloat(sub.pjblBobot) || 0;
-            entries.push({ value, bobot: bobot > 0 ? bobot : 1 });
-          }
-        } else if (componentDef.key === 'presentasi' && (sub.presentasiBobot || sub.presentasiNama)) {
-          const fieldName = `nilai[${sub.globalNumber}][${m.id}][presentasi]`;
-          const rawValue = savedValues[fieldName];
-          const value = parseFloat(rawValue);
-          if (!Number.isNaN(value)) {
-            const bobot = parseFloat(sub.presentasiBobot) || 0;
-            entries.push({ value, bobot: bobot > 0 ? bobot : 1 });
-          }
-        } else if (componentDef.key.startsWith('lainnya:')) {
-          const label = componentDef.key.replace('lainnya:', '');
-          const itemIndex = (sub.lainnya || []).findIndex(item => (item.nama || 'Lainnya') === label);
-          if (itemIndex >= 0 && (sub.lainnya[itemIndex].bobot || '').toString()) {
-            const fieldName = `nilai[${sub.globalNumber}][${m.id}][lainnya][${itemIndex}]`;
-            const rawValue = savedValues[fieldName];
-            const value = parseFloat(rawValue);
-            if (!Number.isNaN(value)) {
-              entries.push({ value, bobot: parseFloat(sub.lainnya[itemIndex].bobot) || 0 });
-            }
-          }
+      components.forEach((component) => {
+        const hasDefinition = !!(component.bobot || component.name);
+        if (!hasDefinition) return;
+
+        const fieldName = `nilai[${sub.globalNumber}][${m.id}][${component.key}]`;
+        const rawValue = savedValues[fieldName];
+        const value = parseFloat(rawValue);
+        if (!Number.isNaN(value)) {
+          const bobot = parseFloat(component.bobot) || 0;
+          entries.push({ value, bobot: bobot > 0 ? bobot : 1 });
+        }
+      });
+
+      (sub.lainnya || []).forEach((item, lIdx) => {
+        if (!item.bobot) return;
+        const fieldName = `nilai[${sub.globalNumber}][${m.id}][lainnya][${lIdx}]`;
+        const rawValue = savedValues[fieldName];
+        const value = parseFloat(rawValue);
+        if (!Number.isNaN(value)) {
+          entries.push({ value, bobot: parseFloat(item.bobot) || 0 });
         }
       });
 
       const totalBobot = entries.reduce((sum, entry) => sum + entry.bobot, 0);
-      const weightedScore = entries.reduce((sum, entry) => sum + (entry.value * entry.bobot), 0);
-      const nilaiAkhir = totalBobot > 0 ? weightedScore / totalBobot : 0;
+      const totalGrade = entries.reduce((sum, entry) => sum + entry.value, 0);
+      const nilaiAkhir = totalBobot > 0 ? (totalGrade / totalBobot) * 100 : 0;
 
-      let status = 'Belum dinilai';
-      if (nilaiAkhir > 0) {
-        status = nilaiAkhir >= 75 ? 'Lulus' : 'Remedial';
-      }
-
-      componentScores[componentDef.key] = {
-        label: componentDef.label,
-        nilaiAkhir,
-        status
+      subCpmkScores[`subcpmk-${sub.globalNumber}`] = {
+        label: `TB ${sub.globalNumber}`,
+        nilaiAkhir
       };
     });
-
-    const selectedComponentKey = componentDefs.length > 0 ? componentDefs[0].key : 'formatif';
-    const selectedComponent = componentScores[selectedComponentKey] || {};
 
     rows.push({
       id: m.id,
       nim: m.nim,
       nama: m.nama,
-      componentOptions: componentDefs.map(def => ({ key: def.key, label: def.label })),
-      selectedComponentKey,
-      selectedComponentLabel: selectedComponent.label || '',
-      selectedNilaiAkhir: selectedComponent.nilaiAkhir || 0,
-      selectedStatus: selectedComponent.status || 'Belum dinilai',
-      componentScores
+      subCpmkScores
     });
   });
 
   return {
-    componentDefs: componentDefs.map(def => ({ key: def.key, label: def.label })),
+    subCpmkColumns,
     rows
   };
 }
@@ -381,7 +296,7 @@ router.get('/penilaian/mk/:rpsId/kelas/:kelasId', isAuthenticated, (req, res) =>
   const savedValues = record ? record.values : {};
   const rekapSummary = buildRekapData(mahasiswaList, subCpmkList, savedValues);
   const rekapData = rekapSummary.rows;
-  const rekapComponents = rekapSummary.componentDefs;
+  const rekapColumns = rekapSummary.subCpmkColumns;
   const activeTab = req.query.activeTab && /^(tb-panel-(?:rekap|\d+))$/.test(req.query.activeTab)
     ? req.query.activeTab
     : 'tb-panel-1';
@@ -395,7 +310,7 @@ router.get('/penilaian/mk/:rpsId/kelas/:kelasId', isAuthenticated, (req, res) =>
     subCpmkList,
     savedValues, // dipakai di view buat isi ulang nilai yg sudah pernah diinput
     rekapData,
-    rekapComponents,
+    rekapColumns,
     activeTab,
     saved: req.query.saved === '1' // flag untuk menampilkan notif "berhasil disimpan"
   });
