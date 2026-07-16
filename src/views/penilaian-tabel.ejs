@@ -162,6 +162,8 @@
                                     <% (typeof rekapColumns !== 'undefined' && Array.isArray(rekapColumns) ? rekapColumns : []).forEach(function(column) { %>
                                         <th class="px-3 py-2 border text-center text-xs font-semibold"><%= column.label %></th>
                                     <% }); %>
+                                    <th class="px-3 py-2 border text-center text-xs font-semibold bg-blue-100">Nilai Akhir</th>
+                                    <th class="px-3 py-2 border text-center text-xs font-semibold bg-blue-100">Nilai Akhir Huruf</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
@@ -173,9 +175,15 @@
                                         <% (typeof rekapColumns !== 'undefined' && Array.isArray(rekapColumns) ? rekapColumns : []).forEach(function(column) { %>
                                             <% const scoreData = item.subCpmkScores && item.subCpmkScores[column.key] ? item.subCpmkScores[column.key] : {}; %>
                                             <td class="px-3 py-2 border text-sm text-center">
-                                                <div class="font-medium"><%= Number(scoreData.nilaiAkhir || 0).toFixed(2) %></div>
+                                                <div class="font-medium"><%= Math.round(Number(scoreData.nilaiAkhir || 0)) %></div>
                                             </td>
                                         <% }); %>
+                                        <td class="px-3 py-2 border text-sm text-center font-semibold bg-blue-50">
+                                            <%= Math.round(Number(item.nilaiAkhirKeseluruhan || 0) * 100) / 100 %>
+                                        </td>
+                                        <td class="px-3 py-2 border text-sm text-center font-semibold bg-blue-50">
+                                            <%= item.nilaiAkhirHuruf || '-' %>
+                                        </td>
                                     </tr>
                                 <% }); %>
                             </tbody>
