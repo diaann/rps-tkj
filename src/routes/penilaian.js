@@ -131,6 +131,68 @@ function buildSubCpmkListForPenilaian(rpsItem) {
   }));
 }
 
+function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
+  return mahasiswaList.map((m) => {
+    const subScores = [];
+
+    subCpmkList.forEach((sub) => {
+      const entries = [];
+
+      const components = [
+        { key: 'formatif', bobot: sub.formatifBobot },
+        { key: 'kuis', bobot: sub.kuisBobot },
+        { key: 'tugas', bobot: sub.tugasBobot },
+        { key: 'ujian', bobot: sub.ujianBobot },
+        { key: 'pjbl', bobot: sub.pjblBobot },
+        { key: 'presentasi', bobot: sub.presentasiBobot }
+      ];
+
+      components.forEach((component) => {
+        if (!component.bobot) return;
+        const fieldName = `nilai[${sub.globalNumber}][${m.id}][${component.key}]`;
+        const rawValue = savedValues[fieldName];
+        const value = parseFloat(rawValue);
+        if (!Number.isNaN(value)) {
+          entries.push({ value, bobot: parseFloat(component.bobot) || 0 });
+        }
+      });
+
+      (sub.lainnya || []).forEach((item, lIdx) => {
+        if (!item.bobot) return;
+        const fieldName = `nilai[${sub.globalNumber}][${m.id}][lainnya][${lIdx}]`;
+        const rawValue = savedValues[fieldName];
+        const value = parseFloat(rawValue);
+        if (!Number.isNaN(value)) {
+          entries.push({ value, bobot: parseFloat(item.bobot) || 0 });
+        }
+      });
+
+      if (entries.length === 0) return;
+
+      const totalBobot = entries.reduce((sum, entry) => sum + entry.bobot, 0);
+      const weightedScore = entries.reduce((sum, entry) => sum + (entry.value * entry.bobot), 0);
+      subScores.push(totalBobot > 0 ? weightedScore / totalBobot : 0);
+    });
+
+    const nilaiAkhir = subScores.length > 0
+      ? subScores.reduce((sum, score) => sum + score, 0) / subScores.length
+      : 0;
+
+    let status = 'Belum dinilai';
+    if (nilaiAkhir > 0) {
+      status = nilaiAkhir >= 75 ? 'Lulus' : 'Remedial';
+    }
+
+    return {
+      id: m.id,
+      nim: m.nim,
+      nama: m.nama,
+      nilaiAkhir,
+      status
+    };
+  });
+}
+
 // ROUTE 1. halaman utama /penilaian: 3 dropdown berantai (Semester -> Mata Kuliah -> Kelas).
 // semua data yg dibutuhkann dropdown (matkulData & kelasData) dikirim sekaligus ke halaman,
 // jadi javascript di browser bisa langsung filter tanpa perlu request ke server lagi tiap ganti pilihan.
@@ -226,6 +288,10 @@ router.get('/penilaian/mk/:rpsId/kelas/:kelasId', isAuthenticated, (req, res) =>
   const record = penilaianAll.find(p => String(p.rpsId) === String(item.id) && p.kelasId === kelasId);
   // kalau ada, savedValues diisi nilai2 yg pernah diinput, kalau belum pernah, objek kosong
   const savedValues = record ? record.values : {};
+  const rekapData = buildRekapData(mahasiswaList, subCpmkList, savedValues);
+  const activeTab = req.query.activeTab && /^(tb-panel-(?:rekap|\d+))$/.test(req.query.activeTab)
+    ? req.query.activeTab
+    : 'tb-panel-1';
 
   res.render('penilaian-tabel', {
     title: 'Tabel Penilaian',
@@ -235,6 +301,8 @@ router.get('/penilaian/mk/:rpsId/kelas/:kelasId', isAuthenticated, (req, res) =>
     mahasiswaList,
     subCpmkList,
     savedValues, // dipakai di view buat isi ulang nilai yg sudah pernah diinput
+    rekapData,
+    activeTab,
     saved: req.query.saved === '1' // flag untuk menampilkan notif "berhasil disimpan"
   });
 });
@@ -285,8 +353,12 @@ router.post('/penilaian/mk/:rpsId/kelas/:kelasId/save', isAuthenticated, (req, r
 
   writeJsonFile(penilaianPath, penilaianAll);
 
+  const activeTab = typeof req.body.activeTab === 'string' && /^(tb-panel-(?:rekap|\d+))$/.test(req.body.activeTab)
+    ? req.body.activeTab
+    : 'tb-panel-1';
+
   // arahkan balik ke halaman tabel yg sama, dgn ?saved=1 supaya notif sukses muncul
-  res.redirect(`/penilaian/mk/${item.id}/kelas/${kelasId}?saved=1`);
+  res.redirect(`/penilaian/mk/${item.id}/kelas/${kelasId}?saved=1&activeTab=${encodeURIComponent(activeTab)}`);
 });
 
 module.exports = router; // ekspor router ini biar bisa dipasang di src/index.js
