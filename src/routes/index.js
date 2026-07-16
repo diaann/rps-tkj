@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router(); // wadah kumpulan route (url) di file ini, nanti dipasang ke app utama di src/index.js
 const fs = require('fs');
@@ -1434,7 +1433,25 @@ router.get('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
   const page = Math.max(1, parseInt(req.query.page || '1', 10));
   const pageSize = 20;
 
-  const sortedMahasiswa = sortMahasiswa(mahasiswa);
+  // filter berdasarkan tingkat (grade), misal tingkat=2 -> cuma tampilin mahasiswa
+  // yg kelasId-nya termasuk kelas dgn tingkat 2 (misal kelas "2A" dan "2B")
+  const tingkatFilter = req.query.tingkat && String(req.query.tingkat).trim() !== ''
+    ? parseInt(req.query.tingkat, 10)
+    : null;
+
+  const kelasIdsForTingkat = tingkatFilter
+    ? new Set(kelas.filter(k => Number(k.tingkat) === tingkatFilter).map(k => String(k.id)))
+    : null;
+
+  const filteredMahasiswa = kelasIdsForTingkat
+    ? mahasiswa.filter(m => kelasIdsForTingkat.has(String(m.kelasId)))
+    : mahasiswa;
+
+  // daftar tingkat unik yg ada di data kelas, buat isi pilihan dropdown filter
+  const tingkatOptions = [...new Set(kelas.map(k => Number(k.tingkat)).filter(t => !Number.isNaN(t)))]
+    .sort((a, b) => a - b);
+
+  const sortedMahasiswa = sortMahasiswa(filteredMahasiswa);
   const totalPages = Math.max(1, Math.ceil(sortedMahasiswa.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const startIndex = (safePage - 1) * pageSize;
@@ -1449,7 +1466,9 @@ router.get('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
     currentPage: safePage,
     totalPages,
     totalItems: sortedMahasiswa.length,
-    pageSize
+    pageSize,
+    tingkatFilter,
+    tingkatOptions
   });
 });
 
