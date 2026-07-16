@@ -131,10 +131,26 @@ function buildSubCpmkListForPenilaian(rpsItem) {
   }));
 }
 
+// ubah nilai angka (0-100) jadi nilai huruf, sesuai skala:
+// <40=E, 40-49=D, 50-54=C-, 55-59=C, 60-64=C+, 65-69=B-, 70-74=B, 75-79=B+, 80-84=A-, 85-100=A
+function getNilaiHuruf(nilai) {
+  const n = Number(nilai) || 0;
+  if (n >= 85) return 'A';
+  if (n >= 80) return 'A-';
+  if (n >= 75) return 'B+';
+  if (n >= 70) return 'B';
+  if (n >= 65) return 'B-';
+  if (n >= 60) return 'C+';
+  if (n >= 55) return 'C';
+  if (n >= 50) return 'C-';
+  if (n >= 40) return 'D';
+  return 'E';
+}
+
 function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
   const subCpmkColumns = subCpmkList.map((sub) => ({
     key: `subcpmk-${sub.globalNumber}`,
-    label: `TB ${sub.globalNumber}`
+    label: `CPMK ${sub.globalNumber}`
   }));
 
   const rows = [];
@@ -176,8 +192,8 @@ function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
       });
 
       const totalBobot = entries.reduce((sum, entry) => sum + entry.bobot, 0);
-      const totalGrade = entries.reduce((sum, entry) => sum + entry.value, 0);
-      const nilaiAkhir = totalBobot > 0 ? (totalGrade / totalBobot) * 100 : 0;
+      const weightedGrade = entries.reduce((sum, entry) => sum + (entry.value * entry.bobot), 0);
+      const nilaiAkhir = totalBobot > 0 ? (weightedGrade / totalBobot) : 0;
 
       subCpmkScores[`subcpmk-${sub.globalNumber}`] = {
         label: `TB ${sub.globalNumber}`,
@@ -185,11 +201,24 @@ function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
       };
     });
 
+    // Nilai Akhir keseluruhan = rata-rata semua nilai Sub-CPMK (CPMK 1..N), dikali 90%.
+    // 90% krn 10% sisanya dijatah utk Kehadiran (Attendance) yg belum diimplementasikan.
+    // Kalau semua Sub-CPMK dpt nilai sempurna (100), maka porsi ini maksimal = 90,
+    // menyisakan tepat 10 poin utk Kehadiran supaya totalnya nyampe 100.
+    const cpmkScores = Object.values(subCpmkScores).map((s) => s.nilaiAkhir);
+    const avgCpmk = cpmkScores.length > 0
+      ? cpmkScores.reduce((sum, val) => sum + val, 0) / cpmkScores.length
+      : 0;
+    const nilaiAkhirKeseluruhan = avgCpmk * 0.9;
+    const nilaiAkhirHuruf = getNilaiHuruf(nilaiAkhirKeseluruhan);
+
     rows.push({
       id: m.id,
       nim: m.nim,
       nama: m.nama,
-      subCpmkScores
+      subCpmkScores,
+      nilaiAkhirKeseluruhan,
+      nilaiAkhirHuruf
     });
   });
 
