@@ -59,6 +59,25 @@
     
     <!-- Form daftar Mahasiswa-->
     <h3 class="font-semibold mb-3">Daftar Mahasiswa</h3>
+
+    <!-- Filter berdasarkan Tingkat/Angkatan -->
+    <div class="flex flex-wrap items-center gap-2 mb-4">
+      <form action="/admin/mahasiswa" method="GET" class="flex items-center gap-2">
+        <label class="label mb-0">Kelas</label>
+        <select class="input" name="tingkat" onchange="this.form.submit()">
+          <option value="">Semua Kelas</option>
+          <% const tingkatOptionsList = (typeof tingkatOptions !== 'undefined' && Array.isArray(tingkatOptions)) ? tingkatOptions : []; %>
+          <% tingkatOptionsList.forEach(function(t) { %>
+            <option value="<%= t %>" <%= (typeof tingkatFilter !== 'undefined' && tingkatFilter === t) ? 'selected' : '' %>>Kelas <%= t %></option>
+          <% }); %>
+        </select>
+        <noscript><button class="btn-secondary text-xs" type="submit">Terapkan</button></noscript>
+      </form>
+    </div>
+
+    <!-- dipakai supaya link pagination di bawah tetap bawa filter tingkat yg aktif -->
+    <% const tingkatQS = (typeof tingkatFilter !== 'undefined' && tingkatFilter) ? '&tingkat=' + tingkatFilter : ''; %>
+
     <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
       <!--Pagination 20 per page-->
       <% const perPage = (typeof pageSize !== 'undefined' && pageSize) ? pageSize : 20; %>
@@ -72,20 +91,23 @@
         <div>Menampilkan <%= visibleCount %> data (dari <%= totalItems || 0 %>)</div>
         <div class="flex flex-wrap items-center gap-2">
           <% if ((currentPage || 1) > 1) { %>
-            <a href="/admin/mahasiswa?page=<%= (currentPage || 1) - 1 %>" class="px-3 py-1 border rounded hover:bg-gray-100">Sebelumnya</a>
+            <a href="/admin/mahasiswa?page=<%= (currentPage || 1) - 1 %><%= tingkatQS %>" class="px-3 py-1 border rounded hover:bg-gray-100">Sebelumnya</a>
           <% } %>
 
           <% for (let i = 1; i <= totalPages; i++) { %>
-            <a href="/admin/mahasiswa?page=<%= i %>" class="px-3 py-1 border rounded <%= i === (currentPage || 1) ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100' %>"><%= i %></a>
+            <a href="/admin/mahasiswa?page=<%= i %><%= tingkatQS %>" class="px-3 py-1 border rounded <%= i === (currentPage || 1) ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100' %>"><%= i %></a>
           <% } %>
 
           <% if ((currentPage || 1) < totalPages) { %>
-            <a href="/admin/mahasiswa?page=<%= (currentPage || 1) + 1 %>" class="px-3 py-1 border rounded hover:bg-gray-100">Berikutnya</a>
+            <a href="/admin/mahasiswa?page=<%= (currentPage || 1) + 1 %><%= tingkatQS %>" class="px-3 py-1 border rounded hover:bg-gray-100">Berikutnya</a>
           <% } %>
 
           <!-- Jump to Page-->
           <form action="/admin/mahasiswa" method="GET" class="flex items-center gap-2 ml-1">
             <input type="number" name="page" min="1" max="<%= totalPages %>" placeholder="Halaman" class="w-24 px-2 py-1 border rounded text-sm" required>
+            <% if (typeof tingkatFilter !== 'undefined' && tingkatFilter) { %>
+              <input type="hidden" name="tingkat" value="<%= tingkatFilter %>">
+            <% } %>
             <button type="submit" class="px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200">Go</button>
           </form>
         </div>
@@ -99,7 +121,7 @@
             <th class="px-4 py-2">NIM</th>
             <th class="px-4 py-2">Nama</th>
             <th class="px-4 py-2">Kelas</th>
-            <th class="px-4 py-2">Aksi</th>
+            <th class="px-4 py-2">Manajemen</th>
           </tr>
         </thead>
         <tbody>
@@ -165,19 +187,22 @@
         <div>Menampilkan <%= visibleCountBottom %> data (dari <%= totalItems || 0 %>)</div>
         <div class="flex flex-wrap items-center gap-2">
           <% if ((currentPage || 1) > 1) { %>
-            <a href="/admin/mahasiswa?page=<%= (currentPage || 1) - 1 %>" class="px-3 py-1 border rounded hover:bg-gray-100">Sebelumnya</a>
+            <a href="/admin/mahasiswa?page=<%= (currentPage || 1) - 1 %><%= tingkatQS %>" class="px-3 py-1 border rounded hover:bg-gray-100">Sebelumnya</a>
           <% } %>
 
           <% for (let i = 1; i <= totalPages; i++) { %>
-            <a href="/admin/mahasiswa?page=<%= i %>" class="px-3 py-1 border rounded <%= i === (currentPage || 1) ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100' %>"><%= i %></a>
+            <a href="/admin/mahasiswa?page=<%= i %><%= tingkatQS %>" class="px-3 py-1 border rounded <%= i === (currentPage || 1) ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100' %>"><%= i %></a>
           <% } %>
 
           <% if ((currentPage || 1) < totalPages) { %>
-            <a href="/admin/mahasiswa?page=<%= (currentPage || 1) + 1 %>" class="px-3 py-1 border rounded hover:bg-gray-100">Berikutnya</a>
+            <a href="/admin/mahasiswa?page=<%= (currentPage || 1) + 1 %><%= tingkatQS %>" class="px-3 py-1 border rounded hover:bg-gray-100">Berikutnya</a>
           <% } %>
 
           <form action="/admin/mahasiswa" method="GET" class="flex items-center gap-2 ml-1">
             <input type="number" name="page" min="1" max="<%= totalPages %>" placeholder="Halaman" class="w-24 px-2 py-1 border rounded text-sm" required>
+            <% if (typeof tingkatFilter !== 'undefined' && tingkatFilter) { %>
+              <input type="hidden" name="tingkat" value="<%= tingkatFilter %>">
+            <% } %>
             <button type="submit" class="px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200">Go</button>
           </form>
         </div>
