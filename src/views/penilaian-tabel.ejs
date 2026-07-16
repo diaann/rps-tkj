@@ -32,18 +32,26 @@
              1 tab doang, pas tombol "Simpan Nilai" diklik, NILAI DARI SEMUA TAB
              ikut terkirim bareng ke server sekali jalan. -->
         <form method="POST" action="/penilaian/mk/<%= rpsItem.id %>/kelas/<%= kelas.id %>/save">
+            <input type="hidden" name="activeTab" id="active-tab-input" value="<%= (typeof activeTab !== 'undefined' && activeTab) ? activeTab : 'tb-panel-1' %>">
 
             <!-- Tab navigation -->
             <div class="card">
                 <div class="flex flex-wrap gap-2 -mb-px">
                     <% subCpmkList.forEach(function(sub, idx) { %>
                         <button type="button"
-                            class="penilaian-tab-btn px-4 py-2 text-sm font-medium rounded-t-lg border border-b-0 <%= idx === 0 ? 'bg-white border-blue-500 text-blue-700' : 'bg-gray-50 border-transparent text-gray-500 hover:text-blue-600' %>"
+                            class="penilaian-tab-btn px-4 py-2 text-sm font-medium rounded-t-lg border border-b-0 <%= (typeof activeTab !== 'undefined' && activeTab === 'tb-panel-' + sub.globalNumber) ? 'bg-white border-blue-500 text-blue-700' : 'bg-gray-50 border-transparent text-gray-500 hover:text-blue-600' %>"
                             data-tab-target="tb-panel-<%= sub.globalNumber %>"
                             onclick="showPenilaianTab('tb-panel-<%= sub.globalNumber %>', this)">
                             Sub-CPMK <%= sub.globalNumber %>
                         </button>
                     <% }); %>
+                    <!--Tabel Rekap will always be shown as the last tab.-->
+                    <button type="button"
+                        class="penilaian-tab-btn px-4 py-2 text-sm font-medium rounded-t-lg border border-b-0 <%= (typeof activeTab !== 'undefined' && activeTab === 'tb-panel-rekap') ? 'bg-white border-blue-500 text-blue-700' : 'bg-gray-50 border-transparent text-gray-500 hover:text-blue-600' %>"
+                        data-tab-target="tb-panel-rekap"
+                        onclick="showPenilaianTab('tb-panel-rekap', this)">
+                        Rekap
+                    </button>
                 </div>
 
                 <% subCpmkList.forEach(function(sub, idx) { %>
@@ -60,7 +68,7 @@
                             { key: 'presentasi', label: 'Presentasi', nama: sub.presentasiNama, bobot: sub.presentasiBobot }
                         ].filter(function(col) { return col.bobot; });
                     %>
-                    <div id="tb-panel-<%= sub.globalNumber %>" class="penilaian-tab-panel <%= idx === 0 ? '' : 'hidden' %>">
+                    <div id="tb-panel-<%= sub.globalNumber %>" class="penilaian-tab-panel <%= (typeof activeTab !== 'undefined' && activeTab === 'tb-panel-' + sub.globalNumber) ? '' : 'hidden' %>">
 
                         <div class="mb-4 p-4 bg-gray-50 border rounded-lg">
                             <div class="text-sm text-gray-500 mb-2">Pekan <%= sub.pekanAwal %><% if (sub.pekanAkhir && sub.pekanAkhir !== sub.pekanAwal) { %> - <%= sub.pekanAkhir %><% } %></div>
@@ -138,6 +146,41 @@
                         </div>
                     </div>
                 <% }); %>
+
+                <div id="tb-panel-rekap" class="penilaian-tab-panel <%= (typeof activeTab !== 'undefined' && activeTab === 'tb-panel-rekap') ? '' : 'hidden' %>">
+                    <div class="mb-4 p-4 bg-gray-50 border rounded-lg">
+                        <div class="text-gray-800">Ringkasan nilai akhir seluruh mahasiswa berdasarkan data yang sudah di input pada semua tab Sub-CPMK.</div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="table-auto w-full border-collapse">
+                            <thead class="bg-blue-50">
+                                <tr>
+                                    <th class="px-3 py-2 border text-left text-xs font-semibold">No</th>
+                                    <th class="px-3 py-2 border text-left text-xs font-semibold">NIM</th>
+                                    <th class="px-3 py-2 border text-left text-xs font-semibold">Nama Mahasiswa</th>
+                                    <th class="px-3 py-2 border text-center text-xs font-semibold">Nilai Akhir</th>
+                                    <th class="px-3 py-2 border text-center text-xs font-semibold">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <% (typeof rekapData !== 'undefined' && Array.isArray(rekapData) ? rekapData : []).forEach(function(item, idx) { %>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-3 py-2 border text-sm"><%= idx + 1 %></td>
+                                        <td class="px-3 py-2 border text-sm"><%= item.nim %></td>
+                                        <td class="px-3 py-2 border text-sm"><%= item.nama %></td>
+                                        <td class="px-3 py-2 border text-sm text-center"><%= Number(item.nilaiAkhir).toFixed(2) %></td>
+                                        <td class="px-3 py-2 border text-sm text-center">
+                                            <span class="px-2 py-1 rounded-full text-xs font-medium <%= item.status === 'Lulus' ? 'bg-green-100 text-green-700' : item.status === 'Remedial' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700' %>">
+                                                <%= item.status %>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <div class="mt-4 flex justify-between items-center">
@@ -170,6 +213,11 @@
             if (btnEl) {
                 btnEl.classList.remove('bg-gray-50', 'border-transparent', 'text-gray-500');
                 btnEl.classList.add('bg-white', 'border-blue-500', 'text-blue-700');
+            }
+
+            const hiddenInput = document.getElementById('active-tab-input');
+            if (hiddenInput) {
+                hiddenInput.value = targetId;
             }
         }
     </script>
