@@ -1,10 +1,52 @@
 [
-  { "id": "1A", "nama": "1A", "tingkat": 1 },
-  { "id": "1B", "nama": "1B", "tingkat": 1 },
-  { "id": "2A", "nama": "2A", "tingkat": 2 },
-  { "id": "2B", "nama": "2B", "tingkat": 2 },
-  { "id": "3A", "nama": "3A", "tingkat": 3 },
-  { "id": "3B", "nama": "3B", "tingkat": 3 },
-  { "id": "4A", "nama": "4A", "tingkat": 4 },
-  { "id": "4B", "nama": "4B", "tingkat": 4 }
+  {
+    "id": "2022A",
+    "nama": "2022A",
+    "tingkat": 2022
+  },
+  {
+    "id": "2022B",
+    "nama": "2022B",
+    "tingkat": 2022
+  },
+  {
+    "id": "2023A",
+    "nama": "2023A",
+    "tingkat": 2023
+  },
+  {
+    "id": "2023B",
+    "nama": "2023B",
+    "tingkat": 2023
+  },
+  {
+    "id": "2024A",
+    "nama": "2024A",
+    "tingkat": 2024
+  },
+  {
+    "id": "2024B",
+    "nama": "2024B",
+    "tingkat": 2024
+  },
+  {
+    "id": "2025A",
+    "nama": "2025A",
+    "tingkat": 2025
+  },
+  {
+    "id": "2025B",
+    "nama": "2025B",
+    "tingkat": 2025
+  },
+  {
+    "id": "2025C",
+    "nama": "2025C",
+    "tingkat": 2025
+  },
+  {
+    "id": "2025D",
+    "nama": "2025D",
+    "tingkat": 2025
+  }
 ]

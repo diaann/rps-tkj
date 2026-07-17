@@ -150,7 +150,7 @@ function getNilaiHuruf(nilai) {
 function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
   const subCpmkColumns = subCpmkList.map((sub) => ({
     key: `subcpmk-${sub.globalNumber}`,
-    label: `CPMK ${sub.globalNumber}`
+    label: `TB ${sub.globalNumber}`
   }));
 
   const rows = [];
@@ -202,9 +202,8 @@ function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
     });
 
     // Nilai Akhir keseluruhan = rata-rata semua nilai Sub-CPMK (CPMK 1..N), dikali 90%.
-    // 90% krn 10% sisanya dijatah utk Kehadiran (Attendance) yg belum diimplementasikan.
-    // Kalau semua Sub-CPMK dpt nilai sempurna (100), maka porsi ini maksimal = 90,
-    // menyisakan tepat 10 poin utk Kehadiran supaya totalnya nyampe 100.
+    // 90% krn 10% utk absensi yg belum diimplementasikan.
+    // Jika semua Sub-CPMK dapat nilai 100, maka nilai maksimal = 90
     const cpmkScores = Object.values(subCpmkScores).map((s) => s.nilaiAkhir);
     const avgCpmk = cpmkScores.length > 0
       ? cpmkScores.reduce((sum, val) => sum + val, 0) / cpmkScores.length

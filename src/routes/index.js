@@ -13,6 +13,15 @@ try {
 } catch (error) {
   console.warn('[UPLOAD RPS] Package multer belum terinstall. Jalankan npm install untuk mengaktifkan upload RPS.');
 }
+// xlsx (SheetJS) = library buat baca isi file Excel (.xlsx/.xls) jadi data javascript.
+// sama kayak multer di atas, dibungkus try/catch spy aplikasi tetap jalan walau
+// package-nya belum di-install (fitur import Excel aja yg otomatis nonaktif).
+let xlsx = null;
+try {
+  xlsx = require('xlsx');
+} catch (error) {
+  console.warn('[IMPORT MAHASISWA] Package xlsx belum terinstall. Jalankan npm install untuk mengaktifkan fitur import Excel.');
+}
 // fungsi yg baca isi file .docx & panggil python (lihat src/utils/rpsDocxParser.js)
 const { parseRpsDocxBuffer } = require('../utils/rpsDocxParser');
 
@@ -79,6 +88,22 @@ const uploadRpsFile = multer ? multer({
     cb(null, true); // cb(null, true) = file diterima, lanjut disimpan
   },
   limits: { fileSize: 15 * 1024 * 1024 } // batas ukuran file: 15 x 1024 x 1024 byte = 15 MB
+}) : null;
+
+// konfigurasi multer khusus utk import data mahasiswa dari Excel.
+// pakai memoryStorage (bukan diskStorage kayak uploadRpsFile di atas) krn file Excel-nya
+// cuma perlu "dibaca sekali" lalu datanya diambil - tidak perlu disimpan permanen di disk.
+const uploadMahasiswaExcel = multer ? multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const isExcel = ext === '.xlsx' || ext === '.xls';
+    if (!isExcel) {
+      return cb(new Error('File harus berformat Excel (.xlsx atau .xls).'));
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 15 * 1024 * 1024 }
 }) : null;
 
 function ensureArray(value) {
@@ -1439,17 +1464,38 @@ router.get('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
     ? parseInt(req.query.tingkat, 10)
     : null;
 
+  // filter berdasarkan huruf kelas (misal "A", "B", "C", "D"), dipakai bareng2 sama
+  // filter tingkat di atas (kedua filter jalan sekaligus / AND, bukan salah satu aja)
+  const hurufFilter = req.query.huruf && String(req.query.huruf).trim() !== ''
+    ? String(req.query.huruf).trim().toUpperCase()
+    : null;
+
+  // ambil huruf kelas dari kelasId, misal "2025A" -> "A". dipakai baik utk nge-filter
+  // maupun utk bikin daftar pilihan huruf yg ada di dropdown.
+  function getHurufFromKelasId(kelasId) {
+    const match = String(kelasId || '').match(/^(\d+)([A-Za-z]+)$/);
+    return match ? match[2].toUpperCase() : null;
+  }
+
   const kelasIdsForTingkat = tingkatFilter
     ? new Set(kelas.filter(k => Number(k.tingkat) === tingkatFilter).map(k => String(k.id)))
     : null;
 
-  const filteredMahasiswa = kelasIdsForTingkat
+  let filteredMahasiswa = kelasIdsForTingkat
     ? mahasiswa.filter(m => kelasIdsForTingkat.has(String(m.kelasId)))
     : mahasiswa;
+
+  if (hurufFilter) {
+    filteredMahasiswa = filteredMahasiswa.filter(m => getHurufFromKelasId(m.kelasId) === hurufFilter);
+  }
 
   // daftar tingkat unik yg ada di data kelas, buat isi pilihan dropdown filter
   const tingkatOptions = [...new Set(kelas.map(k => Number(k.tingkat)).filter(t => !Number.isNaN(t)))]
     .sort((a, b) => a - b);
+
+  // daftar huruf kelas unik yg ada di data kelas, buat isi pilihan dropdown filter
+  const hurufOptions = [...new Set(kelas.map(k => getHurufFromKelasId(k.id)).filter(Boolean))]
+    .sort();
 
   const sortedMahasiswa = sortMahasiswa(filteredMahasiswa);
   const totalPages = Math.max(1, Math.ceil(sortedMahasiswa.length / pageSize));
@@ -1468,7 +1514,9 @@ router.get('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
     totalItems: sortedMahasiswa.length,
     pageSize,
     tingkatFilter,
-    tingkatOptions
+    tingkatOptions,
+    hurufFilter,
+    hurufOptions
   });
 });
 
@@ -1494,6 +1542,132 @@ router.post('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
   writeJsonFile(mahasiswaPath, mahasiswa);
 
   return res.redirect('/admin/mahasiswa?saved=1');
+});
+
+// ROUTE IMPORT EXCEL. dipakai buat nambahin banyak mahasiswa sekaligus dari file Excel
+// (misal hasil export dari SIAKAD), drpd input manual satu-satu lewat form di atas.
+// alurnya:
+// 1) tangkep file Excel yg diupload lewat multer (uploadMahasiswaExcel, disimpan di memori)
+// 2) baca isi Excel-nya pakai library xlsx, cari baris header (baris yg ada tulisan "NIM"-nya,
+//    krn baris pertama biasanya cuma judul, bukan header kolom beneran)
+// 3) tiap baris data diambil kolom NIM, Nama, Tahun Angkatan, & Huruf Kelas-nya aja
+//    (kolom lain kayak NIK/alamat/dll sengaja diabaikan - tidak dipakai aplikasi ini)
+// 4) kelasId dibikin dari gabungan Tahun Angkatan + Huruf Kelas, misal "2025" + "A" = "2025A"
+// 5) baris yg NIM-nya udah ada di database (duplikat), atau Status Mahasiswa-nya bukan "Aktif"
+//    (misal "Mengundurkan_diri"), dilewatin - tidak ikut ditambahkan
+// 6) kalau ada kelasId baru yg belum ada di kelas.json (misal "2025C"), otomatis ditambahkan juga
+router.post('/admin/mahasiswa/import', isAuthenticated, isAdmin, (req, res) => {
+  if (!multer || !uploadMahasiswaExcel) {
+    return res.redirect('/admin/mahasiswa?error=multer-missing');
+  }
+  if (!xlsx) {
+    return res.redirect('/admin/mahasiswa?error=xlsx-missing');
+  }
+
+  uploadMahasiswaExcel.single('excelFile')(req, res, (uploadError) => {
+    if (uploadError) {
+      return res.redirect(`/admin/mahasiswa?error=upload&message=${encodeURIComponent(uploadError.message || 'Gagal mengupload file.')}`);
+    }
+
+    if (!req.file) {
+      return res.redirect('/admin/mahasiswa?error=no-file');
+    }
+
+    try {
+      const workbook = xlsx.read(req.file.buffer, { type: 'buffer', cellDates: true });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+
+      // header:1 = baca sbg array-of-array mentah (bukan langsung jadi object per baris),
+      // krn kita perlu cari sendiri baris ke berapa yg beneran jadi header (ada baris judul
+      // di atasnya yg bukan bagian dari tabel data).
+      const rawRows = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+      const headerRowIndex = rawRows.findIndex(
+        (row) => Array.isArray(row) && row.some((cell) => String(cell).trim() === 'NIM')
+      );
+
+      if (headerRowIndex === -1) {
+        return res.redirect(`/admin/mahasiswa?error=parse&message=${encodeURIComponent('Kolom "NIM" tidak ditemukan di file Excel. Pastikan formatnya sesuai template SIAKAD.')}`);
+      }
+
+      const headers = rawRows[headerRowIndex].map((h) => String(h).trim());
+      const dataRows = rawRows.slice(headerRowIndex + 1);
+
+      const idxNim = headers.indexOf('NIM');
+      const idxNama = headers.indexOf('Nama');
+      const idxAngkatan = headers.indexOf('Tahun Angkatan');
+      const idxHurufKelas = headers.indexOf('Huruf Kelas');
+      const idxStatus = headers.indexOf('Status Mahasiswa'); // opsional, kalau tidak ada dianggap semua Aktif
+
+      if (idxNim === -1 || idxNama === -1 || idxAngkatan === -1 || idxHurufKelas === -1) {
+        return res.redirect(`/admin/mahasiswa?error=parse&message=${encodeURIComponent('Format file tidak sesuai. Pastikan ada kolom NIM, Nama, Tahun Angkatan, dan Huruf Kelas.')}`);
+      }
+
+      const mahasiswa = readJsonFile(mahasiswaPath, []);
+      const kelas = readJsonFile(kelasPath, []);
+      const existingKelasIds = new Set(kelas.map((k) => String(k.id)));
+      const existingNims = new Set(mahasiswa.map((m) => String(m.nim)));
+      const newKelasToAdd = [];
+
+      let added = 0;
+      let skippedDuplicate = 0;
+      let skippedInactive = 0;
+      let skippedInvalid = 0;
+
+      dataRows.forEach((row) => {
+        if (!Array.isArray(row) || row.length === 0) return;
+
+        const status = idxStatus !== -1 ? String(row[idxStatus] || '').trim() : 'Aktif';
+        if (status && status !== 'Aktif') {
+          skippedInactive += 1;
+          return;
+        }
+
+        const nim = String(row[idxNim] || '').trim();
+        const nama = String(row[idxNama] || '').trim();
+        const angkatan = String(row[idxAngkatan] || '').trim();
+        const hurufKelas = String(row[idxHurufKelas] || '').trim().toUpperCase();
+
+        if (!nim || !nama || !angkatan || !hurufKelas) {
+          skippedInvalid += 1;
+          return;
+        }
+
+        if (existingNims.has(nim)) {
+          skippedDuplicate += 1;
+          return;
+        }
+
+        const kelasId = `${angkatan}${hurufKelas}`;
+
+        if (!existingKelasIds.has(kelasId)) {
+          newKelasToAdd.push({ id: kelasId, nama: kelasId, tingkat: parseInt(angkatan, 10) || 0 });
+          existingKelasIds.add(kelasId);
+        }
+
+        const id = generateStudentId(mahasiswa, kelasId);
+        mahasiswa.push({ id, nim, nama, kelasId });
+        existingNims.add(nim);
+        added += 1;
+      });
+
+      if (newKelasToAdd.length > 0) {
+        kelas.push(...newKelasToAdd);
+        writeJsonFile(kelasPath, kelas);
+      }
+
+      if (added > 0) {
+        writeJsonFile(mahasiswaPath, mahasiswa);
+      }
+
+      const summary = `added=${added}&dup=${skippedDuplicate}&inactive=${skippedInactive}&invalid=${skippedInvalid}`;
+      return res.redirect(`/admin/mahasiswa?imported=1&${summary}`);
+    } catch (error) {
+      console.error('[IMPORT MAHASISWA] Gagal membaca file Excel:', error);
+      return res.redirect(`/admin/mahasiswa?error=parse&message=${encodeURIComponent(error.message || 'Gagal membaca isi file Excel.')}`);
+    }
+  });
 });
 
 router.post('/admin/mahasiswa/update/:id', isAuthenticated, isAdmin, (req, res) => {

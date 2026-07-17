@@ -217,7 +217,7 @@ function runPythonExtractor(scriptPath, filePath, missingModuleErrorKey, missing
 
   throw new Error(
     `Tidak menemukan interpreter Python (python3/python/py) di server. ${lastError ? lastError.message : ''} ` +
-    `Pastikan Python 3 dan dependensinya terinstall (lihat README_DOCX_EXTRACTION.md).`
+    `Pastikan Python 3 dan dependensinya terinstall (lihat README_PDF_EXTRACTION.md).`
   );
 }
 
@@ -486,7 +486,7 @@ async function parseRpsDocxBuffer(buffer, options = {}) {
       DOCX_PYTHON_SCRIPT,
       tmpFile,
       'python_docx_not_installed',
-      'Modul Python "python-docx" belum terinstall di server. Jalankan: pip install -r requirements.txt (lihat README_DOCX_EXTRACTION.md).'
+      'Modul Python "python-docx" belum terinstall di server. Jalankan: pip install -r requirements.txt (lihat README_PDF_EXTRACTION.md).'
     );
     const rpsData = buildRpsObjectFromExtraction(extraction, options);
     return { rpsData, parsedText: extraction.raw_text || '' };
