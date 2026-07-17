@@ -6,7 +6,7 @@
             <p class="text-gray-600">
                 <span class="font-semibold"><%= rpsItem.nama_mk %></span>
                 &middot; Semester <%= rpsItem.semester %>
-                &middot; Kelas <%= kelas.nama %>
+                &middot; Kelas <%= kelasLabel %>
             </p>
         </div>
 
@@ -22,15 +22,14 @@
             </div>
         <% } else if (mahasiswaList.length === 0) { %>
             <div class="card text-center py-8 text-gray-500">
-                Belum ada data mahasiswa untuk kelas <%= kelas.nama %>.
+                Belum ada data mahasiswa untuk kelas <%= kelasLabel %>.
             </div>
         <% } else { %>
 
         <!-- PENTING: cuma ADA 1 <form> di seluruh halaman ini, membungkus SEMUA tab
-             Sub-CPMK sekaligus (tab-tab-nya cuma disembunyiin/ditampilin pakai css,
-             bukan form terpisah-terpisah). jadi walau user cuma keliatan lagi ngisi
-             1 tab doang, pas tombol "Simpan Nilai" diklik, NILAI DARI SEMUA TAB
-             ikut terkirim bareng ke server sekali jalan. -->
+             Sub-CPMK sekaligus (tab-tab-nya cuma ditampilkan menggunakan css). 
+             jadi walau user cuma keliatan cuma mengisi 1 tab , setelah tombol 
+             "Simpan Nilai" diklik, NILAI DARI SEMUA TAB ikut terkirim ke server. -->
         <form method="POST" action="/penilaian/mk/<%= rpsItem.id %>/kelas/<%= kelas.id %>/save">
             <input type="hidden" name="activeTab" id="active-tab-input" value="<%= (typeof activeTab !== 'undefined' && activeTab) ? activeTab : 'tb-panel-1' %>">
 

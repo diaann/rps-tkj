@@ -109,7 +109,7 @@
 
             if (!this.value) return;
             const tingkat = tingkatFromSemester(semesterEl.value);
-            const filtered = KELAS_DATA.filter(function (k) { return k.tingkat === tingkat; });
+            const filtered = KELAS_DATA.filter(function (k) { return k.tingkatSaatIni === tingkat; });
             if (filtered.length === 0) {
                 resetSelect(kelasEl, '-- Belum ada kelas --', true);
                 return;
@@ -120,7 +120,7 @@
             filtered.forEach(function (k) {
                 const opt = document.createElement('option');
                 opt.value = k.id;
-                opt.textContent = 'Kelas ' + k.nama;
+                opt.textContent = 'Kelas ' + k.labelSaatIni;
                 kelasEl.appendChild(opt);
             });
         });
