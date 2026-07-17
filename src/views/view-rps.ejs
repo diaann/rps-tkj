@@ -2,7 +2,52 @@
 
 <div class="view-rps-container min-h-screen bg-gray-50 py-4 px-4">
     <div class="view-rps-content bg-white shadow-lg rounded-lg p-4 md:p-8 w-full mx-auto">
-        <h2 class="text-2xl font-bold mb-6 text-blue-700 border-b pb-2">Detail RPS: <%= rps ? rps.nama_mk : '-' %></h2>
+        <h2 class="text-2xl font-bold mb-2 text-blue-700 border-b pb-2">
+            Detail RPS: <%= rps ? rps.nama_mk : '-' %>
+            <% if (rps) {
+                const __rpsStatus = rps.status || 'draft';
+                const __statusBadgeClass = { draft: 'bg-gray-100 text-gray-700', diajukan: 'bg-yellow-100 text-yellow-800', disetujui: 'bg-green-100 text-green-800', ditolak: 'bg-red-100 text-red-800' };
+                const __statusBadgeLabel = { draft: 'Draft', diajukan: 'Menunggu Persetujuan KoPS', disetujui: 'Disetujui (Final)', ditolak: 'Ditolak KoPS' };
+            %>
+                <span class="<%= __statusBadgeClass[__rpsStatus] %> text-xs font-semibold px-2 py-1 rounded-full align-middle ml-2"><%= __statusBadgeLabel[__rpsStatus] %></span>
+            <% } %>
+        </h2>
+        <% if (rps && (rps.status || 'draft') === 'ditolak' && rps.rejection_note) { %>
+            <div class="mb-6 p-4 rounded-lg border border-red-200 bg-red-50 text-red-800 text-sm">
+                <i class="fas fa-circle-exclamation mr-2"></i>
+                <strong>Ditolak KoPS:</strong> <%= rps.rejection_note %>
+            </div>
+        <% } %>
+        <% if (rps && (typeof isRevision === 'undefined' || !isRevision)) {
+            const __rpsStatusForActions = rps.status || 'draft';
+            // tombol "Ajukan Validasi/Ulang" cuma buat dosen (pemilik RPS-nya), bukan kaprodi/admin --
+            // ngajuin RPS itu tugas dosen, kaprodi cuma menyetujui/menolak.
+            const __canSubmit = user && user.role !== 'admin' && String(rps.userId) === String(user.id);
+            const __showSubmit = __canSubmit && (__rpsStatusForActions === 'draft' || __rpsStatusForActions === 'ditolak');
+            const __showKaprodiActions = user && user.role === 'admin' && __rpsStatusForActions === 'diajukan';
+        %>
+            <% if (__showSubmit || __showKaprodiActions) { %>
+                <div class="mb-6 flex flex-wrap gap-2">
+                    <% if (__showSubmit) { %>
+                        <button type="button" class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+                            data-id="<%= rps.id %>" data-name="<%= rps.nama_mk %>" onclick="submitRpsValidasi(this)">
+                            <i class="fas fa-paper-plane"></i>
+                            <%= __rpsStatusForActions === 'ditolak' ? 'Ajukan Ulang' : 'Ajukan Validasi' %>
+                        </button>
+                    <% } %>
+                    <% if (__showKaprodiActions) { %>
+                        <button type="button" class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm" style="background:#166534;"
+                            data-id="<%= rps.id %>" data-name="<%= rps.nama_mk %>" onclick="approveRpsAdmin(this)">
+                            <i class="fas fa-check"></i> Setujui
+                        </button>
+                        <button type="button" class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm" style="background:#dc2626;"
+                            data-id="<%= rps.id %>" data-name="<%= rps.nama_mk %>" onclick="rejectRpsAdmin(this)">
+                            <i class="fas fa-xmark"></i> Tolak
+                        </button>
+                    <% } %>
+                </div>
+            <% } %>
+        <% } %>
         <% if (typeof isRevision !== 'undefined' && isRevision && typeof revision !== 'undefined' && revision) { %>
             <div class="mb-6 p-4 rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-900">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -32,7 +77,12 @@
                 // Field mana saja (key mentah) yang berubah dari versi sebelumnya --
                 // dipakai untuk menandai (bold + highlight) nilainya langsung di
                 // dalam dokumen supaya kelihatan tanpa harus bandingkan manual.
-                const __changedKeys = new Set(typeof changedFieldKeys !== 'undefined' && Array.isArray(changedFieldKeys) ? changedFieldKeys : []);
+                // Highlight ini CUMA relevan saat lihat 1 versi arsip tertentu
+                // (isRevision===true) -- di halaman "versi saat ini" (/history/view/:id)
+                // sengaja tidak ditampilkan, karena di situ tidak ada "versi lama" yang
+                // sedang dibandingkan secara eksplisit oleh user.
+                const __isArchivedRevisionView = typeof isRevision !== 'undefined' && isRevision;
+                const __changedKeys = new Set(__isArchivedRevisionView && typeof changedFieldKeys !== 'undefined' && Array.isArray(changedFieldKeys) ? changedFieldKeys : []);
                 function isFieldChanged(key) { return __changedKeys.has(key); }
                 function changedClass(key) { return isFieldChanged(key) ? 'bg-yellow-100 text-yellow-900 font-bold px-1 rounded' : ''; }
                 function changedAny(keys) { return keys.some(k => __changedKeys.has(k)); }
@@ -445,3 +495,153 @@
 </div>
 
 <%- include('partials/footer') %>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // Ajukan RPS untuk divalidasi/di-ACC kaprodi
+    function submitRpsValidasi(el) {
+        const id = el.getAttribute('data-id');
+        const name = el.getAttribute('data-name');
+
+        Swal.fire({
+            title: 'Ajukan Validasi',
+            html: `
+                <div class="text-left">
+                    <p class="mb-2"><strong>Nama RPS:</strong> ${name}</p>
+                    <p class="text-gray-600">RPS akan diajukan ke KoPS untuk divalidasi. Selama menunggu, RPS ini tidak bisa diedit.</p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Ajukan',
+            cancelButtonText: 'Batal'
+        }).then(result => {
+            if (!result.isConfirmed) return;
+
+            fetch('/submit-rps/' + id, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'RPS berhasil diajukan',
+                            showConfirmButton: false,
+                            timer: 1400
+                        });
+                        setTimeout(() => { window.location.reload(); }, 1400);
+                    } else {
+                        Swal.fire('Gagal', data.message || 'Gagal mengajukan RPS', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error('Submit validasi error', err);
+                    Swal.fire('Error', 'Terjadi kesalahan saat mengajukan RPS', 'error');
+                });
+        });
+    }
+
+    // Kaprodi (admin) menyetujui RPS yang sedang diajukan
+    function approveRpsAdmin(el) {
+        const id = el.getAttribute('data-id');
+        const name = el.getAttribute('data-name');
+
+        Swal.fire({
+            title: 'Setujui RPS',
+            html: `
+                <div class="text-left">
+                    <p class="mb-2"><strong>Nama RPS:</strong> ${name}</p>
+                    <p class="text-gray-600 mb-2">RPS ini akan menjadi versi final dan tidak dapat diedit kembali.</p>
+                    <p class="text-sm text-gray-500">Riwayat revisi sebelumnya akan dirangkum secara otomatis, dan hanya versi final ini yang akan disimpan.</p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#166534',
+            confirmButtonText: 'Ya, Setujui',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+
+            fetch('/admin/rps/approve/' + id, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'RPS berhasil disetujui',
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                        setTimeout(() => { window.location.reload(); }, 1500);
+                    } else {
+                        Swal.fire('Gagal', data.message || 'Gagal menyetujui RPS', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error('Approve error', err);
+                    Swal.fire('Error', 'Terjadi kesalahan saat menyetujui RPS', 'error');
+                });
+        });
+    }
+
+    // Kaprodi (admin) menolak RPS yang sedang diajukan, wajib isi catatan alasan
+    function rejectRpsAdmin(el) {
+        const id = el.getAttribute('data-id');
+        const name = el.getAttribute('data-name');
+
+        Swal.fire({
+            title: 'Tolak RPS',
+            html: `
+                <div class="text-left">
+                    <p class="mb-2"><strong>Nama RPS:</strong> ${name}</p>
+                    <label class="block text-sm text-gray-600 mb-1">Catatan alasan penolakan (wajib diisi):</label>
+                    <textarea id="catatan-tolak-input" class="input w-full" rows="3" placeholder="Jelaskan apa yang perlu direvisi..."></textarea>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Ya, Tolak',
+            cancelButtonText: 'Batal',
+            preConfirm: () => {
+                const val = document.getElementById('catatan-tolak-input').value.trim();
+                if (!val) {
+                    Swal.showValidationMessage('Catatan alasan penolakan wajib diisi');
+                    return false;
+                }
+                return val;
+            }
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+
+            fetch('/admin/rps/reject/' + id, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ catatan: result.value })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'RPS ditolak',
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+                        setTimeout(() => { window.location.reload(); }, 1500);
+                    } else {
+                        Swal.fire('Gagal', data.message || 'Gagal menolak RPS', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error('Reject error', err);
+                    Swal.fire('Error', 'Terjadi kesalahan saat menolak RPS', 'error');
+                });
+        });
+    }
+</script>

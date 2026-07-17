@@ -25,6 +25,27 @@ pernah ditimpa atau dihapus otomatis -- riwayat terus bertambah.
 | Duplikat RPS | `POST /duplicate-rps/:id` | `duplicate` |
 | Pulihkan ke versi lama | `POST /history/rps/:id/revision/:revisionId/revert` | `revert` |
 | Dokumen lama yang belum punya riwayat sama sekali dan baru pertama kali dibuka riwayatnya | otomatis, `ensureInitialRevision()` | `initial` |
+| Dosen ajukan validasi ke kaprodi | `POST /submit-rps/:id` | `submit_validasi` |
+| Kaprodi setujui (ACC) | `POST /admin/rps/approve/:id` | `acc_kaprodi` |
+| Kaprodi tolak (dgn catatan) | `POST /admin/rps/reject/:id` | `tolak_kaprodi` |
+
+## Alur validasi RPS (dosen ajukan -> kaprodi ACC/tolak)
+
+Selain riwayat edit di atas, tiap RPS juga punya status alur validasi: `draft` ->
+`diajukan` (menunggu ACC, RPS terkunci dari editan) -> `disetujui` (final, terkunci
+permanen) atau `ditolak` (kembali ke dosen dgn catatan alasan, bisa direvisi &
+diajukan ulang). Field-field ini (`status`, `submitted_*`, `decided_*`,
+`rejection_note`) disimpan langsung di `rps.json` (lihat `RPS_STATUS`,
+`getRpsStatus()`, `isRpsLocked()` di `src/routes/index.js`) dan sengaja
+dikecualikan dari perbandingan `getChangedFieldKeys()` supaya perubahan status
+tidak dianggap "perubahan konten".
+
+**Khusus saat ACC**: karena RPS yang disetujui sudah final & tidak akan direvisi
+lagi, riwayat revisi lama untuk RPS tsb dipangkas -- hanya snapshot revisi ACC
+yang terakhir yang disimpan di `rps_history.json` (bukan seluruh riwayat `v1..vN`
+sebelumnya). Ini untuk menghemat storage, karena tiap entri riwayat menyimpan
+snapshot penuh isi RPS. Pemangkasan ini **tidak** terjadi saat ditolak -- riwayat
+penuh tetap dipertahankan selama RPS masih berpotensi direvisi.
 
 Tiap revisi tersimpan dengan struktur:
 

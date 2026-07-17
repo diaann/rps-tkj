@@ -25,7 +25,7 @@
         </div>
 
         <!-- Statistics Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
             <div class="card dashboard-stat-card">
                 <div class="flex items-center justify-center">
                     <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
@@ -36,6 +36,20 @@
                             <%= rps.length %>
                         </p>
                         <p class="text-gray-600 text-sm font-medium">Total RPS</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card dashboard-stat-card">
+                <div class="flex items-center justify-center">
+                    <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+                        <i class="fas fa-hourglass-half text-xl"></i>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-bold text-gray-800">
+                            <%= rps.filter(r=> (r.status || 'draft') === 'diajukan').length %>
+                        </p>
+                        <p class="text-gray-600 text-sm font-medium">Menunggu Persetujuan</p>
                     </div>
                 </div>
             </div>
@@ -114,6 +128,13 @@
                             </option>
                             <% }); %>
                     </select>
+                    <select id="filterStatus" class="input">
+                        <option value="">Semua Status</option>
+                        <option value="draft">Draft</option>
+                        <option value="diajukan">Menunggu Persetujuan</option>
+                        <option value="disetujui">Disetujui</option>
+                        <option value="ditolak">Ditolak</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -148,8 +169,13 @@
             </div>
 
             <% if (rps.length> 0) { %>
+                <%
+                    const adminStatusBadgeClass = { draft: 'bg-gray-100 text-gray-700', diajukan: 'bg-yellow-100 text-yellow-800', disetujui: 'bg-green-100 text-green-800', ditolak: 'bg-red-100 text-red-800' };
+                    const adminStatusBadgeLabel = { draft: 'Draft', diajukan: 'Menunggu Persetujuan', disetujui: 'Disetujui', ditolak: 'Ditolak' };
+                %>
                 <div id="rpsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <% rps.forEach(r=> { %>
+                        <% const rStatus = r.status || 'draft'; const rLocked = rStatus === 'diajukan' || rStatus === 'disetujui'; %>
                         <!-- LAMA -->
                         <!-- <div class="rps-card card border border-gray-200 hover:shadow-lg transition-shadow duration-200"
                             data-semester="<%= r.semester %>" data-tahun="<%= r.tahun_akademik %>"
@@ -160,10 +186,11 @@
                             data-semester="<%= r.semester %>"
                             data-tahun="<%= r.tahun_akademik %>"
                             data-owner="<%= r.ownerName %>"
+                            data-status="<%= rStatus %>"
                             data-nama="<%= (r.nama_mk || '').toLowerCase() %>"
                             data-tanggal="<%= r.tanggal_penyusunan || '' %>"
                             data-search="<%= (r.nama_mk + ' ' + r.kode_mk + ' ' + r.ownerName).toLowerCase() %>">
-                            
+
                             <div class="flex items-start justify-between mb-3">
                                 <div class="flex-1">
                                     <h3 class="text-lg font-bold text-gray-800 mb-1 line-clamp-2">
@@ -173,10 +200,21 @@
                                         <%= r.kode_mk %>
                                     </p>
                                 </div>
-                                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
-                                    Semester <%= r.semester %>
-                                </span>
+                                <div class="flex flex-col items-end gap-1">
+                                    <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                                        Semester <%= r.semester %>
+                                    </span>
+                                    <span class="<%= adminStatusBadgeClass[rStatus] %> text-xs font-medium px-2 py-1 rounded-full">
+                                        <%= adminStatusBadgeLabel[rStatus] %>
+                                    </span>
+                                </div>
                             </div>
+
+                            <% if (rStatus === 'ditolak' && r.rejection_note) { %>
+                                <p class="text-xs text-red-600 bg-red-50 rounded p-2 mb-3">
+                                    <i class="fas fa-circle-exclamation mr-1"></i>Ditolak: <%= r.rejection_note %>
+                                </p>
+                            <% } %>
 
                             <div class="text-xs text-gray-500 mb-4 space-y-1">
                                 <p><i class="fas fa-user mr-1"></i> <strong>Pembuat:</strong>
@@ -211,25 +249,27 @@
                                     </a>
                                 </div>
                                 <div class="rps-action-row">
-                                    <a href="/edit-rps/<%= r.id %>" class="rps-btn rps-btn-manage">
-                                        <i class="fas fa-edit"></i>Edit
-                                    </a>
-                                    <a href="/history/rps/<%= r.id %>" class="rps-btn rps-btn-manage">
-                                        <i class="fas fa-clock-rotate-left"></i>History
-                                    </a>
+                                    <% if (!rLocked) { %>
+                                        <a href="/edit-rps/<%= r.id %>" class="rps-btn rps-btn-manage">
+                                            <i class="fas fa-edit"></i>Edit
+                                        </a>
+                                        <% } %>
+                                            <a href="/history/rps/<%= r.id %>" class="rps-btn rps-btn-manage">
+                                                <i class="fas fa-clock-rotate-left"></i>History
+                                            </a>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button class="rps-btn rps-btn-manage" style="flex:1" data-id="<%= r.id %>"
-                                        data-name="<%= r.nama_mk %>" data-owner="<%= r.ownerName %>"
-                                        onclick="duplicateRpsAdmin(this)">
-                                        <i class="fas fa-clone"></i>Duplikat
-                                    </button>
-                                    <button class="rps-btn rps-btn-delete" data-id="<%= r.id %>"
-                                        data-name="<%= r.nama_mk %>" data-owner="<%= r.ownerName %>"
-                                        onclick="deleteRpsAdmin(this)">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
+                                            <button class="rps-btn rps-btn-manage" style="flex:1" data-id="<%= r.id %>"
+                                                data-name="<%= r.nama_mk %>" data-owner="<%= r.ownerName %>"
+                                                onclick="duplicateRpsAdmin(this)">
+                                                <i class="fas fa-clone"></i>Duplikat
+                                            </button>
+                                            <button class="rps-btn rps-btn-delete" data-id="<%= r.id %>"
+                                                data-name="<%= r.nama_mk %>" data-owner="<%= r.ownerName %>"
+                                                onclick="deleteRpsAdmin(this)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
                             </div>
                         </div>
                         <% }); %>
@@ -325,6 +365,7 @@
                 const semesterFilter = document.getElementById('filterSemester');
                 const tahunFilter = document.getElementById('filterTahun');
                 const ownerFilter = document.getElementById('filterOwner');
+                const statusFilter = document.getElementById('filterStatus');
                 const sortSelect = document.getElementById('sortRPS');
 
                 const rpsContainer = document.getElementById('rpsContainer');
@@ -372,6 +413,7 @@
                     const semesterValue = semesterFilter.value;
                     const tahunValue = tahunFilter.value;
                     const ownerValue = ownerFilter.value;
+                    const statusValue = statusFilter ? statusFilter.value : '';
 
                     let visibleCount = 0;
 
@@ -382,13 +424,15 @@
                         const semester = card.dataset.semester;
                         const tahun = card.dataset.tahun;
                         const owner = card.dataset.owner;
+                        const status = card.dataset.status || '';
 
                         const matchesSearch = !searchTerm || searchData.includes(searchTerm);
                         const matchesSemester = !semesterValue || semester === semesterValue;
                         const matchesTahun = !tahunValue || tahun === tahunValue;
                         const matchesOwner = !ownerValue || owner === ownerValue;
+                        const matchesStatus = !statusValue || status === statusValue;
 
-                        if (matchesSearch && matchesSemester && matchesTahun && matchesOwner) {
+                        if (matchesSearch && matchesSemester && matchesTahun && matchesOwner && matchesStatus) {
                             card.style.display = 'block';
                             visibleCount++;
                         } else {
@@ -409,6 +453,7 @@
                 semesterFilter.addEventListener('change', filterRPS);
                 tahunFilter.addEventListener('change', filterRPS);
                 ownerFilter.addEventListener('change', filterRPS);
+                if (statusFilter) statusFilter.addEventListener('change', filterRPS);
                 sortSelect.addEventListener('change', filterRPS);
 
                 filterRPS();

@@ -299,7 +299,31 @@ textarea.input {
 
 /* Dashboard specific styles */
 .dashboard-stat-card {
+  padding: 1.25rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.dashboard-stat-card .rounded-full {
+  flex-shrink: 0;
+}
+.dashboard-stat-card p {
+  overflow-wrap: break-word;
+}
+/* Label di bawah angka bisa 1 atau 2 baris tergantung panjang teksnya (mis.
+   "Semester" vs "Menunggu Persetujuan") -- kalau dibiarkan apa adanya, kartu
+   dgn label 2 baris jadi lebih "tinggi" isinya, dan krn baris ikon+teks di
+   sebelahnya pakai align-items:center, IKON di kartu itu ikut ketarik turun
+   dibanding kartu lain (baris ikonnya jadi tidak sejajar/lurus). Kunci tinggi
+   label supaya selalu sama persis (2 baris) di semua kartu, apa pun isinya. */
+.dashboard-stat-card .text-center p:last-child {
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (max-width: 639px) {
+  .dashboard-stat-card {
+    padding: 1rem;
+  }
 }
 
 .dashboard-stat-card:hover {
@@ -395,6 +419,12 @@ textarea.input {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
+}
+/* kalau cuma 1 tombol yg dirender di baris ini (mis. "Edit" disembunyikan krn
+   RPS terkunci, tinggal "History" sendirian), lebarkan penuh 2 kolom -- biar
+   tidak nyisain kotak kosong di sampingnya. */
+.rps-card-actions .rps-action-row > *:only-child {
+  grid-column: 1 / -1;
 }
 .rps-btn {
   display: inline-flex;

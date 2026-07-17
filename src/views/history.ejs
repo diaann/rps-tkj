@@ -36,7 +36,7 @@
         </div>
 
         <!-- Statistics Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <div class="card dashboard-stat-card">
                 <div class="flex items-center justify-center">
                     <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
@@ -142,7 +142,12 @@
 
             <% if (rps.length> 0) { %>
                 <div id="rpsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <%
+                        const statusBadgeClass = { draft: 'bg-gray-100 text-gray-700', diajukan: 'bg-yellow-100 text-yellow-800', disetujui: 'bg-green-100 text-green-800', ditolak: 'bg-red-100 text-red-800' };
+                        const statusBadgeLabel = { draft: 'Draft', diajukan: 'Menunggu Persetujuan', disetujui: 'Disetujui', ditolak: 'Ditolak' };
+                    %>
                     <% rps.forEach(r=> { %>
+                        <% const rStatus = r.status || 'draft'; const rLocked = rStatus === 'diajukan' || rStatus === 'disetujui'; %>
                         <div class="card rps-card border border-gray-200 hover:shadow-lg transition-shadow duration-200"
                             data-semester="<%= r.semester %>" data-tahun="<%= r.tahun_akademik %>"
                             data-owner="<%= r.ownerName ? r.ownerName : user.username %>"
@@ -156,10 +161,21 @@
                                         <%= r.kode_mk %>
                                     </p>
                                 </div>
-                                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
-                                    Semester <%= r.semester %>
-                                </span>
+                                <div class="flex flex-col items-end gap-1">
+                                    <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                                        Semester <%= r.semester %>
+                                    </span>
+                                    <span class="<%= statusBadgeClass[rStatus] %> text-xs font-medium px-2 py-1 rounded-full">
+                                        <%= statusBadgeLabel[rStatus] %>
+                                    </span>
+                                </div>
                             </div>
+
+                            <% if (rStatus === 'ditolak' && r.rejection_note) { %>
+                                <p class="text-xs text-red-600 bg-red-50 rounded p-2 mb-3">
+                                    <i class="fas fa-circle-exclamation mr-1"></i>Ditolak KoPS: <%= r.rejection_note %>
+                                </p>
+                            <% } %>
 
                             <div class="text-xs text-gray-500 mb-4 space-y-1">
                                 <% if (user.role==='admin' && r.ownerName) { %>
@@ -193,30 +209,27 @@
                                     </a>
                                 </div>
                                 <div class="rps-action-row">
-                                    <a href="/edit-rps/<%= r.id %>" class="rps-btn rps-btn-manage">
-                                        <i class="fas fa-edit"></i>Edit
-                                    </a>
-                                    <a href="/history/rps/<%= r.id %>" class="rps-btn rps-btn-manage">
-                                        <i class="fas fa-clock-rotate-left"></i>History
-                                    </a>
+                                    <% if (!rLocked) { %>
+                                        <a href="/edit-rps/<%= r.id %>" class="rps-btn rps-btn-manage">
+                                            <i class="fas fa-edit"></i>Edit
+                                        </a>
+                                        <% } %>
+                                            <a href="/history/rps/<%= r.id %>" class="rps-btn rps-btn-manage">
+                                                <i class="fas fa-clock-rotate-left"></i>History
+                                            </a>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button class="rps-btn rps-btn-manage" style="flex:1" data-id="<%= r.id %>"
-                                        data-name="<%= r.nama_mk %>" onclick="duplicateRps(this)">
-                                        <i class="fas fa-clone"></i>Duplikat
-                                    </button>
-                                    <% if (user.role==='admin' ) { %>
-                                        <button class="rps-btn rps-btn-delete" data-id="<%= r.id %>"
-                                            data-name="<%= r.nama_mk %>" onclick="deleteRpsAdmin(this)">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        <% } else { %>
-                                            <button class="rps-btn rps-btn-delete" data-id="<%= r.id %>"
-                                                onclick="deleteRps(this)">
-                                                <i class="fas fa-trash"></i>
+                                            <button class="rps-btn rps-btn-manage" style="flex:1" data-id="<%= r.id %>"
+                                                data-name="<%= r.nama_mk %>" onclick="duplicateRps(this)">
+                                                <i class="fas fa-clone"></i>Duplikat
                                             </button>
-                                            <% } %>
-                                </div>
+                                            <% if (!rLocked) { %>
+                                                <button class="rps-btn rps-btn-delete" data-id="<%= r.id %>"
+                                                    onclick="deleteRps(this)">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                <% } %>
+                                        </div>
                             </div>
                         </div>
                         <% }); %>
@@ -366,7 +379,7 @@
                     showCancelButton: true,
                     confirmButtonColor: '#d33',
                     cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Ya, hapus!',
+                    confirmButtonText: 'Ya, Hapus!',
                     cancelButtonText: 'Batal'
                 }).then((result) => {
                     if (result.isConfirmed) {

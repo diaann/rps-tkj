@@ -28,7 +28,7 @@
                 </a>
 
                 <!-- Desktop menu -->
-                <div class="hidden lg:flex items-center space-x-2 xl:space-x-4">
+                <div class="hidden xl:flex items-center space-x-2 xl:space-x-4">
                     <a href="/"
                         class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
                         <i class="fas fa-home mr-1"></i>Dashboard
@@ -58,7 +58,7 @@
                         <div class="relative dropdown-container">
                             <button 
                                 id="user-dropdown-btn"
-                                class="flex items-center text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 focus:outline-none">
+                                class="flex items-center text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 focus:outline-none whitespace-nowrap">
                                 <i class="fas fa-users mr-1"></i>
                                 Kelola User
                                 <i class="fas fa-chevron-down ml-1 text-xs transition-transform"></i>
@@ -82,7 +82,7 @@
                         </div>
 
                         <a href="/admin/cpl"
-                            class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                            class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
                             <i class="fas fa-file-alt mr-1"></i>Kelola CPL
                         </a>
                     <% } %>
@@ -104,7 +104,7 @@
 
                 <!-- Mobile hamburger button -->
                 <button id="mobile-menu-button" type="button"
-                    class="lg:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100 focus:outline-none"
+                    class="xl:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100 focus:outline-none"
                     aria-label="Toggle navigation menu" aria-expanded="false">
                     <i id="mobile-menu-icon-open" class="fas fa-bars text-xl"></i>
                     <i id="mobile-menu-icon-close" class="fas fa-times text-xl" style="display: none;"></i>
@@ -113,7 +113,7 @@
         </div>
 
         <!-- Mobile menu -->
-        <div id="mobile-menu" class="hidden lg:hidden border-t border-gray-200">
+        <div id="mobile-menu" class="hidden xl:hidden border-t border-gray-200">
             <div class="px-4 py-3 space-y-1">
                 <% if (typeof user !=='undefined' ) { %>
                     <div class="flex items-center justify-between px-3 py-2 mb-1 border-b border-gray-100">
@@ -211,7 +211,7 @@
 
             // Close menu when resizing up to desktop width
             window.addEventListener('resize', function () {
-                if (window.innerWidth >= 1024) closeMenu();
+                if (window.innerWidth >= 1280) closeMenu();
             });
         });
 
