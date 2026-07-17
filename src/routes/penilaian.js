@@ -50,6 +50,46 @@ function tingkatFromSemester(semester) {
   return Math.ceil(s / 2); // 1-2 -> 1, 3-4 -> 2, 5-6 -> 3, 7-8 -> 4
 }
 
+// ambil tahun angkatan dari kelasId, contoh "2025A" -> 2025, "2022B" -> 2022.
+// dipakai krn field "tingkat" di kelas.json sebenarnya nyimpen tahun angkatan
+// (misal 2025), BUKAN level 1-4 yg dihasilkan tingkatFromSemester(). jadi ga
+// bisa dibandingkan langsung, harus dihitung ulang tiap kali dari tahun sekarang.
+function angkatanFromKelasId(kelasId) {
+  const match = String(kelasId).match(/^(\d{4})/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+// tahun ajaran yg sedang berjalan sekarang: semester ganjil Agu-Des, genap Jan-Jul.
+// dipakai sbg acuan buat hitung angkatan tsb sekarang ada di tingkat berapa.
+function tahunAjaranSaatIni() {
+  const now = new Date();
+  const bulan = now.getMonth() + 1; // 1-12
+  return bulan >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+// tingkat = selisih tahun ajaran skrg dgn tahun angkatan, +1.
+// angkatan 2025 di tahun ajaran 2025 -> tingkat 1, angkatan 2024 -> tingkat 2, dst.
+function tingkatFromAngkatan(angkatan) {
+  if (!angkatan) return null;
+  const tingkat = tahunAjaranSaatIni() - angkatan + 1;
+  return tingkat < 1 ? 1 : tingkat;
+}
+
+// ambil huruf kelas (section) dari belakang kelasId, contoh "2025A" -> "A", "2024B" -> "B"
+function letterFromKelasId(kelasId) {
+  const match = String(kelasId).match(/[A-Za-z]+$/);
+  return match ? match[0] : '';
+}
+
+// label kelas yg ditampilkan ke user, dihitung ulang tiap kali (BUKAN disimpan statis)
+// krn tingkat-nya berubah tiap tahun ajaran baru. angkatan 2025 kelas A -> "1A" di
+// tahun ajaran 2025, tapi jadi "2A" di tahun ajaran 2026, dst.
+function labelKelasSaatIni(kelasId) {
+  const tingkat = tingkatFromAngkatan(angkatanFromKelasId(kelasId));
+  const letter = letterFromKelasId(kelasId);
+  return tingkat ? `${tingkat}${letter}` : (letter || kelasId);
+}
+
 // cek: user yg login boleh nilai RPS ini apa tidak. hasilnya true kalau admin, atau
 // kalau dia pemilik RPS itu sendiri. selain itu false.
 function canAccessRpsForPenilaian(req, rpsItem) {
@@ -246,7 +286,15 @@ router.get('/penilaian', isAuthenticated, (req, res) => {
       semester: parseInt(r.semester, 10) || 0
     }));
 
-  const kelasData = readJsonFile(kelasPath, []); // semua data kelas, nanti difilter per tingkat di javascript
+  // semua data kelas, nanti difilter per tingkat di javascript.
+  // tingkatSaatIni & labelSaatIni dihitung ulang dari tahun angkatan (bukan pakai
+  // field "tingkat"/"nama" yg tersimpan statis di kelas.json, krn keduanya harus
+  // berubah tiap tahun ajaran seiring mahasiswa naik tingkat).
+  const kelasData = readJsonFile(kelasPath, []).map(k => ({
+    ...k,
+    tingkatSaatIni: tingkatFromAngkatan(angkatanFromKelasId(k.id)),
+    labelSaatIni: labelKelasSaatIni(k.id)
+  }));
 
   res.render('penilaian-semester', {
     title: 'Penilaian',
@@ -286,7 +334,8 @@ router.get('/penilaian/mk/:rpsId', isAuthenticated, (req, res) => {
   }
 
   const tingkat = tingkatFromSemester(item.semester);
-  const kelasList = readJsonFile(kelasPath, []).filter(k => k.tingkat === tingkat);
+  const kelasList = readJsonFile(kelasPath, [])
+    .filter(k => tingkatFromAngkatan(angkatanFromKelasId(k.id)) === tingkat);
 
   res.render('penilaian-kelas', {
     title: 'Penilaian - Pilih Kelas',
@@ -334,6 +383,7 @@ router.get('/penilaian/mk/:rpsId/kelas/:kelasId', isAuthenticated, (req, res) =>
     user: req.session.user,
     rpsItem: item,
     kelas,
+    kelasLabel: labelKelasSaatIni(kelas.id), // contoh: "1A" (angkatan 2025), dihitung ulang tiap request
     mahasiswaList,
     subCpmkList,
     savedValues, // dipakai di view buat isi ulang nilai yg sudah pernah diinput
