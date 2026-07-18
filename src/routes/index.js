@@ -1381,12 +1381,18 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
   uploadRpsFile.single('rpsFile')(req, res, async (uploadError) => {
     if (uploadError) {
       // gagal pas proses upload itu sendiri, misal: file bukan .docx (ditolak fileFilter),
-      // atau ukurannya kelewat 15MB (ditolak limits.fileSize).
+      // atau ukurannya kelewat 15MB (ditolak limits.fileSize). uploadError.message dari
+      // multer sendiri (mis. "File too large") masih bahasa Inggris & kurang jelas ke user,
+      // jadi diterjemahkan dulu utk kode error yg dikenal.
+      let uploadErrorMessage = uploadError.message || 'Gagal mengupload file.';
+      if (uploadError.code === 'LIMIT_FILE_SIZE') {
+        uploadErrorMessage = 'Ukuran file terlalu besar. Maksimal 15 MB.';
+      }
       return res.status(400).render('upload-rps', {
         title: 'Upload RPS',
         user: req.session.user,
         success: null,
-        error: uploadError.message || 'Gagal mengupload file.'
+        error: uploadErrorMessage
       });
     }
 
@@ -1459,13 +1465,16 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
     } catch (error) {
       // apa pun yg gagal di blok try di atas (paling sering: python gagal baca dokumen)
       // ditangkep di sini, biar user dikasih pesan yg jelas, bukan halaman error putih polos.
+      // detail teknis errornya (mis. pesan mentah dari parser python) cuma dicatat di log
+      // server, TIDAK ditampilkan ke user -- soalnya isinya istilah teknis yg membingungkan
+      // (mis. "no `tc` element at grid_offset=3") dan tidak ada gunanya buat user biasa.
       console.error('[UPLOAD RPS] Gagal mengekstrak file:', error);
       safeUnlink(req.file && req.file.path); // bersihin file sementara meskipun gagal
       return res.status(500).render('upload-rps', {
         title: 'Upload RPS',
         user: req.session.user,
         success: null,
-        error: `Gagal membaca isi file. ${error.message || 'Format file mungkin tidak terbaca.'}`
+        error: 'Gagal membaca isi file. Pastikan file berupa dokumen RPS (.docx) yang valid, sesuai format template, dan tidak rusak, lalu coba lagi.'
       });
     }
   });
