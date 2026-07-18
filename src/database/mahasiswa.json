@@ -1,41 +1,5 @@
 [
   {
-    "id": "2025A-01",
-    "nim": "20250101",
-    "nama": "Ahmad Fadillah",
-    "kelasId": "2025A"
-  },
-  {
-    "id": "2025A-02",
-    "nim": "20250102",
-    "nama": "Siti Nurhaliza",
-    "kelasId": "2025A"
-  },
-  {
-    "id": "2025A-03",
-    "nim": "20250103",
-    "nama": "Muh. Rizky Ramadhan",
-    "kelasId": "2025A"
-  },
-  {
-    "id": "2025B-01",
-    "nim": "20250151",
-    "nama": "Nur Aisyah",
-    "kelasId": "2025B"
-  },
-  {
-    "id": "2025B-02",
-    "nim": "20250152",
-    "nama": "Bayu Setiawan",
-    "kelasId": "2025B"
-  },
-  {
-    "id": "2025B-03",
-    "nim": "20250153",
-    "nama": "Putri Amelia",
-    "kelasId": "2025B"
-  },
-  {
     "id": "2024A-01",
     "nim": "20240201",
     "nama": "Andi Pratama",
@@ -108,109 +72,73 @@
     "kelasId": "2023B"
   },
   {
-    "id": "2022A-01",
-    "nim": "20220401",
-    "nama": "Agus Salim",
-    "kelasId": "2022A"
-  },
-  {
-    "id": "2022A-02",
-    "nim": "20220402",
-    "nama": "Novita Sari",
-    "kelasId": "2022A"
-  },
-  {
-    "id": "2022A-03",
-    "nim": "20220403",
-    "nama": "Taufik Hidayat",
-    "kelasId": "2022A"
-  },
-  {
-    "id": "2022B-01",
-    "nim": "20220451",
-    "nama": "Wulan Sari",
-    "kelasId": "2022B"
-  },
-  {
-    "id": "2022B-02",
-    "nim": "20220452",
-    "nama": "Eko Prasetyo",
-    "kelasId": "2022B"
-  },
-  {
-    "id": "2022B-03",
-    "nim": "20220453",
-    "nama": "Lina Marlina",
-    "kelasId": "2022B"
-  },
-  {
     "id": "2022B-04",
     "nim": "42519026",
     "nama": "A. Fazlur Irawan Tenritatta",
     "kelasId": "2022B"
   },
   {
-    "id": "2025A-04",
+    "id": "2025A-01",
     "nim": "47125001",
     "nama": "NINING NUR AISYAH",
     "kelasId": "2025A"
   },
   {
-    "id": "2025A-05",
+    "id": "2025A-02",
     "nim": "47125002",
     "nama": "MUH. ASHAR RAMADHANA",
     "kelasId": "2025A"
   },
   {
-    "id": "2025A-06",
+    "id": "2025A-03",
     "nim": "47125003",
     "nama": "NUR NAILA",
     "kelasId": "2025A"
   },
   {
-    "id": "2025A-07",
+    "id": "2025A-04",
     "nim": "47125005",
     "nama": "RAIHAN ABDILLAH",
     "kelasId": "2025A"
   },
   {
-    "id": "2025A-08",
+    "id": "2025A-05",
     "nim": "47125006",
     "nama": "AFDA ANUGRA",
     "kelasId": "2025A"
   },
   {
-    "id": "2025A-09",
+    "id": "2025A-06",
     "nim": "47125007",
     "nama": "DIAN EKA SUKMA",
     "kelasId": "2025A"
   },
   {
-    "id": "2025B-04",
+    "id": "2025B-01",
     "nim": "47125009",
     "nama": "NURAZISAH",
     "kelasId": "2025B"
   },
   {
-    "id": "2025B-05",
+    "id": "2025B-02",
     "nim": "47125010",
     "nama": "AIDH AL QARNI",
     "kelasId": "2025B"
   },
   {
-    "id": "2025B-06",
+    "id": "2025B-03",
     "nim": "47125011",
     "nama": "SALZA BILA PUTRI",
     "kelasId": "2025B"
   },
   {
-    "id": "2025B-07",
+    "id": "2025B-04",
     "nim": "47125012",
     "nama": "NUR SYAFIQAH",
     "kelasId": "2025B"
   },
   {
-    "id": "2025B-08",
+    "id": "2025B-05",
     "nim": "47125013",
     "nama": "AHMAT GORIF",
     "kelasId": "2025B"
@@ -270,97 +198,97 @@
     "kelasId": "2025D"
   },
   {
-    "id": "2025A-10",
+    "id": "2025A-07",
     "nim": "47125031",
     "nama": "MUH. RAFLI ZULKIFLI",
     "kelasId": "2025A"
   },
   {
-    "id": "2025A-11",
+    "id": "2025A-08",
     "nim": "47125032",
     "nama": "ZULFAHMI",
     "kelasId": "2025A"
   },
   {
-    "id": "2025A-12",
+    "id": "2025A-09",
     "nim": "47125033",
     "nama": "ANDI MUHAMMAD FATHA RIZKI",
     "kelasId": "2025A"
   },
   {
-    "id": "2025A-13",
+    "id": "2025A-10",
     "nim": "47125034",
     "nama": "IVANDRO RAFAEL PARURA",
     "kelasId": "2025A"
   },
   {
-    "id": "2025A-14",
+    "id": "2025A-11",
     "nim": "47125035",
     "nama": "MUHAMMAD FAHRUL ARRAFIQ",
     "kelasId": "2025A"
   },
   {
-    "id": "2025A-15",
+    "id": "2025A-12",
     "nim": "47125036",
     "nama": "ADAM",
     "kelasId": "2025A"
   },
   {
-    "id": "2025A-16",
+    "id": "2025A-13",
     "nim": "47125037",
     "nama": "MUH. MAIZAN AL MANAR PUTRA P.",
     "kelasId": "2025A"
   },
   {
-    "id": "2025A-17",
+    "id": "2025A-14",
     "nim": "47125038",
     "nama": "FARHAN ANUGRAH WHALYANI",
     "kelasId": "2025A"
   },
   {
-    "id": "2025B-09",
+    "id": "2025B-06",
     "nim": "47125041",
     "nama": "MUAZ ABDILLAH S",
     "kelasId": "2025B"
   },
   {
-    "id": "2025B-10",
+    "id": "2025B-07",
     "nim": "47125042",
     "nama": "SABIL MAULANA ARMAN",
     "kelasId": "2025B"
   },
   {
-    "id": "2025B-11",
+    "id": "2025B-08",
     "nim": "47125043",
     "nama": "MUH FATIR MAULANA FIRNANSYAH",
     "kelasId": "2025B"
   },
   {
-    "id": "2025B-12",
+    "id": "2025B-09",
     "nim": "47125044",
     "nama": "RISDAYANTI",
     "kelasId": "2025B"
   },
   {
-    "id": "2025B-13",
+    "id": "2025B-10",
     "nim": "47125045",
     "nama": "AFNI OLIVIA",
     "kelasId": "2025B"
   },
   {
-    "id": "2025B-14",
+    "id": "2025B-11",
     "nim": "47125046",
     "nama": "ANDI REZKIAWAN",
     "kelasId": "2025B"
   },
   {
-    "id": "2025B-15",
+    "id": "2025B-12",
     "nim": "47125047",
     "nama": "ELYUDA EZRA TANDIRERUNG",
     "kelasId": "2025B"
   },
   {
-    "id": "2025B-16",
+    "id": "2025B-13",
     "nim": "47125048",
     "nama": "RAIHAN ABDILLAH",
     "kelasId": "2025B"
@@ -462,37 +390,37 @@
     "kelasId": "2025D"
   },
   {
-    "id": "2025A-18",
+    "id": "2025A-15",
     "nim": "47125068",
     "nama": "Muh. Syauqi Rizqullah",
     "kelasId": "2025A"
   },
   {
-    "id": "2025B-17",
+    "id": "2025B-14",
     "nim": "47125069",
     "nama": "Muhammad Luthfi Nursain",
     "kelasId": "2025B"
   },
   {
-    "id": "2025B-18",
+    "id": "2025B-15",
     "nim": "47125070",
     "nama": "NURZAKILA",
     "kelasId": "2025B"
   },
   {
-    "id": "2025B-19",
+    "id": "2025B-16",
     "nim": "47125071",
     "nama": "Dian Ramadani",
     "kelasId": "2025B"
   },
   {
-    "id": "2025A-19",
+    "id": "2025A-16",
     "nim": "47125072",
     "nama": "Naurah Rayyani",
     "kelasId": "2025A"
   },
   {
-    "id": "2025B-20",
+    "id": "2025B-17",
     "nim": "47125073",
     "nama": "Muchammad Dwi Andika",
     "kelasId": "2025B"
@@ -510,31 +438,31 @@
     "kelasId": "2025D"
   },
   {
-    "id": "2025A-20",
+    "id": "2025A-17",
     "nim": "47125076",
     "nama": "Adit abiansa",
     "kelasId": "2025A"
   },
   {
-    "id": "2025A-21",
+    "id": "2025A-18",
     "nim": "47125077",
     "nama": "Janestine Patilangi",
     "kelasId": "2025A"
   },
   {
-    "id": "2025B-21",
+    "id": "2025B-18",
     "nim": "47125079",
     "nama": "Muhammad Ibnu Hisyam",
     "kelasId": "2025B"
   },
   {
-    "id": "2025A-22",
+    "id": "2025A-19",
     "nim": "47125080",
     "nama": "Rafael Febrio Palimbong",
     "kelasId": "2025A"
   },
   {
-    "id": "2025B-22",
+    "id": "2025B-19",
     "nim": "47125081",
     "nama": "Qanita Khairunnisa",
     "kelasId": "2025B"
@@ -546,19 +474,19 @@
     "kelasId": "2025D"
   },
   {
-    "id": "2025A-23",
+    "id": "2025A-20",
     "nim": "47125083",
     "nama": "Airell Ikhwan Askari",
     "kelasId": "2025A"
   },
   {
-    "id": "2025B-23",
+    "id": "2025B-20",
     "nim": "47125084",
     "nama": "Aqilah Wailah Akmal",
     "kelasId": "2025B"
   },
   {
-    "id": "2025A-24",
+    "id": "2025A-21",
     "nim": "47125085",
     "nama": "MUH RADHI AL QADRI AHMAD",
     "kelasId": "2025A"
@@ -570,7 +498,7 @@
     "kelasId": "2025C"
   },
   {
-    "id": "2025A-25",
+    "id": "2025A-22",
     "nim": "47125087",
     "nama": "FATHIR MUHAMMAD",
     "kelasId": "2025A"
@@ -582,7 +510,7 @@
     "kelasId": "2025C"
   },
   {
-    "id": "2025A-26",
+    "id": "2025A-23",
     "nim": "47125089",
     "nama": "Zahra Fatimah",
     "kelasId": "2025A"
@@ -600,13 +528,13 @@
     "kelasId": "2025C"
   },
   {
-    "id": "2025A-27",
+    "id": "2025A-24",
     "nim": "47125092",
     "nama": "RAHMA YANI",
     "kelasId": "2025A"
   },
   {
-    "id": "2025B-24",
+    "id": "2025B-21",
     "nim": "47125094",
     "nama": "Muhammad Fauzi",
     "kelasId": "2025B"
@@ -624,7 +552,7 @@
     "kelasId": "2025D"
   },
   {
-    "id": "2025B-25",
+    "id": "2025B-22",
     "nim": "47125097",
     "nama": "Falisha Qanitah Rahman",
     "kelasId": "2025B"

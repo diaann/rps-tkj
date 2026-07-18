@@ -268,14 +268,16 @@
                                     <%
                                         const cplList = Array.isArray(rps.cpl) ? rps.cpl : (Array.isArray(rps['cpl[]']) ? rps['cpl[]'] : (rps.cpl ? [rps.cpl] : (rps['cpl[]'] ? [rps['cpl[]']] : [])));
                                     %>
-                                    <input type="checkbox" name="cpl[]" value="<%= cpl.code %>"
-                                        data-description="<%= cpl.desc %>" class="mt-1 mr-3" <%= cplList.includes(cpl.code) ? 'checked' : '' %>>
-                                    <label class="cursor-pointer">
-                                        <span class="font-semibold text-blue-600">
-                                            <%= cpl.code %>:
-                                        </span>
-                                        <span class="text-gray-700">
-                                            <%= cpl.desc %>
+                                    <label class="flex items-start cursor-pointer w-full">
+                                        <input type="checkbox" name="cpl[]" value="<%= cpl.code %>"
+                                            data-description="<%= cpl.desc %>" class="mt-1 mr-3" <%= cplList.includes(cpl.code) ? 'checked' : '' %>>
+                                        <span>
+                                            <span class="font-semibold text-blue-600">
+                                                <%= cpl.code %>:
+                                            </span>
+                                            <span class="text-gray-700">
+                                                <%= cpl.desc %>
+                                            </span>
                                         </span>
                                     </label>
                                 </div>

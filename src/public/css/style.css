@@ -386,16 +386,17 @@ textarea.input {
   }
 }
 
-/* Grup dropdown filter (Semester/Tahun/Dosen) -- ditumpuk penuh-lebar di
-   mobile (kalau dipaksa sebaris, tiap select kepepet jadi sempit dan teksnya
-   terpotong, mis. "Semua" tanpa kelanjutannya), baru sebaris di layar lebar. */
+/* Grup dropdown filter (Semester/Tahun/Dosen/Status) -- ditumpuk penuh-lebar
+   di mobile & tablet (kalau dipaksa sebaris di lebar itu, dengan sampai 4
+   select @ min-width 9rem + search box di sampingnya, totalnya overflow --
+   baru sebaris di layar desktop yg cukup lebar). */
 .filter-select-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   width: 100%;
 }
-@media (min-width: 640px) {
+@media (min-width: 1024px) {
   .filter-select-group {
     flex-direction: row;
     width: auto;

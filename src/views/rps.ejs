@@ -190,10 +190,12 @@
                 ];
                 serverCpls.forEach(cpl => { %>
                     <div class="flex items-start p-3 border rounded hover:bg-gray-50">
-                        <input type="checkbox" name="cpl[]" value="<%= cpl.code || cpl.code %>" data-description="<%= cpl.desc || cpl.desc %>" class="mt-1 mr-3">
-                        <label class="cursor-pointer">
-                            <span class="font-semibold text-blue-600"><%= cpl.code %>:</span>
-                            <span class="text-gray-700"><%= cpl.desc %></span>
+                        <label class="flex items-start cursor-pointer w-full">
+                            <input type="checkbox" name="cpl[]" value="<%= cpl.code || cpl.code %>" data-description="<%= cpl.desc || cpl.desc %>" class="mt-1 mr-3">
+                            <span>
+                                <span class="font-semibold text-blue-600"><%= cpl.code %>:</span>
+                                <span class="text-gray-700"><%= cpl.desc %></span>
+                            </span>
                         </label>
                     </div>
                 <% }); %>
