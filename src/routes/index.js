@@ -264,34 +264,6 @@ function canAccessRps(req, rpsItem) {
   return req.session.user.role === 'admin' || String(rpsItem.userId) === String(req.session.user.id);
 }
 
-// status alur validasi RPS: dosen ajukan -> kaprodi ACC/tolak
-const RPS_STATUS = {
-  DRAFT: 'draft',
-  DIAJUKAN: 'diajukan',
-  DISETUJUI: 'disetujui',
-  DITOLAK: 'ditolak'
-};
-
-// RPS yg dibuat sebelum fitur validasi ini ada belum punya field `status` sama sekali,
-// jadi dianggap 'draft' (masih bisa diedit bebas seperti biasa).
-function getRpsStatus(rpsItem) {
-  return (rpsItem && rpsItem.status) ? rpsItem.status : RPS_STATUS.DRAFT;
-}
-
-// RPS terkunci (tidak bisa diedit/dipulihkan) kalau sudah disetujui kaprodi (final),
-// ATAU sedang diajukan & menunggu ACC (supaya isinya tidak berubah diam2 pas direview).
-function isRpsLocked(rpsItem) {
-  const status = getRpsStatus(rpsItem);
-  return status === RPS_STATUS.DISETUJUI || status === RPS_STATUS.DIAJUKAN;
-}
-
-// dipakai di titik2 terkait ACC/tolak, supaya kata "admin" tidak tersebar mentah2 di
-// business logic. saat ini kaprodi = admin (1 prodi saja), tapi kalau nanti role
-// `kaprodi` beneran dipisah, cukup ubah fungsi ini saja.
-function isKaprodiReviewer(user) {
-  return !!(user && user.role === 'admin');
-}
-
 // kamus/label nama field mentah RPS -> label yg enak dibaca, dipakai di halaman Riwayat Revisi
 const FIELD_LABELS = {
   nama_mk: 'Nama Mata Kuliah',
@@ -414,11 +386,7 @@ function getChangedFieldKeys(before, after) {
   // tidak dilewatkan, 1 perubahan pustaka bisa terhitung 2x jadi keliatan "berubah 2 field".
   const ignoredFields = new Set([
     'updated_at', 'updated_by', 'updated_by_username', 'cpl_descriptions',
-    'dosen_pengampu', 'pustaka_utama', 'pustaka_pendukung', 'cpl', 'dosen_pengembang_rps',
-    // field alur validasi (status/ajukan/ACC/tolak) -- perubahan status BUKAN perubahan
-    // konten RPS, jadi jangan ikut dianggap "field berubah" di badge +/-/~ maupun highlight kuning.
-    'status', 'submitted_at', 'submitted_by', 'submitted_by_username', 'submitted_by_role',
-    'decided_at', 'decided_by', 'decided_by_username', 'decided_by_role', 'rejection_note'
+    'dosen_pengampu', 'pustaka_utama', 'pustaka_pendukung', 'cpl', 'dosen_pengembang_rps'
   ]);
   const beforeObj = before || {};
   const afterObj = after || {};
@@ -986,10 +954,6 @@ router.post('/history/rps/:id/revision/:revisionId/revert', isAuthenticated, (re
     return res.status(404).send('RPS not found or you do not have permission to revert it.');
   }
 
-  if (isRpsLocked(rps[index])) {
-    return res.redirect(`/history/rps/${rpsId}?locked=1`);
-  }
-
   const revisions = getRpsRevisions(rpsId);
   const revision = revisions.find(rev => String(rev.id) === String(revisionId));
   if (!revision) {
@@ -1043,10 +1007,6 @@ router.get('/edit-rps/:id', isAuthenticated, (req, res) => {
 
   if (!item) {
     return res.status(404).send('RPS not found or you do not have permission to edit it.');
-  }
-
-  if (isRpsLocked(item)) {
-    return res.redirect(`/history/rps/${rpsId}?locked=1`);
   }
 
   // Load CPLs and config so edit form can use defaults and CPL set
@@ -1107,11 +1067,6 @@ router.post('/edit-rps/:id', isAuthenticated, (req, res) => {
   // cuma pemilik RPS atau admin yg boleh nyimpen perubahan
   if (rps[index].userId !== req.session.user.id && req.session.user.role !== 'admin') {
     return res.status(403).send('You do not have permission to edit this RPS.');
-  }
-
-  // RPS yg lagi diajukan (menunggu ACC) atau sudah disetujui kaprodi tidak boleh diedit lagi
-  if (isRpsLocked(rps[index])) {
-    return res.status(409).json({ success: false, message: 'RPS ini sedang diajukan/menunggu persetujuan atau sudah disetujui KoPS, sehingga tidak bisa diedit.' });
   }
 
   // gabungin data LAMA dgn data BARU dari form (data baru menimpa yg lama kalau ada field yg sama)
@@ -1178,13 +1133,6 @@ router.post('/delete-rps/:id', isAuthenticated, (req, res) => {
   let rps = JSON.parse(rawData);
   const before = rps.length;
 
-  // dosen (bukan admin) tidak boleh hapus RPS yg sedang diajukan/sudah disetujui kaprodi.
-  // admin tetap boleh hapus kapan pun (konsisten dgn admin selalu bisa override).
-  const target = rps.find(r => r.id === id);
-  if (target && req.session.user.role !== 'admin' && isRpsLocked(target)) {
-    return res.json({ success: false, message: 'RPS ini sedang diajukan/menunggu persetujuan atau sudah disetujui KoPS, tidak bisa dihapus.' });
-  }
-
   // Allow admin to delete any RPS, regular users can only delete their own
   if (req.session.user.role === 'admin') {
     rps = rps.filter(r => r.id !== id);
@@ -1246,18 +1194,6 @@ router.post('/duplicate-rps/:id', isAuthenticated, (req, res) => {
     clone.updated_by = currentUser.id;
     clone.updated_by_username = currentUser.username;
 
-    // duplikat selalu mulai lagi dari 'draft', tidak ikut status/lock RPS asalnya
-    clone.status = RPS_STATUS.DRAFT;
-    clone.submitted_at = null;
-    clone.submitted_by = null;
-    clone.submitted_by_username = null;
-    clone.submitted_by_role = null;
-    clone.decided_at = null;
-    clone.decided_by = null;
-    clone.decided_by_username = null;
-    clone.decided_by_role = null;
-    clone.rejection_note = null;
-
     rps.push(clone);
     writeJsonFile(rpsPath, rps);
 
@@ -1271,129 +1207,6 @@ router.post('/duplicate-rps/:id', isAuthenticated, (req, res) => {
     console.error('Duplicate RPS error', e);
     return res.status(500).json({ success: false, message: 'Gagal menduplikasi RPS' });
   }
-});
-
-// ROUTE dosen mengajukan RPS-nya untuk divalidasi/di-ACC kaprodi. dipanggil dari tombol
-// "Ajukan Validasi" di dashboard dosen (/history). setelah diajukan, RPS terkunci dari
-// editan sampai kaprodi memutuskan (ACC atau tolak) -- lihat isRpsLocked().
-router.post('/submit-rps/:id', isAuthenticated, (req, res) => {
-  const rpsId = parseInt(req.params.id, 10);
-  const rps = readJsonFile(rpsPath, []);
-  const index = rps.findIndex(item => parseInt(item.id, 10) === rpsId);
-
-  if (index === -1 || !canAccessRps(req, rps[index])) {
-    return res.status(404).json({ success: false, message: 'RPS tidak ditemukan atau Anda tidak punya izin.' });
-  }
-
-  const status = getRpsStatus(rps[index]);
-  if (status === RPS_STATUS.DIAJUKAN) {
-    return res.status(409).json({ success: false, message: 'RPS sudah diajukan dan sedang menunggu persetujuan KoPS.' });
-  }
-  if (status === RPS_STATUS.DISETUJUI) {
-    return res.status(409).json({ success: false, message: 'RPS sudah disetujui/final, tidak perlu diajukan lagi.' });
-  }
-
-  rps[index].status = RPS_STATUS.DIAJUKAN;
-  rps[index].submitted_at = new Date().toISOString();
-  rps[index].submitted_by = req.session.user.id;
-  rps[index].submitted_by_username = req.session.user.username;
-  rps[index].submitted_by_role = req.session.user.role;
-  rps[index].rejection_note = null;
-
-  writeJsonFile(rpsPath, rps);
-
-  createRpsRevision(rps[index], req.session.user, {
-    action: 'submit_validasi',
-    message: 'Diajukan untuk validasi KoPS'
-  });
-
-  res.json({ success: true, message: 'RPS berhasil diajukan untuk validasi.', id: rpsId, status: RPS_STATUS.DIAJUKAN });
-});
-
-// ROUTE kaprodi (saat ini = admin) menyetujui (ACC) RPS yg sedang diajukan. Ini adalah
-// keputusan FINAL: RPS terkunci permanen (isRpsLocked) & riwayat revisi lama dipangkas
-// (cuma disisakan snapshot ACC ini) supaya storage rps_history.json tidak terus membesar.
-router.post('/admin/rps/approve/:id', isAuthenticated, isAdmin, (req, res) => {
-  if (!isKaprodiReviewer(req.session.user)) {
-    return res.status(403).json({ success: false, message: 'Anda tidak memiliki izin sebagai KoPS.' });
-  }
-
-  const rpsId = parseInt(req.params.id, 10);
-  const rps = readJsonFile(rpsPath, []);
-  const index = rps.findIndex(item => parseInt(item.id, 10) === rpsId);
-
-  if (index === -1) {
-    return res.status(404).json({ success: false, message: 'RPS tidak ditemukan.' });
-  }
-  if (getRpsStatus(rps[index]) !== RPS_STATUS.DIAJUKAN) {
-    return res.status(409).json({ success: false, message: 'RPS ini tidak sedang menunggu persetujuan.' });
-  }
-
-  rps[index].status = RPS_STATUS.DISETUJUI;
-  rps[index].decided_at = new Date().toISOString();
-  rps[index].decided_by = req.session.user.id;
-  rps[index].decided_by_username = req.session.user.username;
-  rps[index].decided_by_role = req.session.user.role;
-  rps[index].rejection_note = null;
-
-  writeJsonFile(rpsPath, rps);
-
-  const accRevision = createRpsRevision(rps[index], req.session.user, {
-    action: 'acc_kaprodi',
-    message: 'Disetujui oleh KoPS'
-  });
-
-  // pangkas riwayat lama RPS ini -- cuma sisakan snapshot ACC yg baru dibuat, biar
-  // rps_history.json tidak terus membengkak dgn snapshot penuh dari tiap revisi lama.
-  // ini HANYA dilakukan saat approve, tidak saat reject (riwayat penuh masih dibutuhkan
-  // selama RPS berpotensi direvisi lagi).
-  const history = readJsonFile(rpsHistoryPath, []);
-  const pruned = history.filter(h => parseInt(h.rps_id, 10) !== rpsId || h.id === accRevision.id);
-  if (pruned.length !== history.length) {
-    writeJsonFile(rpsHistoryPath, pruned);
-  }
-
-  res.json({ success: true, message: 'RPS berhasil disetujui.', id: rpsId, status: RPS_STATUS.DISETUJUI });
-});
-
-// ROUTE kaprodi (saat ini = admin) menolak RPS yg sedang diajukan, dgn catatan alasan
-// wajib diisi. RPS kembali terbuka utk direvisi dosen & bisa diajukan ulang.
-router.post('/admin/rps/reject/:id', isAuthenticated, isAdmin, (req, res) => {
-  if (!isKaprodiReviewer(req.session.user)) {
-    return res.status(403).json({ success: false, message: 'Anda tidak memiliki izin sebagai KoPS.' });
-  }
-
-  const rpsId = parseInt(req.params.id, 10);
-  const catatan = (req.body && req.body.catatan ? String(req.body.catatan) : '').trim();
-  if (!catatan) {
-    return res.status(400).json({ success: false, message: 'Catatan alasan penolakan wajib diisi.' });
-  }
-
-  const rps = readJsonFile(rpsPath, []);
-  const index = rps.findIndex(item => parseInt(item.id, 10) === rpsId);
-
-  if (index === -1) {
-    return res.status(404).json({ success: false, message: 'RPS tidak ditemukan.' });
-  }
-  if (getRpsStatus(rps[index]) !== RPS_STATUS.DIAJUKAN) {
-    return res.status(409).json({ success: false, message: 'RPS ini tidak sedang menunggu persetujuan.' });
-  }
-
-  rps[index].status = RPS_STATUS.DITOLAK;
-  rps[index].decided_at = new Date().toISOString();
-  rps[index].decided_by = req.session.user.id;
-  rps[index].decided_by_username = req.session.user.username;
-  rps[index].decided_by_role = req.session.user.role;
-  rps[index].rejection_note = catatan;
-
-  writeJsonFile(rpsPath, rps);
-
-  createRpsRevision(rps[index], req.session.user, {
-    action: 'tolak_kaprodi',
-    message: `Ditolak: ${catatan}`
-  });
-
-  res.json({ success: true, message: 'RPS ditolak dan dikembalikan ke dosen untuk direvisi.', id: rpsId, status: RPS_STATUS.DITOLAK });
 });
 
 // Admin: manage CPL selection and defaults (penjamin_mutu, koordinator)
@@ -1657,6 +1470,16 @@ router.get('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
     ? String(req.query.huruf).trim().toUpperCase()
     : null;
 
+  // filter pencarian nama & NIM, cocok sebagian (substring) & ga peduli besar/kecil huruf.
+  // jalan bareng2 sama filter tingkat/huruf di atas (semuanya AND, bukan salah satu aja)
+  const namaFilter = req.query.nama && String(req.query.nama).trim() !== ''
+    ? String(req.query.nama).trim()
+    : null;
+
+  const nimFilter = req.query.nim && String(req.query.nim).trim() !== ''
+    ? String(req.query.nim).trim()
+    : null;
+
   // ambil huruf kelas dari kelasId, misal "2025A" -> "A". dipakai baik utk nge-filter
   // maupun utk bikin daftar pilihan huruf yg ada di dropdown.
   function getHurufFromKelasId(kelasId) {
@@ -1676,6 +1499,15 @@ router.get('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
     filteredMahasiswa = filteredMahasiswa.filter(m => getHurufFromKelasId(m.kelasId) === hurufFilter);
   }
 
+  if (namaFilter) {
+    const namaLower = namaFilter.toLowerCase();
+    filteredMahasiswa = filteredMahasiswa.filter(m => String(m.nama || '').toLowerCase().includes(namaLower));
+  }
+
+  if (nimFilter) {
+    filteredMahasiswa = filteredMahasiswa.filter(m => String(m.nim || '').includes(nimFilter));
+  }
+
   // daftar tingkat unik yg ada di data kelas, buat isi pilihan dropdown filter
   const tingkatOptions = [...new Set(kelas.map(k => Number(k.tingkat)).filter(t => !Number.isNaN(t)))]
     .sort((a, b) => a - b);
@@ -1683,6 +1515,11 @@ router.get('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
   // daftar huruf kelas unik yg ada di data kelas, buat isi pilihan dropdown filter
   const hurufOptions = [...new Set(kelas.map(k => getHurufFromKelasId(k.id)).filter(Boolean))]
     .sort();
+
+  // pilihan huruf kelas tetap (bukan cuma yg sudah ada) buat form tambah mahasiswa,
+  // supaya admin bisa langsung bikin kelas baru misal "2026C" walau kelas C
+  // utk angkatan itu belum pernah ada di kelas.json
+  const hurufKelasChoices = ['A', 'B', 'C', 'D'];
 
   const sortedMahasiswa = sortMahasiswa(filteredMahasiswa);
   const totalPages = Math.max(1, Math.ceil(sortedMahasiswa.length / pageSize));
@@ -1703,24 +1540,39 @@ router.get('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
     tingkatFilter,
     tingkatOptions,
     hurufFilter,
-    hurufOptions
+    hurufOptions,
+    hurufKelasChoices,
+    namaFilter,
+    nimFilter
   });
 });
 
 router.post('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
   const nim = String(req.body.nim || '').trim();
   const nama = String(req.body.nama || '').trim();
-  const kelasId = String(req.body.kelasId || '').trim();
+  const angkatan = String(req.body.angkatan || '').trim();
+  const huruf = String(req.body.huruf || '').trim().toUpperCase();
 
-  if (!nim || !nama || !kelasId) {
+  // validasi angkatan harus 4 digit tahun, huruf harus huruf doang (misal "A", "B")
+  if (!nim || !nama || !/^\d{4}$/.test(angkatan) || !/^[A-Za-z]+$/.test(huruf)) {
     return res.redirect('/admin/mahasiswa?error=missing');
   }
+
+  const kelasId = `${angkatan}${huruf}`;
 
   const mahasiswa = readJsonFile(mahasiswaPath, []);
   const exists = mahasiswa.some(item => String(item.nim) === nim);
 
   if (exists) {
     return res.redirect('/admin/mahasiswa?error=duplicate');
+  }
+
+  // kalau kelasId gabungan angkatan+huruf ini belum ada di kelas.json, bikin otomatis
+  // (sama kayak logic yg dipakai di import Excel)
+  const kelas = readJsonFile(kelasPath, []);
+  if (!kelas.some(k => String(k.id) === kelasId)) {
+    kelas.push({ id: kelasId, nama: kelasId, tingkat: parseInt(angkatan, 10) || 0 });
+    writeJsonFile(kelasPath, kelas);
   }
 
   const id = generateStudentId(mahasiswa, kelasId);
@@ -1861,11 +1713,15 @@ router.post('/admin/mahasiswa/update/:id', isAuthenticated, isAdmin, (req, res) 
   const currentId = String(req.params.id || '').trim();
   const nim = String(req.body.nim || '').trim();
   const nama = String(req.body.nama || '').trim();
-  const kelasId = String(req.body.kelasId || '').trim();
+  const angkatan = String(req.body.angkatan || '').trim();
+  const huruf = String(req.body.huruf || '').trim().toUpperCase();
 
-  if (!nim || !nama || !kelasId) {
+  // validasi angkatan harus 4 digit tahun, huruf harus huruf doang (misal "A", "B")
+  if (!nim || !nama || !/^\d{4}$/.test(angkatan) || !/^[A-Za-z]+$/.test(huruf)) {
     return res.redirect('/admin/mahasiswa?error=missing');
   }
+
+  const kelasId = `${angkatan}${huruf}`;
 
   const mahasiswa = readJsonFile(mahasiswaPath, []);
   const index = mahasiswa.findIndex(item => String(item.id) === currentId);
@@ -1881,6 +1737,14 @@ router.post('/admin/mahasiswa/update/:id', isAuthenticated, isAdmin, (req, res) 
 
   if (duplicate) {
     return res.redirect('/admin/mahasiswa?error=duplicate');
+  }
+
+  // kalau kelasId gabungan angkatan+huruf ini belum ada di kelas.json, bikin otomatis
+  // (sama kayak logic di route tambah mahasiswa & import Excel)
+  const kelas = readJsonFile(kelasPath, []);
+  if (!kelas.some(k => String(k.id) === kelasId)) {
+    kelas.push({ id: kelasId, nama: kelasId, tingkat: parseInt(angkatan, 10) || 0 });
+    writeJsonFile(kelasPath, kelas);
   }
 
   const generatedId = generateStudentId(mahasiswa, kelasId, mahasiswa[index].id);

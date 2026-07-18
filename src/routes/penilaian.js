@@ -69,10 +69,16 @@ function tahunAjaranSaatIni() {
 
 // tingkat = selisih tahun ajaran skrg dgn tahun angkatan, +1.
 // angkatan 2025 di tahun ajaran 2025 -> tingkat 1, angkatan 2024 -> tingkat 2, dst.
+// di-cap 1-4 (S1 cuma 4 tingkat): angkatan yg lebih tua dari tingkat 4 (misal krn
+// telat lulus/tinggal kelas & belum dipindahkan manual ke kelasId yg baru) tetap
+// dianggap tingkat 4, bukan hilang dari daftar krn angkanya kelewat dari yg
+// dicari tingkatFromSemester() (yg maksimal cuma sampai 4).
 function tingkatFromAngkatan(angkatan) {
   if (!angkatan) return null;
   const tingkat = tahunAjaranSaatIni() - angkatan + 1;
-  return tingkat < 1 ? 1 : tingkat;
+  if (tingkat < 1) return 1;
+  if (tingkat > 4) return 4;
+  return tingkat;
 }
 
 // ambil huruf kelas (section) dari belakang kelasId, contoh "2025A" -> "A", "2024B" -> "B"
@@ -212,7 +218,10 @@ function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
         const hasDefinition = !!(component.bobot || component.name);
         if (!hasDefinition) return;
 
-        const fieldName = `nilai[${sub.globalNumber}][${m.id}][${component.key}]`;
+        // dipakai NIM (bukan m.id) sbg kunci penyimpanan nilai, krn m.id ikut berubah
+        // kalau mahasiswa dipindah kelasId (misal krn tinggal kelas). NIM tetap sama
+        // apapun kelasnya, jadi nilai yg udah diinput ga ke-orphan pas dipindah.
+        const fieldName = `nilai[${sub.globalNumber}][${m.nim}][${component.key}]`;
         const rawValue = savedValues[fieldName];
         const value = parseFloat(rawValue);
         if (!Number.isNaN(value)) {
@@ -223,7 +232,7 @@ function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
 
       (sub.lainnya || []).forEach((item, lIdx) => {
         if (!item.bobot) return;
-        const fieldName = `nilai[${sub.globalNumber}][${m.id}][lainnya][${lIdx}]`;
+        const fieldName = `nilai[${sub.globalNumber}][${m.nim}][lainnya][${lIdx}]`;
         const rawValue = savedValues[fieldName];
         const value = parseFloat(rawValue);
         if (!Number.isNaN(value)) {
@@ -395,7 +404,7 @@ router.get('/penilaian/mk/:rpsId/kelas/:kelasId', isAuthenticated, (req, res) =>
 });
 
 // ROUTE 5. proses submit form nilai. field-nya dikirim dgn nama kayak:
-// nilai[3][mhs007][kuis]  ->  artinya nilai Kuis, Sub-CPMK nomor 3, mahasiswa id "mhs007"
+// nilai[3][20250101][kuis]  ->  artinya nilai Kuis, Sub-CPMK nomor 3, mahasiswa NIM "20250101"
 router.post('/penilaian/mk/:rpsId/kelas/:kelasId/save', isAuthenticated, (req, res) => {
   const rps = readJsonFile(rpsPath, []);
   const item = rps.find(r => String(r.id) === String(req.params.rpsId));
