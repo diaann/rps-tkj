@@ -63,11 +63,16 @@
           <input class="input" name="nama" placeholder="Nama Lengkap" required>
         </div>
         <div>
+          <label class="label">Angkatan</label>
+          <input class="input" type="number" name="angkatan" placeholder="2025" min="2000" max="2099" required>
+        </div>
+        <div>
           <label class="label">Kelas</label>
-          <select class="input" name="kelasId" required>
-            <% const kelasList = (typeof kelas !== 'undefined' && Array.isArray(kelas)) ? kelas : []; %>
-            <% kelasList.forEach(function(item) { %>
-              <option value="<%= item.id %>"><%= item.nama %></option>
+          <select class="input" name="huruf" required>
+            <option value="">-- Pilih Kelas --</option>
+            <% const hurufKelasChoicesAdd = (typeof hurufKelasChoices !== 'undefined' && Array.isArray(hurufKelasChoices)) ? hurufKelasChoices : ['A', 'B', 'C', 'D']; %>
+            <% hurufKelasChoicesAdd.forEach(function(h) { %>
+              <option value="<%= h %>"><%= h %></option>
             <% }); %>
           </select>
         </div>
@@ -97,7 +102,7 @@
     <!-- Form daftar Mahasiswa-->
     <h3 class="font-semibold mb-3">Daftar Mahasiswa</h3>
 
-    <!-- Filter berdasarkan Angkatan & Kelas -->
+    <!-- Filter berdasarkan Angkatan, Kelas, Nama & NIM -->
     <div class="flex flex-wrap items-center gap-2 mb-4">
       <form action="/admin/mahasiswa" method="GET" class="flex flex-wrap items-center gap-2">
         <label class="label mb-0">Angkatan</label>
@@ -118,14 +123,22 @@
           <% }); %>
         </select>
 
-        <noscript><button class="btn-secondary text-xs" type="submit">Terapkan</button></noscript>
+        <label class="label mb-0">Nama</label>
+        <input class="input" type="text" name="nama" placeholder="Cari nama..." value="<%= (typeof namaFilter !== 'undefined' && namaFilter) ? namaFilter : '' %>">
+
+        <label class="label mb-0">NIM</label>
+        <input class="input" type="text" name="nim" placeholder="Cari NIM..." value="<%= (typeof nimFilter !== 'undefined' && nimFilter) ? nimFilter : '' %>">
+
+        <button class="btn-secondary text-xs" type="submit">Cari</button>
       </form>
     </div>
 
-    <!-- dipakai supaya link pagination di bawah tetap bawa filter angkatan & kelas yg aktif -->
+    <!-- dipakai supaya link pagination di bawah tetap bawa filter angkatan, kelas, nama & nim yg aktif -->
     <% const filterQS =
       ((typeof tingkatFilter !== 'undefined' && tingkatFilter) ? '&tingkat=' + tingkatFilter : '') +
-      ((typeof hurufFilter !== 'undefined' && hurufFilter) ? '&huruf=' + hurufFilter : '');
+      ((typeof hurufFilter !== 'undefined' && hurufFilter) ? '&huruf=' + hurufFilter : '') +
+      ((typeof namaFilter !== 'undefined' && namaFilter) ? '&nama=' + encodeURIComponent(namaFilter) : '') +
+      ((typeof nimFilter !== 'undefined' && nimFilter) ? '&nim=' + encodeURIComponent(nimFilter) : '');
     %>
 
     <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
@@ -144,8 +157,24 @@
             <a href="/admin/mahasiswa?page=<%= (currentPage || 1) - 1 %><%= filterQS %>" class="px-3 py-1 border rounded hover:bg-gray-100">Sebelumnya</a>
           <% } %>
 
-          <% for (let i = 1; i <= totalPages; i++) { %>
+          <!-- Batasi tombol nomor halaman maksimal 5, digeser mengikuti halaman aktif -->
+          <% const maxPageButtons = 5; %>
+          <% let windowStart = Math.max(1, pageNumber - Math.floor(maxPageButtons / 2)); %>
+          <% let windowEnd = Math.min(totalPages, windowStart + maxPageButtons - 1); %>
+          <% windowStart = Math.max(1, windowEnd - maxPageButtons + 1); %>
+
+          <% if (windowStart > 1) { %>
+            <a href="/admin/mahasiswa?page=1<%= filterQS %>" class="px-3 py-1 border rounded hover:bg-gray-100">1</a>
+            <% if (windowStart > 2) { %><span class="px-1 text-gray-400">...</span><% } %>
+          <% } %>
+
+          <% for (let i = windowStart; i <= windowEnd; i++) { %>
             <a href="/admin/mahasiswa?page=<%= i %><%= filterQS %>" class="px-3 py-1 border rounded <%= i === (currentPage || 1) ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100' %>"><%= i %></a>
+          <% } %>
+
+          <% if (windowEnd < totalPages) { %>
+            <% if (windowEnd < totalPages - 1) { %><span class="px-1 text-gray-400">...</span><% } %>
+            <a href="/admin/mahasiswa?page=<%= totalPages %><%= filterQS %>" class="px-3 py-1 border rounded hover:bg-gray-100"><%= totalPages %></a>
           <% } %>
 
           <% if ((currentPage || 1) < totalPages) { %>
@@ -160,6 +189,12 @@
             <% } %>
             <% if (typeof hurufFilter !== 'undefined' && hurufFilter) { %>
               <input type="hidden" name="huruf" value="<%= hurufFilter %>">
+            <% } %>
+            <% if (typeof namaFilter !== 'undefined' && namaFilter) { %>
+              <input type="hidden" name="nama" value="<%= namaFilter %>">
+            <% } %>
+            <% if (typeof nimFilter !== 'undefined' && nimFilter) { %>
+              <input type="hidden" name="nim" value="<%= nimFilter %>">
             <% } %>
             <button type="submit" class="px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200">Go</button>
           </form>
@@ -210,11 +245,16 @@
                           <input class="input" name="nama" value="<%= item.nama %>" required>
                         </div>
                         <div>
+                          <label class="label">Angkatan</label>
+                          <input class="input" type="number" name="angkatan" value="<%= kelasMatch ? kelasMatch[1] : '' %>" min="2000" max="2099" required>
+                        </div>
+                        <div>
                           <label class="label">Kelas</label>
-                          <select class="input" name="kelasId" required>
-                            <% const kelasListEdit = (typeof kelas !== 'undefined' && Array.isArray(kelas)) ? kelas : []; %>
-                            <% kelasListEdit.forEach(function(k) { %>
-                              <option value="<%= k.id %>" <%= item.kelasId === k.id ? 'selected' : '' %>><%= k.nama %></option>
+                          <select class="input" name="huruf" required>
+                            <option value="">-- Pilih Kelas --</option>
+                            <% const hurufKelasChoicesEdit = (typeof hurufKelasChoices !== 'undefined' && Array.isArray(hurufKelasChoices)) ? hurufKelasChoices : ['A', 'B', 'C', 'D']; %>
+                            <% hurufKelasChoicesEdit.forEach(function(h) { %>
+                              <option value="<%= h %>" <%= (kelasMatch && kelasMatch[2] === h) ? 'selected' : '' %>><%= h %></option>
                             <% }); %>
                           </select>
                         </div>
@@ -246,8 +286,24 @@
             <a href="/admin/mahasiswa?page=<%= (currentPage || 1) - 1 %><%= filterQS %>" class="px-3 py-1 border rounded hover:bg-gray-100">Sebelumnya</a>
           <% } %>
 
-          <% for (let i = 1; i <= totalPages; i++) { %>
+          <!-- Batasi tombol nomor halaman maksimal 5, digeser mengikuti halaman aktif -->
+          <% const maxPageButtonsBottom = 5; %>
+          <% let windowStartBottom = Math.max(1, pageNumberBottom - Math.floor(maxPageButtonsBottom / 2)); %>
+          <% let windowEndBottom = Math.min(totalPages, windowStartBottom + maxPageButtonsBottom - 1); %>
+          <% windowStartBottom = Math.max(1, windowEndBottom - maxPageButtonsBottom + 1); %>
+
+          <% if (windowStartBottom > 1) { %>
+            <a href="/admin/mahasiswa?page=1<%= filterQS %>" class="px-3 py-1 border rounded hover:bg-gray-100">1</a>
+            <% if (windowStartBottom > 2) { %><span class="px-1 text-gray-400">...</span><% } %>
+          <% } %>
+
+          <% for (let i = windowStartBottom; i <= windowEndBottom; i++) { %>
             <a href="/admin/mahasiswa?page=<%= i %><%= filterQS %>" class="px-3 py-1 border rounded <%= i === (currentPage || 1) ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-100' %>"><%= i %></a>
+          <% } %>
+
+          <% if (windowEndBottom < totalPages) { %>
+            <% if (windowEndBottom < totalPages - 1) { %><span class="px-1 text-gray-400">...</span><% } %>
+            <a href="/admin/mahasiswa?page=<%= totalPages %><%= filterQS %>" class="px-3 py-1 border rounded hover:bg-gray-100"><%= totalPages %></a>
           <% } %>
 
           <% if ((currentPage || 1) < totalPages) { %>
@@ -261,6 +317,12 @@
             <% } %>
             <% if (typeof hurufFilter !== 'undefined' && hurufFilter) { %>
               <input type="hidden" name="huruf" value="<%= hurufFilter %>">
+            <% } %>
+            <% if (typeof namaFilter !== 'undefined' && namaFilter) { %>
+              <input type="hidden" name="nama" value="<%= namaFilter %>">
+            <% } %>
+            <% if (typeof nimFilter !== 'undefined' && nimFilter) { %>
+              <input type="hidden" name="nim" value="<%= nimFilter %>">
             <% } %>
             <button type="submit" class="px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200">Go</button>
           </form>
