@@ -578,7 +578,7 @@ router.get('/admin', isAuthenticated, isAdmin, (req, res) => {
   const users = JSON.parse(rawData);
   // Tampilkan semua user kecuali admin utama
   const filtered = users.filter(u => u.role !== 'admin' || u.email !== 'admin@example.com');
-  res.render('admin', { title: 'Admin - Validasi User', user: req.session.user, users: filtered });
+  res.render('admin', { title: 'Admin - Validasi User', user: req.session.user, users: filtered, req });
 });
 
 // Halaman admin: kelola RPS
@@ -660,6 +660,26 @@ router.post('/admin/change-role/:id', isAuthenticated, isAdmin, (req, res) => {
     return res.json({ success: true, message: 'Role berhasil diubah', userId, username, oldRole, newRole: role });
   }
   res.redirect('/admin');
+});
+
+// Hapus user (hanya admin, tidak boleh hapus akun sendiri yg sedang login)
+router.post('/admin/users/delete/:id', isAuthenticated, isAdmin, (req, res) => {
+  const userId = parseInt(req.params.id, 10);
+
+  if (req.session.user.id === userId) {
+    return res.redirect('/admin?error=self-delete');
+  }
+
+  const rawData = fs.readFileSync(usersPath);
+  const users = JSON.parse(rawData);
+  const filtered = users.filter(u => u.id !== userId);
+
+  if (filtered.length === users.length) {
+    return res.redirect('/admin?error=not-found');
+  }
+
+  fs.writeFileSync(usersPath, JSON.stringify(filtered, null, 2));
+  res.redirect('/admin?deleted=1');
 });
 
 // Register page

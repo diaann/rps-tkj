@@ -233,6 +233,19 @@
 </div>
 
 <script>
+// Cari label yg berhubungan dgn sebuah field, buat dipakai di pesan peringatan
+// supaya user tau persis field mana yg dimaksud (bukan cuma "Step X blm lengkap").
+function findFieldLabel(el) {
+    if (el.id) {
+        const byFor = document.querySelector(`label[for="${el.id}"]`);
+        if (byFor) return byFor.textContent.trim();
+    }
+    const wrapper = el.closest('div');
+    const label = wrapper ? wrapper.querySelector('label') : null;
+    if (label) return label.textContent.trim();
+    return el.name || 'field ini';
+}
+
 // Validasi wajib isi step 1 sebelum next
 function validateStep1AndNext() {
     const requiredFields = [
@@ -241,17 +254,19 @@ function validateStep1AndNext() {
         'dosen_pengampu[]', 'penjamin_mutu', 'dosen_pengembang_rps[]', 'koordinator_program_studi'
     ];
     let valid = true;
+    let firstInvalid = null;
     for (const name of requiredFields) {
         let el = document.getElementsByName(name)[0];
         if (el && !el.value) {
             el.classList.add('ring-2', 'ring-red-400');
             valid = false;
+            if (!firstInvalid) firstInvalid = el;
         } else if (el) {
             el.classList.remove('ring-2', 'ring-red-400');
         }
     }
     if (!valid) {
-        alert('Mohon lengkapi semua data pada Step 1 sebelum melanjutkan!');
+        window.showFieldWarning(`Mohon lengkapi kolom "${findFieldLabel(firstInvalid)}" sebelum melanjutkan!`, firstInvalid);
         return;
     }
     nextStep();
@@ -261,17 +276,19 @@ function validateStep1AndNext() {
 function validateStep2AndNext() {
     const required = ['deskripsi_singkat_mk', 'materi_kajian', 'pustaka_utama[]'];
     let valid = true;
+    let firstInvalid = null;
     for (const name of required) {
         let el = document.getElementsByName(name)[0];
         if (el && !el.value) {
             el.classList.add('ring-2', 'ring-red-400');
             valid = false;
+            if (!firstInvalid) firstInvalid = el;
         } else if (el) {
             el.classList.remove('ring-2', 'ring-red-400');
         }
     }
     if (!valid) {
-        alert('Mohon lengkapi semua data pada Step 2 sebelum melanjutkan!');
+        window.showFieldWarning(`Mohon lengkapi kolom "${findFieldLabel(firstInvalid)}" sebelum melanjutkan!`, firstInvalid);
         return;
     }
     nextStep();
@@ -283,7 +300,7 @@ function validateStep3AndNext() {
     const cplChecks = document.querySelectorAll('input[name="cpl[]"]');
     const anyChecked = Array.from(cplChecks).some(cb => cb.checked);
     if (!anyChecked) {
-        alert('Mohon pilih minimal satu CPL pada Step 3 sebelum melanjutkan!');
+        window.showFieldWarning('Mohon pilih minimal satu CPL pada Step 3 sebelum melanjutkan!', document.getElementById('step-3'));
         return;
     }
     nextStep();
@@ -295,7 +312,7 @@ function validateStep4AndNext() {
     const all = Array.from(document.querySelectorAll('[id^="CPMK"]'));
     const cpmkElements = all.filter(el => (/^CPMK\d+$/).test(el.id));
     if (cpmkElements.length === 0) {
-        alert('Mohon tambahkan minimal satu CPMK pada Step 4 sebelum melanjutkan!');
+        window.showFieldWarning('Mohon tambahkan minimal satu CPMK pada Step 4 sebelum melanjutkan!', document.getElementById('step-4'));
         return;
     }
 
@@ -308,10 +325,7 @@ function validateStep4AndNext() {
             currentStep = 4;
             showStep(currentStep);
             const target = textarea || cpmkEl;
-            if (target && typeof target.scrollIntoView === 'function') {
-                setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
-            }
-            alert(`Mohon isi deskripsi untuk ${cpmkEl.id} pada Step 4 sebelum melanjutkan!`);
+            setTimeout(() => window.showFieldWarning(`Mohon isi deskripsi untuk ${cpmkEl.id} pada Step 4 sebelum melanjutkan!`, target), 100);
             return;
         }
     }
@@ -333,10 +347,7 @@ function validateStep5AndNext() {
             currentStep = 5;
             showStep(currentStep);
             const target = document.getElementById(`sub-cpmk-section-${id}`) || document.getElementById(`cpmk-list-${id}`) || cpmkEl;
-            if (target && typeof target.scrollIntoView === 'function') {
-                setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
-            }
-            alert(`Mohon tambahkan minimal satu Sub-CPMK untuk ${id} pada Step 5 sebelum menyimpan!`);
+            setTimeout(() => window.showFieldWarning(`Mohon tambahkan minimal satu Sub-CPMK untuk ${id} pada Step 5 sebelum menyimpan!`, target), 100);
             return false;
         }
     }

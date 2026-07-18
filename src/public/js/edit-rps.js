@@ -506,13 +506,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const selectedCpls = Array.from(cplCheckboxes).filter(cb => cb.checked);
         if (selectedCpls.length === 0) {
-            alert('Mohon pilih minimal satu CPL sebelum memperbarui RPS.');
+            const cplTarget = cplCheckboxes[0] ? cplCheckboxes[0].closest('fieldset') : null;
+            window.showFieldWarning('Mohon pilih minimal satu CPL sebelum memperbarui RPS.', cplTarget);
             return false;
         }
 
         const cpmkItems = Array.from(document.querySelectorAll('.cpmk-item'));
         if (cpmkItems.length === 0) {
-            alert('Mohon tambahkan minimal satu CPMK sebelum memperbarui RPS.');
+            window.showFieldWarning('Mohon tambahkan minimal satu CPMK sebelum memperbarui RPS.', document.getElementById('cpmk-container'));
             return false;
         }
 
@@ -521,11 +522,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const textarea = cpmkItem.querySelector('textarea[name^="cpmk["][name$="[deskripsi]"]');
 
             if (!textarea || !textarea.value.trim()) {
-                if (textarea && typeof textarea.scrollIntoView === 'function') {
-                    setTimeout(() => textarea.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
-                    textarea.focus();
-                }
-                alert(`Mohon isi deskripsi untuk ${cpmkId || 'CPMK'} sebelum memperbarui RPS.`);
+                window.showFieldWarning(`Mohon isi deskripsi untuk ${cpmkId || 'CPMK'} sebelum memperbarui RPS.`, textarea || cpmkItem);
                 return false;
             }
 
@@ -533,10 +530,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const subCpmkItems = subList ? subList.querySelectorAll('[data-subcpmk-index]') : [];
             if (!subList || subCpmkItems.length === 0) {
                 const target = subList || cpmkItem;
-                if (target && typeof target.scrollIntoView === 'function') {
-                    setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
-                }
-                alert(`Mohon tambahkan minimal satu Sub-CPMK untuk ${cpmkId || 'CPMK'} sebelum memperbarui RPS.`);
+                window.showFieldWarning(`Mohon tambahkan minimal satu Sub-CPMK untuk ${cpmkId || 'CPMK'} sebelum memperbarui RPS.`, target);
                 return false;
             }
         }
@@ -592,7 +586,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (typeof validateModalitasForAll === 'function') {
                     const vm = validateModalitasForAll();
                     if (!vm.ok) {
-                        alert(vm.message);
+                        window.showFieldWarning(vm.message, vm.targetEl);
                         return;
                     }
                 }
@@ -652,7 +646,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     setTimeout(() => {
                         if (successIndicator && successIndicator.parentNode) successIndicator.remove();
-                        window.location.href = '/history?updated=1';
+                        window.location.href = `/history/view/${data.id}?updated=1`;
                     }, 1200);
                 } else {
                     throw new Error(data.message || 'Gagal memperbarui RPS');

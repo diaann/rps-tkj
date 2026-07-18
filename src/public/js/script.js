@@ -20,6 +20,38 @@ const steps = document.querySelectorAll('.step');
 let cpmkCounter = 0;
 let subCpmkCounter = 0;
 
+// Peringatan validasi field (dulu pakai alert() bawaan browser -- ganggu krn
+// memblokir & ga ngarahin ke field yg salah). Sekarang: field-nya di-highlight,
+// di-scroll & difokus, pesannya lewat toast SweetAlert2 yg ga memblokir apa2.
+if (!window.__showFieldWarningInstalled) {
+    window.__showFieldWarningInstalled = true;
+
+    window.showFieldWarning = function(message, targetEl) {
+        if (targetEl) {
+            targetEl.classList.add('ring-2', 'ring-red-400');
+            if (typeof targetEl.scrollIntoView === 'function') {
+                targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            setTimeout(() => {
+                if (typeof targetEl.focus === 'function') targetEl.focus();
+            }, 300);
+        }
+        if (typeof Swal !== 'undefined' && Swal.fire) {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'warning',
+                title: message,
+                showConfirmButton: false,
+                timer: 3500,
+                timerProgressBar: true
+            });
+        } else {
+            alert(message);
+        }
+    };
+}
+
 // Input bobot asesmen menerima koma maupun titik sebagai pemisah desimal
 // (banyak dosen terbiasa menulis "4,5" ala format Indonesia). Field-nya
 // bertipe text (bukan number) supaya browser tidak menolak koma sebelum
@@ -62,19 +94,11 @@ if (!window.__bobotHelpersInstalled) {
         const inputs = form.querySelectorAll('.bobot-input');
         for (const input of inputs) {
             if (!window.isValidBobotValue(input.value)) {
-                if (typeof input.scrollIntoView === 'function') {
-                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-                input.focus();
-                alert('Bobot asesmen harus berupa angka 0-100 (boleh pakai koma atau titik untuk desimal, contoh: 4,5 atau 4.5).');
+                window.showFieldWarning('Bobot asesmen harus berupa angka 0-100 (boleh pakai koma atau titik untuk desimal, contoh: 4,5 atau 4.5).', input);
                 return false;
             }
             if (input.hasAttribute('required') && input.value.trim() === '') {
-                if (typeof input.scrollIntoView === 'function') {
-                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-                input.focus();
-                alert('Mohon isi Bobot Penilaian sebelum menyimpan.');
+                window.showFieldWarning('Mohon isi Bobot Penilaian sebelum menyimpan.', input);
                 return false;
             }
         }
@@ -181,19 +205,19 @@ function validateModalitasForAll() {
             const daringCb = item.querySelector(`input[name="sub_cpmk[${cpmkId}][${idx}][modalitas][]"][value="daring"]`);
             const anyChecked = (luringCb && luringCb.checked) || (daringCb && daringCb.checked);
             if (!anyChecked) {
-                return { ok: false, message: `Mohon pilih minimal satu Modalitas untuk Sub-CPMK ${cpmkId}#${idx}` };
+                return { ok: false, message: `Mohon pilih minimal satu Modalitas untuk Sub-CPMK ${cpmkId}#${idx}`, targetEl: luringCb || daringCb || item };
             }
             // if luring selected, ensure metode_luring (if displayed) has value
             if (luringCb && luringCb.checked) {
                 const mt = item.querySelector(`#metode-luring-${cpmkId}-${idx} textarea`);
                 if (mt && !mt.value.trim()) {
-                    return { ok: false, message: `Mohon isi Metode Pembelajaran Luring untuk Sub-CPMK ${cpmkId}#${idx}` };
+                    return { ok: false, message: `Mohon isi Metode Pembelajaran Luring untuk Sub-CPMK ${cpmkId}#${idx}`, targetEl: mt };
                 }
             }
             if (daringCb && daringCb.checked) {
                 const mt2 = item.querySelector(`#metode-daring-${cpmkId}-${idx} textarea`);
                 if (mt2 && !mt2.value.trim()) {
-                    return { ok: false, message: `Mohon isi Metode Pembelajaran Daring untuk Sub-CPMK ${cpmkId}#${idx}` };
+                    return { ok: false, message: `Mohon isi Metode Pembelajaran Daring untuk Sub-CPMK ${cpmkId}#${idx}`, targetEl: mt2 };
                 }
             }
         }
@@ -1074,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const vm = validateModalitasForAll();
                     if (!vm.ok) {
                         e.preventDefault();
-                        alert(vm.message);
+                        window.showFieldWarning(vm.message, vm.targetEl);
                         return;
                     }
                 }
