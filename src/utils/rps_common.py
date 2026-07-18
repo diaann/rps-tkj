@@ -570,8 +570,11 @@ def extract_assessment_rows(all_tables, assume_in_section=False):
                 # jadi kedua regex musti punya lookahead simetris biar masing2 berhenti pas ketemu
                 # penanda satunya, bukan "nyerobot" isi bagian lain (dulu mp_match nyerobot smp akhir
                 # teks & ikut makan "BP: ..." kalau BP-nya muncul belakangan).
-                bp_match = re.search(r"BP\s*:?\s*(.*?)(?=(?:[,;/\n]\s*)?MP\s*:|$)", bp_mp_text, re.I | re.S)
-                mp_match = re.search(r"MP\s*:?\s*(.*?)(?=(?:[,;/\n]\s*)?BP\s*:|$)", bp_mp_text, re.I | re.S)
+                # "BP"/"MP" wajib diikuti titik dua & tidak boleh nempel di tengah kata lain
+                # (mis. kata "Kelompok" mengandung huruf "mp" nyambung, dulu kesalah-baca sbg
+                # penanda "MP:" trus nyomot sisa hurufnya "ok" doang sbg isi metode pembelajaran).
+                bp_match = re.search(r"(?<![A-Za-z])BP\s*:\s*(.*?)(?=(?:[,;/\n]\s*)?(?<![A-Za-z])MP\s*:|$)", bp_mp_text, re.I | re.S)
+                mp_match = re.search(r"(?<![A-Za-z])MP\s*:\s*(.*?)(?=(?:[,;/\n]\s*)?(?<![A-Za-z])BP\s*:|$)", bp_mp_text, re.I | re.S)
                 bentuk = clean(bp_match.group(1)).strip(" ,;/-") if bp_match else ""
                 metode = clean(mp_match.group(1)).strip(" ,;/-") if mp_match else ""
                 if bentuk:
