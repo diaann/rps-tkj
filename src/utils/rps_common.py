@@ -79,6 +79,13 @@ def find_authoritative_subcpmk_owners(all_tables):
                 if not cell:
                     continue
                 for m in pattern.finditer(cell):
+                    # "Sub-CPMK"/"SubCPMK" itu sendiri MENGANDUNG substring "CPMK", jadi kalau
+                    # kebetulan ada 2 kode Sub-CPMK numpuk di 1 sel (mis. "Sub-CPMK 7\nSub-CPMK 8"),
+                    # pattern di atas bisa salah kira "CPMK" dari kata "Sub-CPMK 7" sbg kode CPMK
+                    # asli nomor 7. cek 6 karakter sebelum match, skip kalau ternyata itu "sub-"/"sub".
+                    preceding = cell[max(0, m.start() - 6):m.start()]
+                    if re.search(r"sub[\s\-]*$", preceding, re.I):
+                        continue
                     cpmk_id = pad_code("CPMK", m.group(1))
                     sub_num = int(m.group(2))
                     owners.setdefault(sub_num, cpmk_id)
@@ -298,6 +305,37 @@ def extract_cp_tree(all_tables, authoritative_owners=None):
                         cpmk_order.append(cpmk_id)
                         cpmk_map[cpmk_id] = {"id": cpmk_id, "cpl_code": current_cpl or "", "deskripsi": ""}
                 current_cpmk = cpmk_tokens[-1]
+
+                # kasus khusus: sel pertama di rest_cells isinya CUMA daftar "Sub-CPMK n" polos
+                # (tanpa deskripsi), dan deskripsinya ada di sel BERIKUTNYA, baris demi baris
+                # terpisah (dokumen nulis kode & deskripsi di 2 sel beda, bukan digabung per-item).
+                # kalau digabung jadi 1 teks dulu (spt logic umum di bawah), pasangannya kebalik:
+                # kode pertama jadi "kosong" & nyerobot deskripsi kode berikutnya. jadi kalau pola
+                # ini kedetek, pasangkan langsung by urutan tanpa gabung dulu.
+                code_cell = rest_cells[0] if rest_cells else ""
+                code_lines = [l.strip() for l in code_cell.split("\n") if l.strip()]
+                is_pure_code_list = bool(code_lines) and all(
+                    re.fullmatch(r"Sub[\s\-]*CPMK\s*0*\d+\s*[:\-]?", l, re.I) for l in code_lines
+                )
+                handled_via_pairing = False
+                if is_pure_code_list and len(rest_cells) >= 2:
+                    desc_lines = [l for l in rest_cells[1].split("\n") if l.strip()]
+                    sub_nums = [int(re.search(r"\d+", l).group()) for l in code_lines]
+                    if len(desc_lines) == len(sub_nums):
+                        handled_via_pairing = True
+                        for i, sub_num in enumerate(sub_nums):
+                            desc = clean(desc_lines[i])
+                            owner = authoritative_owners.get(sub_num) or (
+                                cpmk_tokens[i] if i < len(cpmk_tokens) else cpmk_tokens[-1]
+                            )
+                            sub_key = (owner, sub_num)
+                            if sub_key not in subcpmk_map:
+                                subcpmk_order.append(sub_key)
+                                subcpmk_map[sub_key] = {"global_number": sub_num, "cpmk_id": owner, "deskripsi": desc}
+                            elif desc:
+                                subcpmk_map[sub_key]["deskripsi"] = (subcpmk_map[sub_key]["deskripsi"] + " " + desc).strip()
+                if handled_via_pairing:
+                    continue
 
                 sub_matches = list(re.finditer(
                     r"Sub[\s\-]*CPMK\s*0*(\d+)\s*[:\-]?\s*(.*?)(?=Sub[\s\-]*CPMK\s*0*\d+|$)",
