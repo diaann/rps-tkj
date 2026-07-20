@@ -62,10 +62,17 @@
                         </div>
                     </div>
                 </div>
+                <datalist id="dosen-suggestions">
+                    <% (typeof dosenUsers !== 'undefined' ? dosenUsers : []).forEach(function(u) { %>
+                        <option value="<%= u.nama_lengkap || u.username %>" data-user-id="<%= u.id %>"></option>
+                    <% }); %>
+                </datalist>
                 <div id="dosen-pengampu-container" class="md:col-span-2">
                     <label class="label">Dosen Pengampu</label>
-                    <div class="flex items-center mb-2">
-                        <input class="input" name="dosen_pengampu[]" type="text" required>
+                    <p class="text-sm text-gray-500 mb-1">Pilih dari saran nama agar dosen tsb otomatis ikut bisa mengedit RPS ini.</p>
+                    <div class="flex items-center mb-2 dosen-pengampu-row">
+                        <input class="input" name="dosen_pengampu[]" type="text" list="dosen-suggestions" oninput="syncDosenPengampuUserId(this)" style="margin-bottom:0" required>
+                        <input type="hidden" name="dosen_pengampu_user_id[]" value="">
                         <button type="button" class="ml-2 btn-primary" style="padding:0.5rem 1rem;min-width:2.5rem;" onclick="addDosenPengampu()">+</button>
                     </div>
                 </div>

@@ -20,6 +20,7 @@
     "email": "raihani@apa.com",
     "username": "Raihani",
     "password": "asd",
+    "nama_lengkap": "Raihani",
     "role": "dosen",
     "status": "active"
   },
@@ -28,6 +29,15 @@
     "email": "dian@gmail.com",
     "username": "dian",
     "password": "dian",
+    "role": "dosen",
+    "status": "active"
+  },
+  {
+    "id": 8,
+    "email": "dian2@gmail.com",
+    "username": "dires",
+    "password": "dian2",
+    "nama_lengkap": "resky",
     "role": "dosen",
     "status": "active"
   }

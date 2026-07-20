@@ -70,19 +70,27 @@
                             <input class="input" id="tanggal_penyusunan" name="tanggal_penyusunan" type="date"
                                 value="<%= rps.tanggal_penyusunan %>" required>
                         </div>
+                        <datalist id="dosen-suggestions">
+                            <% (typeof dosenUsers !== 'undefined' ? dosenUsers : []).forEach(function(u) { %>
+                                <option value="<%= u.nama_lengkap || u.username %>" data-user-id="<%= u.id %>"></option>
+                            <% }); %>
+                        </datalist>
                         <div id="dosen-pengampu-container">
                             <label class="label">Dosen Pengampu</label>
+                            <p class="text-sm text-gray-500 mb-1">Pilih dari saran nama agar dosen tsb otomatis ikut bisa mengedit RPS ini.</p>
                             <%
                                 let dosenPengampuList = rps.dosen_pengampu || rps['dosen_pengampu[]'] || [];
                                 if (!Array.isArray(dosenPengampuList)) {
                                     dosenPengampuList = dosenPengampuList ? [dosenPengampuList] : [];
                                 }
+                                let dosenPengampuUserIds = Array.isArray(rps.dosen_pengampu_user_ids) ? rps.dosen_pengampu_user_ids : [];
                             %>
                             <% if (dosenPengampuList && dosenPengampuList.length> 0) { %>
                                 <% dosenPengampuList.forEach((dosen, index)=> { %>
-                                    <div class="flex items-center mb-2">
+                                    <div class="flex items-center mb-2 dosen-pengampu-row">
                                         <input class="input" name="dosen_pengampu[]" type="text" value="<%= dosen %>"
-                                            required>
+                                            list="dosen-suggestions" oninput="syncDosenPengampuUserId(this)" style="margin-bottom:0" required>
+                                        <input type="hidden" name="dosen_pengampu_user_id[]" value="<%= (dosenPengampuUserIds[index] !== undefined && dosenPengampuUserIds[index] !== null) ? dosenPengampuUserIds[index] : '' %>">
                                         <% if (index===0) { %>
                                             <button type="button" class="ml-2 btn-primary"
                                                 onclick="addDosenPengampu()">+</button>
@@ -93,8 +101,9 @@
                                     </div>
                                     <% }); %>
                                         <% } else { %>
-                                            <div class="flex items-center mb-2">
-                                                <input class="input" name="dosen_pengampu[]" type="text" required>
+                                            <div class="flex items-center mb-2 dosen-pengampu-row">
+                                                <input class="input" name="dosen_pengampu[]" type="text" list="dosen-suggestions" oninput="syncDosenPengampuUserId(this)" style="margin-bottom:0" required>
+                                                <input type="hidden" name="dosen_pengampu_user_id[]" value="">
                                                 <button type="button" class="ml-2 btn-primary"
                                                     onclick="addDosenPengampu()">+</button>
                                             </div>

@@ -40,6 +40,7 @@
                 <tr>
                     <th class="px-4 py-2 text-left">Email</th>
                     <th class="px-4 py-2 text-left">Username</th>
+                    <th class="px-4 py-2 text-left">Nama</th>
                     <th class="px-4 py-2 text-left">Role</th>
                     <th class="px-4 py-2 text-left">Status</th>
                     <th class="px-4 py-2 text-left">Aksi</th>
@@ -47,13 +48,14 @@
             </thead>
             <tbody>
                 <% if (users.length === 0) { %>
-                    <tr><td colspan="5" class="text-center py-4 text-gray-500">Tidak ada user pending validasi.</td></tr>
+                    <tr><td colspan="6" class="text-center py-4 text-gray-500">Tidak ada user pending validasi.</td></tr>
                 <% } %>
                 <% const currentUserId = user.id; %>
                 <% users.forEach(function(user) { %>
                     <tr class="border-t">
                         <td class="px-4 py-2"><%= user.email %></td>
                         <td class="px-4 py-2"><%= user.username %></td>
+                        <td class="px-4 py-2"><%= user.nama_lengkap || '-' %></td>
                         <td class="px-4 py-2 capitalize">
                             <form action="/admin/change-role/<%= user.id %>" method="POST" class="flex items-center gap-2 text-xs role-change-form" data-user-id="<%= user.id %>">
                                 <select name="role" class="border rounded px-2 py-1 focus:outline-none focus:ring role-select">

@@ -2000,5 +2000,259 @@
       "updated_by": 7,
       "updated_by_username": "dian"
     }
+  },
+  {
+    "id": 44,
+    "rps_id": 61,
+    "revision_number": 1,
+    "revision_name": "v1",
+    "action": "upload_docx",
+    "message": "RPS dibuat dari upload Word: RPS_v1 2026-07-18 MK TESTING.docx",
+    "edited_at": "2026-07-18T12:47:59.011Z",
+    "edited_by": 7,
+    "edited_by_username": "dian",
+    "edited_by_email": "dian@gmail.com",
+    "edited_by_role": "dosen",
+    "changed_fields": [],
+    "change_stats": null,
+    "source_revision_id": null,
+    "source_revision_name": null,
+    "data": {
+      "nama_mk": "MK Testing",
+      "kode_mk": "XXX",
+      "rumpun_mk": "Mata Kuliah Dasar Keahlian",
+      "semester": "1",
+      "sks_teori": "2",
+      "sks_praktikum": "0",
+      "tanggal_penyusunan": "2026-07-18",
+      "tahun_akademik": "2026/2027",
+      "mk_syarat": "",
+      "mata_kuliah_syarat": "",
+      "dosen_pengampu[]": [
+        "Resky, S.ST."
+      ],
+      "dosen_pengampu": [
+        "Resky, S.ST."
+      ],
+      "deskripsi_singkat_mk": "x",
+      "materi_kajian": "x",
+      "indikator_cpl": "",
+      "bentuk_pembelajaran": "",
+      "metode_pembelajaran": "",
+      "strategi_pembelajaran": "",
+      "modalitas": "",
+      "pustaka_utama[]": [
+        "x"
+      ],
+      "pustaka_utama": [
+        "x"
+      ],
+      "pustaka_pendukung[]": [
+        "x"
+      ],
+      "pustaka_pendukung": [
+        "x"
+      ],
+      "penjamin_mutu": "-",
+      "dosen_pengembang_rps": "- dian",
+      "dosen_pengembang_rps[]": [
+        "- dian"
+      ],
+      "koordinator_program_studi": "Meylanie Olivya, S.T., M.T.",
+      "id_cpls": "0",
+      "cpl[]": [],
+      "cpl": [],
+      "cpl_descriptions": {},
+      "imported_from_docx": true,
+      "source_docx_name": "RPS_v1 2026-07-18 MK TESTING.docx",
+      "source_docx_uploaded_at": "2026-07-18T12:47:58.778Z",
+      "extraction_notes": [
+        "CPL tidak terdeteksi jelas dari dokumen. Silakan lengkapi lewat Edit RPS."
+      ],
+      "cpmk[CPMK01][cpl_code]": "CPL01",
+      "cpmk[CPMK01][cpl_description]": "",
+      "cpmk[CPMK01][deskripsi]": "x",
+      "sub_cpmk[CPMK01][1][deskripsi]": "x",
+      "sub_cpmk[CPMK01][1][global_number]": "1",
+      "sub_cpmk[CPMK01][1][pekan_awal]": "1",
+      "sub_cpmk[CPMK01][1][pekan_akhir]": "3",
+      "sub_cpmk[CPMK01][1][materi]": "x",
+      "sub_cpmk[CPMK01][1][durasi]": "",
+      "sub_cpmk[CPMK01][1][indikator]": "x",
+      "sub_cpmk[CPMK01][1][teknik_kriteria]": "x",
+      "sub_cpmk[CPMK01][1][modalitas][]": [
+        "luring"
+      ],
+      "sub_cpmk[CPMK01][1][metode_luring]": "x",
+      "sub_cpmk[CPMK01][1][metode_daring]": "",
+      "sub_cpmk[CPMK01][1][bentuk_pembelajaran]": "x",
+      "sub_cpmk[CPMK01][1][strategi_pembelajaran]": "",
+      "sub_cpmk[CPMK01][1][media]": "",
+      "sub_cpmk[CPMK01][1][sumber_belajar]": "",
+      "sub_cpmk[CPMK01][1][alat_bahan]": "",
+      "sub_cpmk[CPMK01][1][pengalaman_belajar]": "",
+      "sub_cpmk[CPMK01][1][bentuk_penilaian]": "",
+      "sub_cpmk[CPMK01][1][bobot]": "100",
+      "sub_cpmk[CPMK01][1][formatif_nama]": "",
+      "sub_cpmk[CPMK01][1][formatif_bobot]": "",
+      "sub_cpmk[CPMK01][1][sumatif_kuis_nama]": "",
+      "sub_cpmk[CPMK01][1][sumatif_kuis_bobot]": "50",
+      "sub_cpmk[CPMK01][1][sumatif_tugas_nama]": "",
+      "sub_cpmk[CPMK01][1][sumatif_tugas_bobot]": "10",
+      "sub_cpmk[CPMK01][1][sumatif_ujian_nama]": "",
+      "sub_cpmk[CPMK01][1][sumatif_ujian_bobot]": "10",
+      "sub_cpmk[CPMK01][1][sumatif_pjbl_nama]": "",
+      "sub_cpmk[CPMK01][1][sumatif_pjbl_bobot]": "10",
+      "sub_cpmk[CPMK01][1][sumatif_presentasi_nama]": "",
+      "sub_cpmk[CPMK01][1][sumatif_presentasi_bobot]": "",
+      "sub_cpmk[CPMK01][1][sumatif_lainnya]": "[]",
+      "sub_cpmk[CPMK01][1][cpl][]": [
+        "CPL01"
+      ],
+      "id": 61,
+      "userId": 7,
+      "dosen_pengampu_user_ids": [
+        8
+      ],
+      "created_at": "2026-07-18T12:47:58.832Z",
+      "updated_at": "2026-07-18T12:47:58.832Z",
+      "updated_by": 7,
+      "updated_by_username": "dian"
+    }
+  },
+  {
+    "id": 45,
+    "rps_id": 61,
+    "revision_number": 2,
+    "revision_name": "v2",
+    "action": "edit",
+    "message": "RPS diperbarui",
+    "edited_at": "2026-07-18T13:29:54.951Z",
+    "edited_by": 1,
+    "edited_by_username": "admin",
+    "edited_by_email": "admin@polteku.ac.id",
+    "edited_by_role": "admin",
+    "changed_fields": [
+      "CPL yang Dipilih",
+      "Deskripsi CPL",
+      "CPMK01 - Deskripsi CPL",
+      "Dosen Pengampu",
+      "Sub-CPMK CPMK01.1 - Strategi Pembelajaran"
+    ],
+    "change_stats": {
+      "added": 6,
+      "removed": 0,
+      "modified": 0
+    },
+    "source_revision_id": null,
+    "source_revision_name": null,
+    "data": {
+      "nama_mk": "MK Testing",
+      "kode_mk": "XXX",
+      "rumpun_mk": "Mata Kuliah Dasar Keahlian",
+      "semester": "1",
+      "sks_teori": "2",
+      "sks_praktikum": "0",
+      "tanggal_penyusunan": "2026-07-18",
+      "tahun_akademik": "2026/2027",
+      "mk_syarat": "",
+      "mata_kuliah_syarat": "",
+      "dosen_pengampu[]": [
+        "Resky, S.ST.",
+        "Raihani, S.ST."
+      ],
+      "dosen_pengampu": [
+        "Resky, S.ST.",
+        "Raihani, S.ST."
+      ],
+      "deskripsi_singkat_mk": "x",
+      "materi_kajian": "x",
+      "indikator_cpl": "",
+      "bentuk_pembelajaran": "",
+      "metode_pembelajaran": "",
+      "strategi_pembelajaran": "",
+      "modalitas": "",
+      "pustaka_utama[]": [
+        "x"
+      ],
+      "pustaka_utama": [
+        "x"
+      ],
+      "pustaka_pendukung[]": [
+        "x"
+      ],
+      "pustaka_pendukung": [
+        "x"
+      ],
+      "penjamin_mutu": "-",
+      "dosen_pengembang_rps": "- dian",
+      "dosen_pengembang_rps[]": [
+        "- dian"
+      ],
+      "koordinator_program_studi": "Meylanie Olivya, S.T., M.T.",
+      "id_cpls": "0",
+      "cpl[]": [
+        "CPL01"
+      ],
+      "cpl": [
+        "CPL01"
+      ],
+      "cpl_descriptions": {
+        "CPL01": "Menunjukkan sikap profesional yang berlandaskan ketakwaan, etika, integritas, nasionalisme, dan kepedulian sosial dalam menjalankan tugas di bidang teknik komputer dan jaringan"
+      },
+      "imported_from_docx": true,
+      "source_docx_name": "RPS_v1 2026-07-18 MK TESTING.docx",
+      "source_docx_uploaded_at": "2026-07-18T12:47:58.778Z",
+      "extraction_notes": [
+        "CPL tidak terdeteksi jelas dari dokumen. Silakan lengkapi lewat Edit RPS."
+      ],
+      "id": 61,
+      "userId": 7,
+      "dosen_pengampu_user_ids": [
+        8,
+        6
+      ],
+      "created_at": "2026-07-18T12:47:58.832Z",
+      "updated_at": "2026-07-18T13:29:54.835Z",
+      "updated_by": 1,
+      "updated_by_username": "admin",
+      "cpl_deskripsi[]": "Menunjukkan sikap profesional yang berlandaskan ketakwaan, etika, integritas, nasionalisme, dan kepedulian sosial dalam menjalankan tugas di bidang teknik komputer dan jaringan",
+      "cpmk[CPMK01][cpl_code]": "CPL01",
+      "cpmk[CPMK01][cpl_description]": "Menunjukkan sikap profesional yang berlandaskan ketakwaan, etika, integritas, nasionalisme, dan kepedulian sosial dalam menjalankan tugas di bidang teknik komputer dan jaringan",
+      "cpmk[CPMK01][deskripsi]": "x",
+      "sub_cpmk[CPMK01][1][global_number]": "1",
+      "sub_cpmk[CPMK01][1][deskripsi]": "x",
+      "sub_cpmk[CPMK01][1][pekan_awal]": "1",
+      "sub_cpmk[CPMK01][1][pekan_akhir]": "3",
+      "sub_cpmk[CPMK01][1][materi]": "x",
+      "sub_cpmk[CPMK01][1][durasi]": "",
+      "sub_cpmk[CPMK01][1][indikator]": "x",
+      "sub_cpmk[CPMK01][1][teknik_kriteria]": "x",
+      "sub_cpmk[CPMK01][1][modalitas][]": "luring",
+      "sub_cpmk[CPMK01][1][metode_luring]": "x",
+      "sub_cpmk[CPMK01][1][metode_daring]": "",
+      "sub_cpmk[CPMK01][1][bentuk_pembelajaran]": "x",
+      "sub_cpmk[CPMK01][1][strategi_pembelajaran]": "x",
+      "sub_cpmk[CPMK01][1][media]": "",
+      "sub_cpmk[CPMK01][1][sumber_belajar]": "",
+      "sub_cpmk[CPMK01][1][alat_bahan]": "",
+      "sub_cpmk[CPMK01][1][pengalaman_belajar]": "",
+      "sub_cpmk[CPMK01][1][bentuk_penilaian]": "",
+      "sub_cpmk[CPMK01][1][bobot]": "100",
+      "sub_cpmk[CPMK01][1][formatif_nama]": "",
+      "sub_cpmk[CPMK01][1][formatif_bobot]": "",
+      "sub_cpmk[CPMK01][1][sumatif_kuis_nama]": "",
+      "sub_cpmk[CPMK01][1][sumatif_kuis_bobot]": "50",
+      "sub_cpmk[CPMK01][1][sumatif_tugas_nama]": "",
+      "sub_cpmk[CPMK01][1][sumatif_tugas_bobot]": "10",
+      "sub_cpmk[CPMK01][1][sumatif_ujian_nama]": "",
+      "sub_cpmk[CPMK01][1][sumatif_ujian_bobot]": "10",
+      "sub_cpmk[CPMK01][1][sumatif_pjbl_nama]": "",
+      "sub_cpmk[CPMK01][1][sumatif_pjbl_bobot]": "10",
+      "sub_cpmk[CPMK01][1][sumatif_presentasi_nama]": "",
+      "sub_cpmk[CPMK01][1][sumatif_presentasi_bobot]": "",
+      "sub_cpmk[CPMK01][1][sumatif_lainnya]": "[]",
+      "sub_cpmk[CPMK01][1][cpl][]": "CPL01"
+    }
   }
 ]

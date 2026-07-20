@@ -24,6 +24,8 @@ try {
 }
 // fungsi yg baca isi file .docx & panggil python (lihat src/utils/rpsDocxParser.js)
 const { parseRpsDocxBuffer } = require('../utils/rpsDocxParser');
+// fungsi buat nyocokin nama dosen_pengampu ke akun user terdaftar (lihat src/utils/dosenMatch.js)
+const { matchDosenPengampuToUserIds } = require('../utils/dosenMatch');
 
 // alamat file2 "database" (json) yg dipakai di file ini
 const usersPath = path.join(__dirname, '..', 'database', 'users.json');
@@ -111,6 +113,17 @@ function ensureArray(value) {
     return [];
   }
   return Array.isArray(value) ? value : [value];
+}
+
+// parse input hidden "dosen_pengampu_user_id[]" (dikirim form, sejajar posisinya dgn
+// dosen_pengampu[]) jadi array id (number) atau null kalau baris itu tidak ter-link ke
+// akun manapun. posisinya SENGAJA dipertahankan (tidak di-filter/dedupe) krn harus tetap
+// sejajar sama dosen_pengampu[] pas nanti ditampilkan lagi di form edit.
+function parsePengampuUserIds(rawValue) {
+  return ensureArray(rawValue).map(x => {
+    const n = parseInt(x, 10);
+    return Number.isNaN(n) ? null : n;
+  });
 }
 
 function buildCplDescriptionMap(rpsData) {
@@ -259,9 +272,19 @@ function getRpsById(rpsList, rpsId) {
 // cek user yg login boleh buka/ubah RPS ini atau tidak. hasilnya true kalau dia admin
 // atau kalau dia adalah pemilik RPS itu sendiri
 // (userId di data RPS sama dgn id user yg login). selain itu, hasilnya false.
+// akun user yg jadi "dosen pengampu" (ter-link, baik dari auto-match upload docx maupun
+// dipilih manual dari saran nama pas ngetik) otomatis boleh ikut ngedit RPS ini -- tidak
+// ada daftar co-editor terpisah, aksesnya nempel langsung ke field dosen_pengampu.
+function getRpsPengampuIds(rpsItem) {
+  const linked = Array.isArray(rpsItem && rpsItem.dosen_pengampu_user_ids) ? rpsItem.dosen_pengampu_user_ids : [];
+  return linked.filter(id => id !== null && id !== undefined && id !== '');
+}
+
 function canAccessRps(req, rpsItem) {
   if (!req.session.user || !rpsItem) return false;
-  return req.session.user.role === 'admin' || String(rpsItem.userId) === String(req.session.user.id);
+  if (req.session.user.role === 'admin') return true;
+  if (String(rpsItem.userId) === String(req.session.user.id)) return true;
+  return getRpsPengampuIds(rpsItem).some(id => String(id) === String(req.session.user.id));
 }
 
 // kamus/label nama field mentah RPS -> label yg enak dibaca, dipakai di halaman Riwayat Revisi
@@ -278,6 +301,7 @@ const FIELD_LABELS = {
   tanggal_penyusunan: 'Tanggal Penyusunan',
   dosen_pengampu: 'Dosen Pengampu',
   'dosen_pengampu[]': 'Dosen Pengampu',
+  dosen_pengampu_user_ids: 'Dosen Pengampu',
   deskripsi_singkat_mk: 'Deskripsi Singkat MK',
   materi_kajian: 'Materi Kajian',
   indikator_cpl: 'Indikator CPL',
@@ -689,8 +713,8 @@ router.get('/register', (req, res) => {
 
 // Register process
 router.post('/register', (req, res) => {
-  const { email, username, password } = req.body;
-  if (!email || !username || !password) {
+  const { email, username, password, nama_lengkap } = req.body;
+  if (!email || !username || !password || !nama_lengkap) {
     return res.render('register', { title: 'Register', error: 'Semua field wajib diisi.' });
   }
   const rawData = fs.readFileSync(usersPath);
@@ -703,6 +727,7 @@ router.post('/register', (req, res) => {
     email,
     username,
     password,
+    nama_lengkap: String(nama_lengkap).trim(),
     role: 'dosen',
     status: 'pending' // Harus divalidasi admin
   };
@@ -805,13 +830,17 @@ router.get('/create-rps', isAuthenticated, (req, res) => {
     activeCplId = active.id || aid;
   }
 
+  // daftar dosen aktif yg bisa dipilih jadi co-editor RPS ini
+  const dosenUsers = getAllUsers().filter(u => u.role === 'dosen' && u.status === 'active');
+
   res.render('rps', {
     title: 'Buat RPS Baru',
     user: req.session.user,
     cpls: activeCplContent,
     activeCplId: activeCplId,
     penjamin_mutu: config.penjamin_mutu || '',
-    koordinator_program_studi: config.koordinator_program_studi || ''
+    koordinator_program_studi: config.koordinator_program_studi || '',
+    dosenUsers
   });
 });
 
@@ -819,6 +848,12 @@ router.get('/create-rps', isAuthenticated, (req, res) => {
 router.post('/save-rps', isAuthenticated, (req, res) => {
   const rpsData = normalizeRpsPayload(req.body);
   rpsData.userId = req.session.user.id;
+  // dosen pengampu yg dipilih dari saran nama (cocok akun terdaftar) otomatis boleh ikut edit
+  rpsData.dosen_pengampu_user_ids = parsePengampuUserIds(
+    req.body['dosen_pengampu_user_id[]'] || req.body.dosen_pengampu_user_id
+  );
+  delete rpsData['dosen_pengampu_user_id[]'];
+  delete rpsData.dosen_pengampu_user_id;
   const rps = readJsonFile(rpsPath, []);
 
   // Generate id unik
@@ -856,7 +891,12 @@ router.get('/history', isAuthenticated, (req, res) => {
 
   const rawData = fs.readFileSync(rpsPath);
   const rps = JSON.parse(rawData);
-  const userRps = rps.filter(r => r.userId === req.session.user.id);
+  // munculin RPS yg dia PUNYA (userId) ATAU yg dia jadi dosen pengampu-nya (ter-link lewat
+  // dosen_pengampu_user_ids) -- keduanya sama2 boleh dibuka & diedit (lihat canAccessRps)
+  const userRps = rps.filter(r =>
+    r.userId === req.session.user.id ||
+    getRpsPengampuIds(r).some(id => String(id) === String(req.session.user.id))
+  );
   res.render('history', { title: 'History', user: req.session.user, rps: userRps });
 });
 
@@ -866,12 +906,8 @@ router.get('/history/view/:id', isAuthenticated, (req, res) => {
   const rpsId = req.params.id;
   const rawData = fs.readFileSync(rpsPath);
   const rps = JSON.parse(rawData);
-  let item;
-  if (req.session.user.role === 'admin') {
-    item = rps.find(r => String(r.id) === String(rpsId)); // admin boleh liat RPS siapa aja
-  } else {
-    item = rps.find(r => String(r.id) === String(rpsId) && r.userId === req.session.user.id); // dosen cuma boleh liat miliknya
-  }
+  const found = rps.find(r => String(r.id) === String(rpsId));
+  const item = canAccessRps(req, found) ? found : undefined; // admin, pemilik, atau co-editor boleh liat
 
   // cari tau field mana aja yg berubah di revisi PALING TERAKHIR, biar bisa disorot
   // kuning langsung di halaman detailnya (bukan cuma keliatan di halaman Riwayat Revisi).
@@ -1018,12 +1054,8 @@ router.get('/edit-rps/:id', isAuthenticated, (req, res) => {
   const rpsId = req.params.id;
   const rawData = fs.readFileSync(rpsPath);
   const rps = JSON.parse(rawData);
-  let item;
-  if (req.session.user.role === 'admin') {
-    item = rps.find(r => String(r.id) === String(rpsId));
-  } else {
-    item = rps.find(r => String(r.id) === String(rpsId) && r.userId === req.session.user.id);
-  }
+  const found = rps.find(r => String(r.id) === String(rpsId));
+  const item = canAccessRps(req, found) ? found : undefined;
 
   if (!item) {
     return res.status(404).send('RPS not found or you do not have permission to edit it.');
@@ -1056,6 +1088,9 @@ router.get('/edit-rps/:id', isAuthenticated, (req, res) => {
     activeCplId = active.id || preferredId;
   }
 
+  // daftar dosen aktif yg bisa dipilih jadi co-editor RPS ini
+  const dosenUsers = getAllUsers().filter(u => u.role === 'dosen' && u.status === 'active');
+
   res.render('edit-rps', {
     title: 'Edit RPS',
     user: req.session.user,
@@ -1063,7 +1098,8 @@ router.get('/edit-rps/:id', isAuthenticated, (req, res) => {
     cpls: activeCplContent,
     activeCplId: activeCplId,
     penjamin_mutu: config.penjamin_mutu || '',
-    koordinator_program_studi: config.koordinator_program_studi || ''
+    koordinator_program_studi: config.koordinator_program_studi || '',
+    dosenUsers
   });
 });
 
@@ -1084,8 +1120,8 @@ router.post('/edit-rps/:id', isAuthenticated, (req, res) => {
     return res.status(404).send('RPS not found.');
   }
 
-  // cuma pemilik RPS atau admin yg boleh nyimpen perubahan
-  if (rps[index].userId !== req.session.user.id && req.session.user.role !== 'admin') {
+  // cuma pemilik RPS, co-editor, atau admin yg boleh nyimpen perubahan
+  if (!canAccessRps(req, rps[index])) {
     return res.status(403).send('You do not have permission to edit this RPS.');
   }
 
@@ -1116,6 +1152,12 @@ router.post('/edit-rps/:id', isAuthenticated, (req, res) => {
   finalRpsData.updated_at = new Date().toISOString();
   finalRpsData.updated_by = req.session.user.id;
   finalRpsData.updated_by_username = req.session.user.username;
+  // dosen pengampu yg dipilih dari saran nama (cocok akun terdaftar) otomatis boleh ikut edit
+  finalRpsData.dosen_pengampu_user_ids = parsePengampuUserIds(
+    req.body['dosen_pengampu_user_id[]'] || req.body.dosen_pengampu_user_id
+  );
+  delete finalRpsData['dosen_pengampu_user_id[]'];
+  delete finalRpsData.dosen_pengampu_user_id;
 
   // BAGIAN RIWAYAT REVISI DIMULAI DI SINI:
   // bandingin versi SEBELUM (originalRps) & SESUDAH (finalRpsData) diedit, buat tau
@@ -1153,12 +1195,12 @@ router.post('/delete-rps/:id', isAuthenticated, (req, res) => {
   let rps = JSON.parse(rawData);
   const before = rps.length;
 
-  // Allow admin to delete any RPS, regular users can only delete their own
-  if (req.session.user.role === 'admin') {
-    rps = rps.filter(r => r.id !== id);
-  } else {
-    rps = rps.filter(r => r.id !== id || r.userId !== req.session.user.id);
+  // admin, pemilik, atau co-editor boleh hapus
+  const item = rps.find(r => r.id === id);
+  if (!canAccessRps(req, item)) {
+    return res.json({ success: false, message: 'Data tidak ditemukan atau bukan milik Anda.' });
   }
+  rps = rps.filter(r => r.id !== id);
 
   if (rps.length < before) {
     fs.writeFileSync(rpsPath, JSON.stringify(rps, null, 2));
@@ -1191,9 +1233,9 @@ router.post('/duplicate-rps/:id', isAuthenticated, (req, res) => {
 
     const original = rps[idx];
 
-    // Permission: admin can duplicate any; dosen can only duplicate their own RPS
+    // Permission: admin, pemilik, atau co-editor boleh menduplikasi
     const currentUser = req.session.user;
-    if (!(currentUser && (currentUser.role === 'admin' || currentUser.id === original.userId))) {
+    if (!canAccessRps(req, original)) {
       return res.status(403).json({ success: false, message: 'Anda tidak memiliki izin untuk menduplikasi RPS ini' });
     }
 
@@ -1434,6 +1476,20 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
       const newId = getNextNumericId(rps); // hitung id baru (angka terbesar + 1)
       const now = new Date().toISOString();
 
+      // coba cocokin tiap nama di dosen_pengampu (hasil ekstraksi docx) ke akun dosen aktif
+      // yg nama_lengkap-nya persis sama (gelar diabaikan). best-effort: gagal cocok (0 atau
+      // >1 kandidat) dilewati diam2, TIDAK boleh menggagalkan upload.
+      const rawDosenNames = Array.isArray(rpsData.dosen_pengampu)
+        ? rpsData.dosen_pengampu
+        : (rpsData.dosen_pengampu ? [rpsData.dosen_pengampu] : []);
+      let dosenPengampuUserIds = rawDosenNames.map(() => null);
+      try {
+        dosenPengampuUserIds = matchDosenPengampuToUserIds(rawDosenNames, getAllUsers());
+      } catch (matchError) {
+        console.warn('[UPLOAD RPS] Gagal mencocokkan dosen_pengampu ke akun user:', matchError);
+        dosenPengampuUserIds = rawDosenNames.map(() => null);
+      }
+
       // gabungin hasil ekstraksi (rpsData) dgn info kepemilikan & waktu.
       // normalizeRpsPayload = fungsi yg merapikan struktur field2-nya (didefinisikan di
       // bagian lain file ini), supaya bentuknya konsisten sama RPS yg dibuat lewat form manual.
@@ -1441,6 +1497,9 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
         ...rpsData,
         id: newId,
         userId: req.session.user.id, // penanda "RPS ini punya siapa"
+        // dosen pengampu yg otomatis ke-match ke akun (sejajar dgn dosen_pengampu[]), boleh
+        // ikut ngedit RPS ini -- bukan daftar co-editor terpisah, nempel ke field ini sendiri
+        dosen_pengampu_user_ids: dosenPengampuUserIds,
         created_at: now,
         updated_at: now,
         updated_by: req.session.user.id,

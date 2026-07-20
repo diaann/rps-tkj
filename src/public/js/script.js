@@ -611,16 +611,21 @@ function restoreDynamicFields() {
                 if (index === 0) {
                     // Set first input
                     const firstInput = container.querySelector('input[name="dosen_pengampu[]"]');
-                    if (firstInput) firstInput.value = value;
+                    if (firstInput) {
+                        firstInput.value = value;
+                        syncDosenPengampuUserId(firstInput); // coba re-link ke akun kalau namanya cocok saran
+                    }
                 } else {
                     // Add new inputs
                     const newDiv = document.createElement('div');
-                    newDiv.className = 'flex items-center mb-2';
+                    newDiv.className = 'flex items-center mb-2 dosen-pengampu-row';
                     newDiv.innerHTML = `
-                        <input class="input" name="dosen_pengampu[]" type="text" value="${value}" required>
+                        <input class="input" name="dosen_pengampu[]" type="text" value="${value}" list="dosen-suggestions" oninput="syncDosenPengampuUserId(this)" style="margin-bottom:0" required>
+                        <input type="hidden" name="dosen_pengampu_user_id[]" value="">
                         <button type="button" class="ml-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" onclick="removeElementAndSave(this)">-</button>
                     `;
                     container.appendChild(newDiv);
+                    syncDosenPengampuUserId(newDiv.querySelector('input[name="dosen_pengampu[]"]'));
                 }
             });
         }
@@ -772,6 +777,51 @@ function prevStep() {
     }
 }
 
+// daftar gelar/sapaan yg suka nempel di depan nama -- SAMA PERSIS dgn HONORIFIC_PREFIXES
+// di src/utils/dosenMatch.js (Node-only module, tidak bisa di-import ke browser krn app
+// ini tidak pakai bundler, jadi logikanya diduplikasi di sini)
+const DOSEN_HONORIFIC_PREFIXES = ['prof', 'dr', 'ir', 'drs', 'dra', 'h', 'hj'];
+
+// samain dgn normalizeDosenName() di dosenMatch.js: potong di koma pertama (buang gelar
+// di belakang nama), lucuti sapaan/gelar di depan, lowercase, rapikan spasi. supaya
+// ngetik manual "Resky, S.ST." tetap ke-link ke akun "resky", bukan cuma pas upload docx.
+function normalizeDosenNameClient(raw) {
+    let name = String(raw || '').split(',')[0].trim();
+
+    let stripped = true;
+    while (stripped) {
+        stripped = false;
+        for (const prefix of DOSEN_HONORIFIC_PREFIXES) {
+            const re = new RegExp(`^${prefix}\\.?\\s+`, 'i');
+            if (re.test(name)) {
+                name = name.replace(re, '');
+                stripped = true;
+            }
+        }
+    }
+
+    return name.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// cek apakah teks yg diketik di input dosen_pengampu[] cocok (setelah gelar dilucuti) dgn
+// salah satu saran nama dosen terdaftar (datalist "dosen-suggestions"). kalau cocok, isi
+// input tersembunyi dosen_pengampu_user_id[] pasangannya dgn id akun tsb -- inilah yg bikin
+// dosen itu otomatis dapat akses edit RPS ini, TANPA perlu UI "co-editor" terpisah.
+function syncDosenPengampuUserId(inputEl) {
+    const row = inputEl.closest('.dosen-pengampu-row');
+    const hidden = row ? row.querySelector('input[name="dosen_pengampu_user_id[]"]') : null;
+    if (!hidden) return;
+
+    const datalist = document.getElementById('dosen-suggestions');
+    const typed = normalizeDosenNameClient(inputEl.value);
+    let matchedId = '';
+    if (datalist && typed) {
+        const opt = Array.from(datalist.options).find(o => normalizeDosenNameClient(o.value) === typed);
+        if (opt) matchedId = opt.dataset.userId || '';
+    }
+    hidden.value = matchedId;
+}
+
 function addDosenPengampu() {
     // Try to find the container, fall back to existing inputs if missing
     let container = document.getElementById('dosen-pengampu-container');
@@ -779,7 +829,7 @@ function addDosenPengampu() {
         const fallbackInputs = document.getElementsByName('dosen_pengampu[]');
         if (fallbackInputs && fallbackInputs.length > 0) {
             // Use parent of the first input as container
-            const parent = fallbackInputs[0].closest('.flex.items-center');
+            const parent = fallbackInputs[0].closest('.dosen-pengampu-row') || fallbackInputs[0].closest('.flex.items-center');
             container = parent ? parent.parentElement : fallbackInputs[0].parentElement;
         } else {
             // No container and no inputs: try to attach to the main form if present
@@ -789,8 +839,9 @@ function addDosenPengampu() {
                 container.id = 'dosen-pengampu-container';
                 container.innerHTML = `
                     <label class="label">Dosen Pengampu</label>
-                    <div class="flex items-center mb-2">
-                        <input class="input" name="dosen_pengampu[]" type="text" required>
+                    <div class="flex items-center mb-2 dosen-pengampu-row">
+                        <input class="input" name="dosen_pengampu[]" type="text" list="dosen-suggestions" oninput="syncDosenPengampuUserId(this)" style="margin-bottom:0" required>
+                        <input type="hidden" name="dosen_pengampu_user_id[]" value="">
                         <button type="button" class="ml-2 btn-primary" style="padding:0.5rem 1rem;min-width:2.5rem;" onclick="addDosenPengampu()">+</button>
                     </div>
                 `;
@@ -803,37 +854,44 @@ function addDosenPengampu() {
         }
     }
 
-    // Ambil input terakhir (yang ada tombol +)
-    const inputs = container.querySelectorAll('input[name="dosen_pengampu[]"]');
-    if (!inputs || inputs.length === 0) {
-        // create an initial input so there is something to copy
-        const newDiv = document.createElement('div');
-        newDiv.className = 'flex items-center mb-2';
-        newDiv.innerHTML = `
-            <input class="input" name="dosen_pengampu[]" type="text" required>
+    // Tombol "+" SELALU nambah baris kosong baru di PALING BAWAH -- baris yg sudah ada
+    // (termasuk baris pertama yg lagi diisi) TIDAK PERNAH digeser/dikosongkan. Dulu isinya
+    // malah dipindah ke baris baru & baris pertama dikosongkan, jadi kalau baris baru itu
+    // dihapus lagi (klik "-"), yg ilang adalah nama dosen yg udah diisi, bukan baris kosongnya.
+    const rows = container.querySelectorAll('.dosen-pengampu-row');
+    if (rows.length === 0) {
+        // belum ada baris sama sekali: bikin baris pertama (dgn tombol +)
+        const firstDiv = document.createElement('div');
+        firstDiv.className = 'flex items-center mb-2 dosen-pengampu-row';
+        firstDiv.innerHTML = `
+            <input class="input" name="dosen_pengampu[]" type="text" list="dosen-suggestions" oninput="syncDosenPengampuUserId(this)" style="margin-bottom:0" required>
+            <input type="hidden" name="dosen_pengampu_user_id[]" value="">
             <button type="button" class="ml-2 btn-primary" style="padding:0.5rem 1rem;min-width:2.5rem;" onclick="addDosenPengampu()">+</button>
         `;
-        container.appendChild(newDiv);
+        container.appendChild(firstDiv);
+        return;
     }
 
-    const lastInput = inputs[0];
-    const value = lastInput ? lastInput.value : '';
-    if (value.trim() !== "") {
-        // Buat input baru di bawah, isi dengan value lama
-        const newDiv = document.createElement('div');
-        newDiv.className = 'flex items-center mb-2';
-        newDiv.innerHTML = `
-            <input class="input" name="dosen_pengampu[]" type="text" value="${value}" required>
-            <button type="button" class="ml-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" onclick="removeElementAndSave(this)">-</button>
-        `;
-        // Insert newDiv SETELAH lastInputDiv
-        const lastInputDiv = lastInput.closest('.flex.items-center');
-        container.insertBefore(newDiv, lastInputDiv.nextSibling);
-        lastInput.value = "";
-        saveFormState(); // Save state after adding
-    } else {
-        lastInput.focus();
+    const lastRow = rows[rows.length - 1];
+    const lastRowInput = lastRow.querySelector('input[name="dosen_pengampu[]"]');
+    if (lastRowInput && lastRowInput.value.trim() === "") {
+        // baris terakhir masih kosong, tidak perlu nambah baris baru lagi
+        lastRowInput.focus();
+        return;
     }
+
+    const newDiv = document.createElement('div');
+    newDiv.className = 'flex items-center mb-2 dosen-pengampu-row';
+    newDiv.innerHTML = `
+        <input class="input" name="dosen_pengampu[]" type="text" list="dosen-suggestions" oninput="syncDosenPengampuUserId(this)" style="margin-bottom:0" required>
+        <input type="hidden" name="dosen_pengampu_user_id[]" value="">
+        <button type="button" class="ml-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" onclick="removeElementAndSave(this)">-</button>
+    `;
+    container.insertBefore(newDiv, lastRow.nextSibling);
+    saveFormState(); // Save state after adding
+
+    const newInput = newDiv.querySelector('input[name="dosen_pengampu[]"]');
+    if (newInput) newInput.focus();
 }
 
 // Add a new Dosen Pengembang RPS input (used in rps.ejs)
