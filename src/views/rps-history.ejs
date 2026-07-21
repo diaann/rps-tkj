@@ -185,9 +185,9 @@
         </div>
 
         <div class="status-banner status-<%= rpsStatus %>">
-            Status: <%= statusLabels[rpsStatus] || rpsStatus %>
+            <div>Status: <%= statusLabels[rpsStatus] || rpsStatus %></div>
             <% if (rpsStatus === 'ditolak' && rps.rejection_note) { %>
-                &middot; Catatan KoPS: <%= rps.rejection_note %>
+                <div class="mt-1 font-normal">Catatan KoPS: <%= rps.rejection_note %></div>
             <% } %>
         </div>
 
@@ -223,11 +223,11 @@
         </p>
 
         <% if (revisions.length > 0) { %>
-            <% const latestRevisionNumber = Math.max(...revisions.map(rev => parseInt(rev.revision_number || 0, 10))); %>
+            <% const latestRevisionId = revisions.length ? revisions[revisions.length - 1].id : null; %>
             <!-- daftar semua revisi, terbaru di atas -->
             <ul class="revision-list">
                 <% revisions.slice().reverse().forEach(function(rev) { %>
-                    <% const isLatest = parseInt(rev.revision_number || 0, 10) === latestRevisionNumber; %>
+                    <% const isLatest = rev.id === latestRevisionId; %>
                     <%
                         const actionClass = rev.action === 'revert' || rev.action === 'tolak_kaprodi' ? 'revert'
                             : rev.action === 'acc_kaprodi' ? 'acc'

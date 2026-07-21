@@ -560,8 +560,10 @@ function createRpsRevision(rpsItem, editorUser, options = {}) {
   const rpsId = parseInt(rpsItem.id, 10);
   const revisionsForRps = history.filter(item => parseInt(item.rps_id, 10) === rpsId);
   // nomor revisi berikutnya (v1, v2, v3, ...) KHUSUS untuk RPS ini aja
+  // aksi status (ajukan/ACC/tolak) tidak mengubah konten RPS, jadi lewat options.keepRevisionNumber
+  // nomor versinya dipertahankan sama dgn versi konten terakhir, tidak ikut naik.
   const revisionNumber = revisionsForRps.length
-    ? Math.max(...revisionsForRps.map(item => parseInt(item.revision_number || 0, 10))) + 1
+    ? Math.max(...revisionsForRps.map(item => parseInt(item.revision_number || 0, 10))) + (options.keepRevisionNumber ? 0 : 1)
     : 1; // belum ada revisi sama sekali -> ini jadi v1
 
   const editor = getEditorFromUser(editorUser, options.fallbackEditorName || 'System');
@@ -1366,7 +1368,8 @@ router.post('/submit-rps/:id', isAuthenticated, (req, res) => {
 
   createRpsRevision(rps[index], req.session.user, {
     action: 'submit_validasi',
-    message: 'Diajukan untuk validasi KoPS'
+    message: 'Diajukan untuk validasi KoPS',
+    keepRevisionNumber: true
   });
 
   res.json({ success: true, message: 'RPS berhasil diajukan untuk validasi.', id: rpsId, status: RPS_STATUS.DIAJUKAN });
@@ -1402,7 +1405,8 @@ router.post('/admin/rps/approve/:id', isAuthenticated, isAdmin, (req, res) => {
 
   const accRevision = createRpsRevision(rps[index], req.session.user, {
     action: 'acc_kaprodi',
-    message: 'Disetujui oleh KoPS'
+    message: 'Disetujui oleh KoPS',
+    keepRevisionNumber: true
   });
 
   // pangkas riwayat lama RPS ini -- cuma sisakan snapshot ACC yg baru dibuat, biar
@@ -1452,7 +1456,8 @@ router.post('/admin/rps/reject/:id', isAuthenticated, isAdmin, (req, res) => {
 
   createRpsRevision(rps[index], req.session.user, {
     action: 'tolak_kaprodi',
-    message: `Ditolak: ${catatan}`
+    message: `Ditolak: ${catatan}`,
+    keepRevisionNumber: true
   });
 
   res.json({ success: true, message: 'RPS ditolak dan dikembalikan ke dosen untuk direvisi.', id: rpsId, status: RPS_STATUS.DITOLAK });

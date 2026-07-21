@@ -13,7 +13,7 @@
             <% } %>
         </h2>
         <% if (rps && (rps.status || 'draft') === 'ditolak' && rps.rejection_note) { %>
-            <div class="mb-6 p-4 rounded-lg border border-red-200 bg-red-50 text-red-800 text-sm">
+            <div class="mb-3 p-4 rounded-lg border border-red-200 bg-red-50 text-red-800 text-sm">
                 <i class="fas fa-circle-exclamation mr-2"></i>
                 <strong>Ditolak KoPS:</strong> <%= rps.rejection_note %>
             </div>
