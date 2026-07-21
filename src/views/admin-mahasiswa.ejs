@@ -102,34 +102,47 @@
     <!-- Form daftar Mahasiswa-->
     <h3 class="font-semibold mb-3">Daftar Mahasiswa</h3>
 
-    <!-- Filter berdasarkan Angkatan, Kelas, Nama & NIM -->
-    <div class="flex flex-wrap items-center gap-2 mb-4">
-      <form action="/admin/mahasiswa" method="GET" class="flex flex-wrap items-center gap-2">
-        <label class="label mb-0">Angkatan</label>
-        <select class="input" name="tingkat" onchange="this.form.submit()">
-          <option value="">Semua Angkatan</option>
-          <% const tingkatOptionsList = (typeof tingkatOptions !== 'undefined' && Array.isArray(tingkatOptions)) ? tingkatOptions : []; %>
-          <% tingkatOptionsList.forEach(function(t) { %>
-            <option value="<%= t %>" <%= (typeof tingkatFilter !== 'undefined' && tingkatFilter === t) ? 'selected' : '' %>>Angkatan <%= t %></option>
-          <% }); %>
-        </select>
+    <!-- Filter berdasarkan Angkatan, Kelas, Nama & NIM - Compact Layout -->
+    <div class="mb-6">
+      <form action="/admin/mahasiswa" method="GET" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <label class="label">Angkatan</label>
+          <select class="input" name="tingkat" onchange="this.form.submit()">
+            <option value="">Semua Angkatan</option>
+            <% const tingkatOptionsList = (typeof tingkatOptions !== 'undefined' && Array.isArray(tingkatOptions)) ? tingkatOptions : []; %>
+            <% tingkatOptionsList.forEach(function(t) { %>
+              <option value="<%= t %>" <%= (typeof tingkatFilter !== 'undefined' && tingkatFilter === t) ? 'selected' : '' %>>Angkatan <%= t %></option>
+            <% }); %>
+          </select>
+        </div>
 
-        <label class="label mb-0">Kelas</label>
-        <select class="input" name="huruf" onchange="this.form.submit()">
-          <option value="">Semua Kelas</option>
-          <% const hurufOptionsList = (typeof hurufOptions !== 'undefined' && Array.isArray(hurufOptions)) ? hurufOptions : []; %>
-          <% hurufOptionsList.forEach(function(h) { %>
-            <option value="<%= h %>" <%= (typeof hurufFilter !== 'undefined' && hurufFilter === h) ? 'selected' : '' %>>Kelas <%= h %></option>
-          <% }); %>
-        </select>
+        <div>
+          <label class="label">Kelas</label>
+          <select class="input" name="huruf" onchange="this.form.submit()">
+            <option value="">Semua Kelas</option>
+            <% const hurufOptionsList = (typeof hurufOptions !== 'undefined' && Array.isArray(hurufOptions)) ? hurufOptions : []; %>
+            <% hurufOptionsList.forEach(function(h) { %>
+              <option value="<%= h %>" <%= (typeof hurufFilter !== 'undefined' && hurufFilter === h) ? 'selected' : '' %>>Kelas <%= h %></option>
+            <% }); %>
+          </select>
+        </div>
 
-        <label class="label mb-0">Nama</label>
-        <input class="input" type="text" name="nama" placeholder="Cari nama..." value="<%= (typeof namaFilter !== 'undefined' && namaFilter) ? namaFilter : '' %>">
+        <div>
+          <label class="label">Nama</label>
+          <input class="input" type="text" name="nama" placeholder="Cari nama..." 
+                value="<%= (typeof namaFilter !== 'undefined' && namaFilter) ? namaFilter : '' %>">
+        </div>
 
-        <label class="label mb-0">NIM</label>
-        <input class="input" type="text" name="nim" placeholder="Cari NIM..." value="<%= (typeof nimFilter !== 'undefined' && nimFilter) ? nimFilter : '' %>">
+        <div>
+          <label class="label">NIM</label>
+          <input class="input" type="text" name="nim" placeholder="Cari NIM..." 
+                value="<%= (typeof nimFilter !== 'undefined' && nimFilter) ? nimFilter : '' %>">
+        </div>
 
-        <button class="btn-secondary text-xs" type="submit">Cari</button>
+        <!-- Submit button -->
+        <div class="md:col-span-4 flex justify-end pt-2">
+          <button class="btn-secondary px-6" type="submit">Cari</button>
+        </div>
       </form>
     </div>
 
