@@ -20,9 +20,11 @@
         <% } %>
         <% if (rps && (typeof isRevision === 'undefined' || !isRevision)) {
             const __rpsStatusForActions = rps.status || 'draft';
-            // tombol "Ajukan Validasi/Ulang" cuma buat dosen (pemilik RPS-nya), bukan kaprodi/admin --
-            // ngajuin RPS itu tugas dosen, kaprodi cuma menyetujui/menolak.
-            const __canSubmit = user && user.role !== 'admin' && String(rps.userId) === String(user.id);
+            // tombol "Ajukan Validasi/Ulang" cuma buat dosen (pemilik ATAU pengampu RPS-nya), bukan
+            // kaprodi/admin -- ngajuin RPS itu tugas dosen, kaprodi cuma menyetujui/menolak.
+            const __pengampuIds = Array.isArray(rps.dosen_pengampu_user_ids) ? rps.dosen_pengampu_user_ids : [];
+            const __isPengampu = __pengampuIds.some(id => String(id) === String(user.id));
+            const __canSubmit = user && user.role !== 'admin' && (String(rps.userId) === String(user.id) || __isPengampu);
             const __showSubmit = __canSubmit && (__rpsStatusForActions === 'draft' || __rpsStatusForActions === 'ditolak');
             const __showKaprodiActions = user && user.role === 'admin' && __rpsStatusForActions === 'diajukan';
         %>
