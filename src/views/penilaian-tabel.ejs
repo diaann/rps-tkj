@@ -586,17 +586,20 @@
         });
     </script>
 
-<!-- Floating Jump to Bottom Button -->
-<button onclick="jumpToBottom()" 
-        class="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center z-50 transition-all duration-200">
-    <i class="fas fa-arrow-down text-xl"></i>
-</button>
+<!-- Floating Buttons - Side by Side -->
+<div class="fixed bottom-8 right-8 flex gap-3 z-50">
+    <!-- Jump to Bottom -->
+    <button onclick="jumpToBottom()" 
+            class="bg-blue-600 hover:bg-blue-700 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all">
+        <i class="fas fa-arrow-down text-xl"></i>
+    </button>
 
-<!-- Return to Top Button (also floating) -->
-<button onclick="scrollToTop()" 
-        class="fixed bottom-8 left-8 bg-gray-600 hover:bg-gray-700 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center z-50 transition-all duration-200 hidden" 
-        id="return-to-top-btn">
-    <i class="fas fa-arrow-up text-xl"></i>
-</button>
+    <!-- Return to Top -->
+    <button onclick="scrollToTop()" 
+            id="return-to-top-btn"
+            class="bg-gray-600 hover:bg-gray-700 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all hidden">
+        <i class="fas fa-arrow-up text-xl"></i>
+    </button>
+</div>
 
 <%- include('partials/footer') %>
