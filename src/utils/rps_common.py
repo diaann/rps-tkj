@@ -280,16 +280,18 @@ def extract_cp_tree(all_tables, authoritative_owners=None):
                         cpl_desc[code] = rest
                 continue
 
-            # baris "CPL02 CPMK01: deskripsi..." 1 sel bisa berisi beberapa cpmk, makanya loop finditer
+            # baris "CPL02 CPMK01: deskripsi..." 1 sel bisa berisi beberapa cpmk, makanya loop finditer.
+            # cpl_tokens & cpmk bisa beda jumlah: pasangkan by urutan index (cpl ke-i <-> cpmk ke-i),
+            # kalau cpmk lebih banyak dari cpl, sisanya ikut kode cpl terakhir (sama spt pola cpmk<->sub-cpmk).
             if cpl_tokens and has_cpmk_marker_in_rest:
-                current_cpl = cpl_tokens[-1]
                 cpmk_matches = list(re.finditer(
                     r"CPMK\s*0*(\d+(?:\.\d+)?)\s*[:\-]?\s*(.*?)(?=CPMK\s*0*\d+(?:\.\d+)?\s*[:\-]|$)",
                     rest, re.I | re.S,
                 ))
-                for cpmk_match in cpmk_matches:
+                for i, cpmk_match in enumerate(cpmk_matches):
                     cpmk_id = pad_code("CPMK", cpmk_match.group(1))
                     desc = clean(cpmk_match.group(2))
+                    current_cpl = cpl_tokens[i] if i < len(cpl_tokens) else cpl_tokens[-1]
                     current_cpmk = cpmk_id
                     if cpmk_id not in cpmk_map:
                         cpmk_order.append(cpmk_id)
