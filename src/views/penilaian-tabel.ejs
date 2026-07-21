@@ -26,11 +26,156 @@
             </div>
         <% } else { %>
 
+        <!-- Matriks Asesmen RPS Collapsible Card -->
+        <div class="card mb-6 shadow-sm border border-gray-100">
+            <div class="flex justify-between items-center border-b pb-3 mb-4 cursor-pointer" onclick="toggleRpsMatrix()">
+                <h2 class="text-md font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-table mr-2 text-blue-600"></i> Matriks Asesmen RPS (Rencana Pembelajaran Semester)
+                </h2>
+                <button type="button" id="toggle-matrix-btn" class="text-blue-600 hover:text-blue-800 text-sm font-semibold flex items-center gap-1 focus:outline-none">
+                    <span id="toggle-matrix-text">Tampilkan</span> <i id="toggle-matrix-icon" class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            
+            <div id="rps-matrix-container" class="transition-all duration-300 hidden">
+                <div class="overflow-x-auto">
+                    <table class="table-auto w-full border-collapse border border-gray-200">
+                        <thead class="bg-blue-50 text-gray-700">
+                            <tr>
+                                <th rowspan="2" class="px-3 py-2 border border-gray-300 text-center text-xs font-bold uppercase tracking-wider">KODE CPL</th>
+                                <th rowspan="2" class="px-3 py-2 border border-gray-300 text-center text-xs font-bold uppercase tracking-wider">KODE CPMK</th>
+                                <th rowspan="2" class="px-3 py-2 border border-gray-300 text-center text-xs font-bold uppercase tracking-wider">KODE Sub-CPMK</th>
+                                <th rowspan="2" class="px-3 py-2 border border-gray-300 text-center text-xs font-bold uppercase tracking-wider">Bentuk dan Metode Pembelajaran</th>
+                                <th colspan="<%= 1 + (typeof activeSumatifCols !== 'undefined' ? activeSumatifCols.length : 0) %>" class="px-3 py-1 border border-gray-300 text-center text-xs font-bold uppercase tracking-wider">Bentuk dan Teknik Penilaian</th>
+                                <th rowspan="2" class="px-3 py-2 border border-gray-300 text-center text-xs font-bold uppercase tracking-wider">Bobot Penilaian (%)</th>
+                            </tr>
+                            <tr>
+                                <th class="px-3 py-1 border border-gray-300 text-center text-xs font-bold uppercase tracking-wider bg-green-50">FORMATIF</th>
+                                <% if (typeof activeSumatifCols !== 'undefined') { %>
+                                    <% activeSumatifCols.forEach(function(col) { %>
+                                        <th class="px-3 py-1 border border-gray-300 text-center text-xs font-bold uppercase tracking-wider bg-blue-100"><%= col.label %></th>
+                                    <% }); %>
+                                <% } %>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 text-sm text-gray-800">
+                            <% 
+                               let totalBobotPenilaian = 0;
+                               subCpmkList.forEach(function(sub) { 
+                                   let rowSumatifBobot = 0;
+                                   rowSumatifBobot += (parseFloat(sub.tugasBobot) || 0);
+                                   rowSumatifBobot += (parseFloat(sub.kuisBobot) || 0);
+                                   rowSumatifBobot += (parseFloat(sub.presentasiBobot) || 0);
+                                   rowSumatifBobot += (parseFloat(sub.pjblBobot) || 0);
+                                   rowSumatifBobot += (parseFloat(sub.ujianBobot) || 0);
+                                   (sub.lainnya || []).forEach(function(item) {
+                                       rowSumatifBobot += (parseFloat(item.bobot) || 0);
+                                   });
+                                   totalBobotPenilaian += rowSumatifBobot;
+                            %>
+                                <tr class="hover:bg-gray-50">
+                                    <% if (typeof sub.cplRowSpan !== 'undefined') { %>
+                                        <% if (sub.cplRowSpan > 0) { %>
+                                            <td rowspan="<%= sub.cplRowSpan %>" class="px-3 py-2 border border-gray-200 text-center font-semibold bg-white align-middle">
+                                                <%= sub.cplCode || '-' %>
+                                            </td>
+                                        <% } %>
+                                    <% } else { %>
+                                        <td class="px-3 py-2 border border-gray-200 text-center font-semibold bg-white align-middle">
+                                            <%= sub.cplCode || '-' %>
+                                        </td>
+                                    <% } %>
+                                    
+                                    <% if (typeof sub.cpmkRowSpan !== 'undefined') { %>
+                                        <% if (sub.cpmkRowSpan > 0) { %>
+                                            <td rowspan="<%= sub.cpmkRowSpan %>" class="px-3 py-2 border border-gray-200 text-center font-semibold bg-white align-middle">
+                                                <%= sub.cpmkId || '-' %>
+                                            </td>
+                                        <% } %>
+                                    <% } else { %>
+                                        <td class="px-3 py-2 border border-gray-200 text-center font-semibold bg-white align-middle">
+                                            <%= sub.cpmkId || '-' %>
+                                        </td>
+                                    <% } %>
+                                    
+                                    <td class="px-3 py-2 border border-gray-200 text-center font-medium">
+                                        Sub-CPMK <%= sub.globalNumber %>
+                                    </td>
+                                    
+                                    <td class="px-3 py-2 border border-gray-200 text-left text-xs leading-relaxed max-w-xs">
+                                        <%
+                                            let bp = (sub.bentukPembelajaran || '').trim();
+                                            let mp = (sub.metode || sub.metodeLuring || sub.metodeDaring || '').trim();
+                                            let displayPemb = [];
+                                            if (bp) displayPemb.push('BP: ' + bp);
+                                            if (mp) displayPemb.push('MP: ' + mp);
+                                        %>
+                                        <%= displayPemb.join(', ') || '-' %>
+                                    </td>
+                                    
+                                    <% if (typeof sub.formatifRowSpan !== 'undefined') { %>
+                                        <% if (sub.formatifRowSpan > 0) { %>
+                                            <td rowspan="<%= sub.formatifRowSpan %>" class="px-3 py-2 border border-gray-200 text-left text-xs bg-white align-middle">
+                                                <%= sub.formatifNama || '-' %><% if (sub.formatifBobot) { %> (<%= sub.formatifBobot %>%)<% } %>
+                                            </td>
+                                        <% } %>
+                                    <% } else { %>
+                                        <td class="px-3 py-2 border border-gray-200 text-left text-xs bg-white align-middle">
+                                            <%= sub.formatifNama || '-' %><% if (sub.formatifBobot) { %> (<%= sub.formatifBobot %>%)<% } %>
+                                        </td>
+                                    <% } %>
+                                    
+                                    <% if (typeof activeSumatifCols !== 'undefined') { %>
+                                        <% activeSumatifCols.forEach(function(col) { %>
+                                            <td class="px-3 py-2 border border-gray-200 text-center text-xs">
+                                                <% if (col.isDynamic) { %>
+                                                    <% 
+                                                       let foundItem = (sub.lainnya || []).find(function(item) {
+                                                           return item.nama && item.nama.replace(/\s*\d+\s*$/, '').trim().toLowerCase() === col.rawName.toLowerCase();
+                                                       });
+                                                       if (foundItem) {
+                                                    %>
+                                                        <%= foundItem.nama %> (<%= foundItem.bobot %>%)
+                                                    <% } else { %>
+                                                        -
+                                                    <% } %>
+                                                <% } else { %>
+                                                    <% 
+                                                       let nameField = col.key + 'Nama';
+                                                       let bobotField = col.key + 'Bobot';
+                                                       if (sub[bobotField] && parseFloat(sub[bobotField]) > 0) {
+                                                    %>
+                                                        <%= sub[nameField] || col.label %> (<%= sub[bobotField] %>%)
+                                                    <% } else { %>
+                                                        -
+                                                    <% } %>
+                                                <% } %>
+                                            </td>
+                                        <% }); %>
+                                    <% } %>
+                                    
+                                    <td class="px-3 py-2 border border-gray-200 text-center font-semibold bg-gray-50">
+                                        <%= rowSumatifBobot %>%
+                                    </td>
+                                </tr>
+                            <% }); %>
+                            <!-- Total Row -->
+                            <tr class="bg-gray-100 font-bold text-gray-900">
+                                <td colspan="4" class="px-3 py-2 border border-gray-300 text-right">TOTAL</td>
+                                <td colspan="<%= 1 + (typeof activeSumatifCols !== 'undefined' ? activeSumatifCols.length : 0) %>" class="px-3 py-2 border border-gray-300"></td>
+                                <td class="px-3 py-2 border border-gray-300 text-center"><%= totalBobotPenilaian %>%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- PENTING: cuma ADA 1 <form> di seluruh halaman ini, membungkus SEMUA tab
              Sub-CPMK sekaligus (tab-tab-nya cuma ditampilkan menggunakan css). 
              jadi walau user cuma keliatan cuma mengisi 1 tab , setelah tombol 
              "Simpan Nilai" diklik, NILAI DARI SEMUA TAB ikut terkirim ke server. -->
-        <form method="POST" action="/penilaian/mk/<%= rpsItem.id %>/kelas/<%= kelas.id %>/save">
+        <form id="penilaian-form" method="POST" action="/penilaian/mk/<%= rpsItem.id %>/kelas/<%= kelas.id %>/save">
             <input type="hidden" name="activeTab" id="active-tab-input" value="<%= (typeof activeTab !== 'undefined' && activeTab) ? activeTab : 'tb-panel-1' %>">
 
             <!-- Tab navigation -->
@@ -163,6 +308,8 @@
                                     <% }); %>
                                     <th class="px-3 py-2 border text-center text-xs font-semibold bg-blue-100">Nilai Akhir</th>
                                     <th class="px-3 py-2 border text-center text-xs font-semibold bg-blue-100">Nilai Akhir Huruf</th>
+                                    <th class="px-3 py-2 border text-center text-xs font-semibold bg-blue-100">Bobot</th>
+                                    <th class="px-3 py-2 border text-center text-xs font-semibold">Portofolio</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
@@ -183,6 +330,15 @@
                                         <td class="px-3 py-2 border text-sm text-center font-semibold bg-blue-50">
                                             <%= item.nilaiAkhirHuruf || '-' %>
                                         </td>
+                                        <td class="px-3 py-2 border text-sm text-center font-semibold bg-blue-50">
+                                            <%= (typeof item.bobot === 'number') ? item.bobot.toFixed(2) : '-' %>
+                                        </td>
+                                        <td class="px-3 py-2 border text-sm text-center">
+                                            <button type="button" class="btn-secondary text-xs px-3 py-1 rounded"
+                                                onclick="openPortofolio('<%= item.nim %>')">
+                                                <i class="fas fa-folder-open mr-1"></i>Portofolio
+                                            </button>
+                                        </td>
                                     </tr>
                                 <% }); %>
                             </tbody>
@@ -191,10 +347,103 @@
                 </div>
             </div>
 
-            <div class="mt-4 flex justify-between items-center">
+            <!-- Modal Portofolio per mahasiswa. Semua modal ini dirender langsung di HTML
+                 (bukan diisi lewat javascript) supaya textarea komentarnya tetap bagian
+                 dari <form> yg sama & ikut kekirim pas tombol "Simpan Nilai" diklik --
+                 sama kayak prinsip tab Sub-CPMK di atas. Disembunyikan pakai class
+                 "hidden" & baru dimunculkan lewat openPortofolio(nim). -->
+            <% mahasiswaList.forEach(function(m) { %>
+                <% const rekapItem = (typeof rekapData !== 'undefined' && Array.isArray(rekapData) ? rekapData : []).find(function(r) { return r.nim === m.nim; }); %>
+                <div id="portofolio-modal-<%= m.nim %>" class="portofolio-modal hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                    <!-- max-height & flex-column lewat inline style (bukan class Tailwind arbitrary-value
+                          kayak "max-h-[85vh]") supaya tetap kepakai walau class itu ga ada di CSS hasil build.
+                          Bagian tengah (isi komentar) yg discroll; header & footer tetap kelihatan. -->
+                    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl" style="max-height: 85vh; display: flex; flex-direction: column;">
+                        <div class="flex items-center justify-between p-4 border-b flex-shrink-0">
+                            <div>
+                                <div class="font-semibold text-gray-800"><%= m.nama %></div>
+                                <div class="text-sm text-gray-500">NIM <%= m.nim %></div>
+                            </div>
+                            <button type="button" class="text-gray-400 hover:text-gray-600" onclick="closePortofolio('<%= m.nim %>')">
+                                <i class="fas fa-times text-lg"></i>
+                            </button>
+                        </div>
+
+                        <div class="p-4" style="overflow-y: auto;">
+                            <div class="mb-4 flex items-center gap-2">
+                                <span class="text-sm text-gray-600">Nilai Akhir (MK Terpilih):</span>
+                                <span id="portofolio-nilai-huruf-<%= m.nim %>" class="px-3 py-1 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm">
+                                    <%= rekapItem ? (rekapItem.nilaiAkhirHuruf || '-') : '-' %>
+                                </span>
+                                <span class="text-sm text-gray-600 ml-2">Bobot:</span>
+                                <span id="portofolio-bobot-<%= m.nim %>" class="px-3 py-1 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm">
+                                    <%= (rekapItem && typeof rekapItem.bobot === 'number') ? rekapItem.bobot.toFixed(2) : '-' %>
+                                </span>
+                            </div>
+
+                            <!-- Course Dropdown Selector -->
+                            <div class="mb-4">
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Pilih Mata Kuliah:</label>
+                                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500" 
+                                    onchange="switchPortofolioMk('<%= m.nim %>', this.value)">
+                                    <% if (typeof rpsListWithSubCpmk !== 'undefined' && typeof rekapDataByMk !== 'undefined') { %>
+                                        <% rpsListWithSubCpmk.forEach(function(mk) { %>
+                                            <% 
+                                               const mkRekap = rekapDataByMk[mk.id] || [];
+                                               const studentMkSummary = mkRekap.find(function(r) { return r.nim === m.nim; });
+                                               const displayNilai = studentMkSummary ? (studentMkSummary.nilaiAkhirHuruf || '-') : '-';
+                                               const displayBobot = (studentMkSummary && typeof studentMkSummary.bobot === 'number') ? studentMkSummary.bobot.toFixed(2) : '-';
+                                            %>
+                                            <option value="<%= mk.id %>" 
+                                                    data-nilai-huruf="<%= displayNilai %>" 
+                                                    data-bobot="<%= displayBobot %>"
+                                                    <%= String(mk.id) === String(rpsItem.id) ? 'selected' : '' %>>
+                                                <%= mk.nama_mk %> (<%= mk.kode_mk %>)
+                                            </option>
+                                        <% }); %>
+                                    <% } %>
+                                </select>
+                            </div>
+
+                            <!-- Comment Sections for all Courses -->
+                            <% if (typeof rpsListWithSubCpmk !== 'undefined') { %>
+                                <% rpsListWithSubCpmk.forEach(function(mk) { %>
+                                    <div id="portofolio-mk-<%= m.nim %>-<%= mk.id %>" class="portofolio-mk-section <%= String(mk.id) === String(rpsItem.id) ? '' : 'hidden' %>">
+                                        <% if (mk.subCpmkList.length === 0) { %>
+                                            <p class="text-sm text-gray-500 italic py-4 text-center">Mata kuliah ini belum memiliki data Sub-CPMK.</p>
+                                        <% } else { %>
+                                            <% mk.subCpmkList.forEach(function(sub) { %>
+                                                <div class="mb-4 p-3 bg-gray-50 border rounded-lg">
+                                                    <div class="text-sm font-semibold text-gray-700 mb-1">Sub-CPMK <%= sub.globalNumber %></div>
+                                                    <div class="text-sm text-gray-600 mb-2"><%= sub.deskripsi %></div>
+                                                    <% 
+                                                       const komentarKey = `komentar[${mk.id}][${sub.globalNumber}][${m.nim}]`;
+                                                       const dbKomentarKey = `komentar[${sub.globalNumber}][${m.nim}]`;
+                                                       const savedCommentText = (typeof allSavedComments !== 'undefined' && allSavedComments[mk.id] && allSavedComments[mk.id][dbKomentarKey]) ? allSavedComments[mk.id][dbKomentarKey] : '';
+                                                    %>
+                                                    <textarea name="<%= komentarKey %>" rows="2" placeholder="Tulis komentar untuk Sub-CPMK ini..."
+                                                        class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"><%= savedCommentText %></textarea>
+                                                </div>
+                                            <% }); %>
+                                        <% } %>
+                                    </div>
+                                <% }); %>
+                            <% } %>
+                        </div>
+
+                        <div class="p-4 border-t flex justify-end flex-shrink-0">
+                            <button type="button" class="btn-secondary px-4 py-2 rounded bg-gray-500 text-white hover:bg-gray-600" onclick="closePortofolio('<%= m.nim %>')">Tutup</button>
+                        </div>
+                    </div>
+                </div>
+            <% }); %>
+
+            <div class="mt-6 flex justify-between items-center">
                 <a href="/penilaian" class="btn-secondary px-4 py-2 rounded bg-gray-500 text-white hover:bg-gray-600 inline-block">Kembali</a>
-                <button type="submit" class="btn-primary px-6 py-2 rounded">
-                    <i class="fas fa-save mr-1"></i>Simpan Nilai
+                
+                <button type="submit" id="save-button" class="btn-primary px-6 py-2 rounded flex items-center gap-2">
+                    <i class="fas fa-save"></i>
+                    <span>Simpan Nilai</span>
                 </button>
             </div>
         </form>
@@ -228,6 +477,129 @@
                 hiddenInput.value = targetId;
             }
         }
+
+        // buka/tutup modal Portofolio per mahasiswa. modal-nya sendiri sudah ada di
+        // HTML (cuma disembunyikan lewat class "hidden"), jadi fungsi ini cuma
+        // gonta-ganti class-nya aja, ga perlu request ke server.
+        function openPortofolio(nim) {
+            const modal = document.getElementById('portofolio-modal-' + nim);
+            if (modal) modal.classList.remove('hidden');
+        }
+        function closePortofolio(nim) {
+            const modal = document.getElementById('portofolio-modal-' + nim);
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function switchPortofolioMk(nim, rpsId) {
+            // hide all sections for this specific student's modal
+            document.querySelectorAll('.portofolio-mk-section').forEach(function (sec) {
+                if (sec.id.startsWith('portofolio-mk-' + nim + '-')) {
+                    sec.classList.add('hidden');
+                }
+            });
+            // show the selected course's section
+            const targetSec = document.getElementById('portofolio-mk-' + nim + '-' + rpsId);
+            if (targetSec) targetSec.classList.remove('hidden');
+
+            // update Nilai Akhir and Bobot badge
+            const selectEl = document.querySelector('#portofolio-modal-' + nim + ' select');
+            if (selectEl) {
+                const selectedOpt = selectEl.options[selectEl.selectedIndex];
+                const nilaiHuruf = selectedOpt.getAttribute('data-nilai-huruf') || '-';
+                const bobotVal = selectedOpt.getAttribute('data-bobot') || '-';
+                
+                const nilaiBadge = document.getElementById('portofolio-nilai-huruf-' + nim);
+                const bobotBadge = document.getElementById('portofolio-bobot-' + nim);
+                if (nilaiBadge) nilaiBadge.innerText = nilaiHuruf;
+                if (bobotBadge) bobotBadge.innerText = bobotVal;
+            }
+        }
+
+        function toggleRpsMatrix() {
+            const container = document.getElementById('rps-matrix-container');
+            const text = document.getElementById('toggle-matrix-text');
+            const icon = document.getElementById('toggle-matrix-icon');
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                text.innerText = 'Sembunyikan';
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            } else {
+                container.classList.add('hidden');
+                text.innerText = 'Tampilkan';
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            }
+        }
+
+        // AJAX Save
+        document.getElementById('penilaian-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const saveBtn = document.getElementById('save-button');
+            const originalHTML = saveBtn.innerHTML;
+
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menyimpan...`;
+
+            fetch(this.action, {
+                method: 'POST',
+                body: new FormData(this)
+            })
+            .then(() => {
+                // Success message
+                const successDiv = document.createElement('div');
+                successDiv.className = 'mb-4 p-3 rounded bg-green-100 text-green-800 border border-green-300 flex items-center';
+                successDiv.innerHTML = `<i class="fas fa-check-circle mr-2"></i> Nilai berhasil disimpan.`;
+                
+                const firstCard = document.querySelector('.card.mb-6');
+                if (firstCard) firstCard.parentNode.insertBefore(successDiv, firstCard.nextSibling);
+
+                setTimeout(() => successDiv.remove(), 4000);
+
+                // Soft reload to show updated values
+                setTimeout(() => window.location.reload(), 800);
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Gagal menyimpan nilai. Silakan coba lagi.');
+            })
+            .finally(() => {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalHTML;
+            });
+        });
+
+        // Floating Buttons
+        function jumpToBottom() {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Show Return to Top button when scrolled down
+        window.addEventListener('scroll', () => {
+            const btn = document.getElementById('return-to-top-btn');
+            if (btn) btn.classList.toggle('hidden', window.scrollY < 400);
+        });
     </script>
+
+<!-- Floating Buttons - Side by Side -->
+<div class="fixed bottom-8 right-8 flex gap-3 z-50">
+    <!-- Jump to Bottom -->
+    <button onclick="jumpToBottom()" 
+            class="bg-blue-600 hover:bg-blue-700 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all">
+        <i class="fas fa-arrow-down text-xl"></i>
+    </button>
+
+    <!-- Return to Top -->
+    <button onclick="scrollToTop()" 
+            id="return-to-top-btn"
+            class="bg-gray-600 hover:bg-gray-700 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all hidden">
+        <i class="fas fa-arrow-up text-xl"></i>
+    </button>
+</div>
 
 <%- include('partials/footer') %>

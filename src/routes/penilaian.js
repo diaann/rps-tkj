@@ -149,6 +149,11 @@ function buildSubCpmkListForPenilaian(rpsItem) {
   return rawList.map((sub, idx) => ({
     globalNumber: idx + 1, // <- ini yg dipakai sbg nomor tab "Sub-CPMK 1", "Sub-CPMK 2", dst
     cpmkId: sub.cpmkId,
+    cplCode: rpsItem[`cpmk[${sub.cpmkId}][cpl_code]`] || '',
+    bentukPembelajaran: sub.bentuk_pembelajaran || '',
+    metode: sub.metode || '',
+    metodeLuring: sub.metode_luring || '',
+    metodeDaring: sub.metode_daring || '',
     deskripsi: sub.deskripsi || '',
     pekanAwal: sub.pekan_awal || '',
     pekanAkhir: sub.pekan_akhir || '',
@@ -193,10 +198,27 @@ function getNilaiHuruf(nilai) {
   return 'E';
 }
 
+// konversi nilai huruf -> bobot (dipakai spt IPK). E tidak punya bobot (dianggap 0).
+const BOBOT_PER_HURUF = {
+  A: 4.00,
+  'A-': 3.75,
+  'B+': 3.25,
+  B: 3.00,
+  'B-': 2.75,
+  'C+': 2.50,
+  C: 2.00,
+  'C-': 1.50,
+  D: 1.00,
+  E: 0
+};
+function getBobot(huruf) {
+  return Object.prototype.hasOwnProperty.call(BOBOT_PER_HURUF, huruf) ? BOBOT_PER_HURUF[huruf] : 0;
+}
+
 function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
   const subCpmkColumns = subCpmkList.map((sub) => ({
     key: `subcpmk-${sub.globalNumber}`,
-    label: `TB ${sub.globalNumber}`
+    label: `Sub-CPMK ${sub.globalNumber}`
   }));
 
   const rows = [];
@@ -245,7 +267,7 @@ function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
       const nilaiAkhir = totalBobot > 0 ? (weightedGrade / totalBobot) : 0;
 
       subCpmkScores[`subcpmk-${sub.globalNumber}`] = {
-        label: `TB ${sub.globalNumber}`,
+        label: `Sub-CPMK ${sub.globalNumber}`,
         nilaiAkhir
       };
     });
@@ -257,8 +279,9 @@ function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
     const avgCpmk = cpmkScores.length > 0
       ? cpmkScores.reduce((sum, val) => sum + val, 0) / cpmkScores.length
       : 0;
-    const nilaiAkhirKeseluruhan = avgCpmk * 0.9;
+    const nilaiAkhirKeseluruhan = avgCpmk;
     const nilaiAkhirHuruf = getNilaiHuruf(nilaiAkhirKeseluruhan);
+    const bobot = getBobot(nilaiAkhirHuruf);
 
     rows.push({
       id: m.id,
@@ -266,7 +289,8 @@ function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
       nama: m.nama,
       subCpmkScores,
       nilaiAkhirKeseluruhan,
-      nilaiAkhirHuruf
+      nilaiAkhirHuruf,
+      bobot
     });
   });
 
@@ -375,17 +399,128 @@ router.get('/penilaian/mk/:rpsId/kelas/:kelasId', isAuthenticated, (req, res) =>
   // susun ulang Sub-CPMK dari RPS
   const subCpmkList = buildSubCpmkListForPenilaian(item);
 
+  // Calculate CPL row spans
+  let i = 0;
+  while (i < subCpmkList.length) {
+    let j = i + 1;
+    while (j < subCpmkList.length && subCpmkList[j].cplCode === subCpmkList[i].cplCode) {
+      j++;
+    }
+    subCpmkList[i].cplRowSpan = j - i;
+    for (let k = i + 1; k < j; k++) {
+      subCpmkList[k].cplRowSpan = 0;
+    }
+    i = j;
+  }
+
+  // Calculate CPMK row spans
+  i = 0;
+  while (i < subCpmkList.length) {
+    let j = i + 1;
+    while (j < subCpmkList.length && subCpmkList[j].cpmkId === subCpmkList[i].cpmkId) {
+      j++;
+    }
+    subCpmkList[i].cpmkRowSpan = j - i;
+    for (let k = i + 1; k < j; k++) {
+      subCpmkList[k].cpmkRowSpan = 0;
+    }
+    i = j;
+  }
+
+  // Calculate Formatif row spans (merge if identical formatifNama)
+  i = 0;
+  while (i < subCpmkList.length) {
+    let j = i + 1;
+    while (j < subCpmkList.length && subCpmkList[j].formatifNama === subCpmkList[i].formatifNama && subCpmkList[i].formatifNama !== '') {
+      j++;
+    }
+    subCpmkList[i].formatifRowSpan = j - i;
+    for (let k = i + 1; k < j; k++) {
+      subCpmkList[k].formatifRowSpan = 0;
+    }
+    i = j;
+  }
+
+  // Dynamic Sumatif columns detection
+  const activeSumatifCols = [];
+  const standards = [
+    { key: 'tugas', label: 'Tugas' },
+    { key: 'kuis', label: 'Kuis' },
+    { key: 'presentasi', label: 'Presentasi' },
+    { key: 'pjbl', label: 'PjBL' },
+    { key: 'ujian', label: 'Ujian' }
+  ];
+
+  standards.forEach(std => {
+    const hasBobot = subCpmkList.some(sub => {
+      const bobotField = `${std.key}Bobot`;
+      return sub[bobotField] && parseFloat(sub[bobotField]) > 0;
+    });
+    if (hasBobot) {
+      activeSumatifCols.push({ key: std.key, label: std.label, isDynamic: false });
+    }
+  });
+
+  const dynamicNames = new Set();
+  subCpmkList.forEach(sub => {
+    (sub.lainnya || []).forEach(item => {
+      if (item.nama && item.bobot && parseFloat(item.bobot) > 0) {
+        const catName = item.nama.replace(/\s*\d+\s*$/, '').trim();
+        if (catName) {
+          dynamicNames.add(catName);
+        }
+      }
+    });
+  });
+
+  dynamicNames.forEach(name => {
+    if (!activeSumatifCols.some(col => col.label.toLowerCase() === name.toLowerCase())) {
+      activeSumatifCols.push({ key: `lainnya_${name.toLowerCase()}`, label: name, isDynamic: true, rawName: name });
+    }
+  });
+
   // cari record nilai yg mungkin udah pernah disimpan sebelumnya utk kombinasi RPS+kelas
   const penilaianAll = readJsonFile(penilaianPath, []);
   const record = penilaianAll.find(p => String(p.rpsId) === String(item.id) && p.kelasId === kelasId);
   // kalau ada, savedValues diisi nilai2 yg pernah diinput, kalau belum pernah, objek kosong
   const savedValues = record ? record.values : {};
+  // komentar portofolio per mahasiswa per Sub-CPMK, disimpan terpisah dari nilai
+  const savedComments = record ? (record.komentar || {}) : {};
   const rekapSummary = buildRekapData(mahasiswaList, subCpmkList, savedValues);
   const rekapData = rekapSummary.rows;
   const rekapColumns = rekapSummary.subCpmkColumns;
   const activeTab = req.query.activeTab && /^(tb-panel-(?:rekap|\d+))$/.test(req.query.activeTab)
     ? req.query.activeTab
     : 'tb-panel-1';
+
+  // Get all RPS items in the same semester
+  const semesterRpsList = rps.filter(r => String(r.semester) === String(item.semester));
+
+  // Build the list of all courses in the semester with their respective Sub-CPMKs
+  const rpsListWithSubCpmk = semesterRpsList.map(r => {
+    return {
+      id: r.id,
+      nama_mk: r.nama_mk || '(Tanpa nama)',
+      kode_mk: r.kode_mk || '',
+      subCpmkList: buildSubCpmkListForPenilaian(r)
+    };
+  });
+
+  // Collect all comments from penilaian.json for all courses in this semester for the current class
+  const allSavedComments = {};
+  semesterRpsList.forEach(r => {
+    const rec = penilaianAll.find(p => String(p.rpsId) === String(r.id) && p.kelasId === kelasId);
+    allSavedComments[r.id] = rec ? (rec.komentar || {}) : {};
+  });
+
+  // Calculate final grade records (rekap data) for all courses in this semester for all students
+  const rekapDataByMk = {};
+  rpsListWithSubCpmk.forEach(mk => {
+    const rec = penilaianAll.find(p => String(p.rpsId) === String(mk.id) && p.kelasId === kelasId);
+    const mkSavedValues = rec ? (rec.values || {}) : {};
+    const summary = buildRekapData(mahasiswaList, mk.subCpmkList, mkSavedValues);
+    rekapDataByMk[mk.id] = summary.rows;
+  });
 
   res.render('penilaian-tabel', {
     title: 'Tabel Penilaian',
@@ -395,7 +530,12 @@ router.get('/penilaian/mk/:rpsId/kelas/:kelasId', isAuthenticated, (req, res) =>
     kelasLabel: labelKelasSaatIni(kelas.id), // contoh: "1A" (angkatan 2025), dihitung ulang tiap request
     mahasiswaList,
     subCpmkList,
+    activeSumatifCols,
+    rpsListWithSubCpmk,
+    allSavedComments,
+    rekapDataByMk,
     savedValues, // dipakai di view buat isi ulang nilai yg sudah pernah diinput
+    savedComments, // dipakai di view buat isi ulang komentar portofolio yg sudah pernah diinput
     rekapData,
     rekapColumns,
     activeTab,
@@ -415,7 +555,7 @@ router.post('/penilaian/mk/:rpsId/kelas/:kelasId/save', isAuthenticated, (req, r
 
   const kelasId = req.params.kelasId;
 
-  // saring req.body: cuma field yg namanya nilai[angka][id][komponen] akan diambil.
+  // saring req.body: cuma field yg namanya nilai[angka][nim][komponen] akan diambil.
   const values = {};
   Object.keys(req.body).forEach(key => {
     if (
@@ -426,26 +566,74 @@ router.post('/penilaian/mk/:rpsId/kelas/:kelasId/save', isAuthenticated, (req, r
     }
   });
 
-  const penilaianAll = readJsonFile(penilaianPath, []);
-  // cari apakah kombinasi RPS+kelas ini sudah pernah punya record nilai sebelumnya
-  const existingIndex = penilaianAll.findIndex(p => String(p.rpsId) === String(item.id) && p.kelasId === kelasId);
+  // saring lagi field komentar portofolio, formatnya: komentar[<rpsId>][<subCpmkGlobalNumber>][<nim>]
+  const komentarByRps = {};
+  Object.keys(req.body).forEach(key => {
+    const match = key.match(/^komentar\[(\d+)\]\[(\d+)\]\[([^\]]+)\]$/);
+    if (match) {
+      const rpsIdStr = match[1];
+      const subNum = match[2];
+      const nim = match[3];
+      if (!komentarByRps[rpsIdStr]) {
+        komentarByRps[rpsIdStr] = {};
+      }
+      komentarByRps[rpsIdStr][`komentar[${subNum}][${nim}]`] = req.body[key];
+    }
+  });
 
-  const record = {
-    // kalau sudah ada sebelumnya, pakai id lama (biar tetap 1 record yg sama, bukan bikin duplikat).
-    // kalau belum ada, bikin id baru = id terbesar + 1.
+  const penilaianAll = readJsonFile(penilaianPath, []);
+  
+  // 1. Process active/current course record (including grades/values and comments)
+  const currentRpsIdStr = String(item.id);
+  const currentKomentar = komentarByRps[currentRpsIdStr] || {};
+  const existingIndex = penilaianAll.findIndex(p => String(p.rpsId) === currentRpsIdStr && p.kelasId === kelasId);
+
+  const currentRecord = {
     id: existingIndex >= 0 ? penilaianAll[existingIndex].id : (penilaianAll.reduce((max, p) => Math.max(max, p.id || 0), 0) + 1),
     rpsId: item.id,
     kelasId,
-    values, // seluruh nilai yg baru diinput menggantikan nilai lama
+    values, // replacing current values
+    komentar: {
+      ...(existingIndex >= 0 ? (penilaianAll[existingIndex].komentar || {}) : {}),
+      ...currentKomentar // merging current comments
+    },
     updated_at: new Date().toISOString(),
     updated_by: req.session.user.id
   };
 
   if (existingIndex >= 0) {
-    penilaianAll[existingIndex] = record; // timpa record lama
+    penilaianAll[existingIndex] = currentRecord;
   } else {
-    penilaianAll.push(record); // record baru, tambahkan ke daftar
+    penilaianAll.push(currentRecord);
   }
+
+  // 2. Process other courses comments in the same semester (only updating comments, not overriding other fields)
+  Object.keys(komentarByRps).forEach(otherRpsIdStr => {
+    if (otherRpsIdStr === currentRpsIdStr) return; // already updated above
+    const otherRpsId = parseInt(otherRpsIdStr, 10);
+    const otherKomentar = komentarByRps[otherRpsIdStr];
+    
+    const otherIndex = penilaianAll.findIndex(p => String(p.rpsId) === otherRpsIdStr && p.kelasId === kelasId);
+    if (otherIndex >= 0) {
+      penilaianAll[otherIndex].komentar = {
+        ...(penilaianAll[otherIndex].komentar || {}),
+        ...otherKomentar
+      };
+      penilaianAll[otherIndex].updated_at = new Date().toISOString();
+      penilaianAll[otherIndex].updated_by = req.session.user.id;
+    } else {
+      const newRecord = {
+        id: penilaianAll.reduce((max, p) => Math.max(max, p.id || 0), 0) + 1,
+        rpsId: otherRpsId,
+        kelasId,
+        values: {},
+        komentar: otherKomentar,
+        updated_at: new Date().toISOString(),
+        updated_by: req.session.user.id
+      };
+      penilaianAll.push(newRecord);
+    }
+  });
 
   writeJsonFile(penilaianPath, penilaianAll);
 
