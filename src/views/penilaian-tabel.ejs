@@ -542,11 +542,23 @@
             saveBtn.disabled = true;
             saveBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menyimpan...`;
 
+            // dikirim sbg application/x-www-form-urlencoded (bukan multipart/form-data
+            // bawaan FormData), krn route ini cuma pakai body-parser urlencoded standar
+            // (ga ada middleware multer terpasang). kalau dikirim sbg FormData mentah,
+            // req.body di server bakal KOSONG - nilai & komentar keliatan "tersimpan"
+            // di UI (alert sukses tetap muncul krn fetch-nya sendiri berhasil), padahal
+            // sebenarnya ga ada satupun field yg nyampe ke server.
+            const bodyParams = new URLSearchParams(new FormData(this));
+
             fetch(this.action, {
                 method: 'POST',
-                body: new FormData(this)
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: bodyParams.toString()
             })
-            .then(() => {
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error('Server merespons dengan status ' + res.status);
+                }
                 // Success message
                 const successDiv = document.createElement('div');
                 successDiv.className = 'mb-4 p-3 rounded bg-green-100 text-green-800 border border-green-300 flex items-center';
