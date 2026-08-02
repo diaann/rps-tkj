@@ -115,6 +115,29 @@ function ensureArray(value) {
   return Array.isArray(value) ? value : [value];
 }
 
+// tahun ajaran yg sedang berjalan sekarang: semester ganjil Agu-Des, genap Jan-Jul.
+// SAMA PERSIS dgn tahunAjaranSaatIni() di routes/penilaian.js -- kalau salah satu
+// diubah, yg lain juga harus ikut diubah biar ga ketidaksesuain.
+function tahunAjaranSaatIni() {
+  const now = new Date();
+  const bulan = now.getMonth() + 1; // 1-12
+  return bulan >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+// hitung tingkat (1-4) dari tahun angkatan, di-cap 1-4. dipakai SATU KALI aja pas
+// sebuah kelas baru pertama kali dibikin (bukan dihitung ulang tiap request kayak
+// dulu) -- hasilnya disimpan permanen di field "tingkatSaatIni" pada kelas.json,
+// supaya admin bisa koreksi manual kapan aja (misal mahasiswa tinggal kelas) tanpa
+// nilainya ketiban ulang otomatis oleh perhitungan tahun berjalan.
+function computeTingkatSaatIni(angkatan) {
+  const angkatanNum = parseInt(angkatan, 10);
+  if (!angkatanNum) return 1;
+  const tingkat = tahunAjaranSaatIni() - angkatanNum + 1;
+  if (tingkat < 1) return 1;
+  if (tingkat > 4) return 4;
+  return tingkat;
+}
+
 // parse input hidden "dosen_pengampu_user_id[]" (dikirim form, sejajar posisinya dgn
 // dosen_pengampu[]) jadi array id (number) atau null kalau baris itu tidak ter-link ke
 // akun manapun. posisinya SENGAJA dipertahankan (tidak di-filter/dedupe) krn harus tetap
@@ -1851,7 +1874,12 @@ router.post('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
   // (sama kayak logic yg dipakai di import Excel)
   const kelas = readJsonFile(kelasPath, []);
   if (!kelas.some(k => String(k.id) === kelasId)) {
-    kelas.push({ id: kelasId, nama: kelasId, tingkat: parseInt(angkatan, 10) || 0 });
+    kelas.push({
+      id: kelasId,
+      nama: kelasId,
+      tingkat: parseInt(angkatan, 10) || 0,
+      tingkatSaatIni: computeTingkatSaatIni(angkatan) // dihitung SEKALI di sini, bukan tiap request
+    });
     writeJsonFile(kelasPath, kelas);
   }
 
@@ -1961,7 +1989,12 @@ router.post('/admin/mahasiswa/import', isAuthenticated, isAdmin, (req, res) => {
         const kelasId = `${angkatan}${hurufKelas}`;
 
         if (!existingKelasIds.has(kelasId)) {
-          newKelasToAdd.push({ id: kelasId, nama: kelasId, tingkat: parseInt(angkatan, 10) || 0 });
+        newKelasToAdd.push({
+          id: kelasId,
+          nama: kelasId,
+          tingkat: parseInt(angkatan, 10) || 0,
+          tingkatSaatIni: computeTingkatSaatIni(angkatan) // dihitung SEKALI di sini, bukan tiap request
+        });
           existingKelasIds.add(kelasId);
         }
 
@@ -1996,7 +2029,7 @@ router.post('/admin/mahasiswa/update/:id', isAuthenticated, isAdmin, (req, res) 
   const angkatan = String(req.body.angkatan || '').trim();
   const huruf = String(req.body.huruf || '').trim().toUpperCase();
 
-  // validasi angkatan harus 4 digit tahun, huruf harus huruf doang (misal "A", "B")
+  // validasi
   if (!nim || !nama || !/^\d{4}$/.test(angkatan) || !/^[A-Za-z]+$/.test(huruf)) {
     return res.redirect('/admin/mahasiswa?error=missing');
   }
@@ -2010,6 +2043,7 @@ router.post('/admin/mahasiswa/update/:id', isAuthenticated, isAdmin, (req, res) 
     return res.redirect('/admin/mahasiswa?error=not-found');
   }
 
+  // cek duplikat NIM
   const duplicate = mahasiswa.some((item, idx) => {
     if (idx === index) return false;
     return String(item.nim) === nim;
@@ -2019,11 +2053,15 @@ router.post('/admin/mahasiswa/update/:id', isAuthenticated, isAdmin, (req, res) 
     return res.redirect('/admin/mahasiswa?error=duplicate');
   }
 
-  // kalau kelasId gabungan angkatan+huruf ini belum ada di kelas.json, bikin otomatis
-  // (sama kayak logic di route tambah mahasiswa & import Excel)
+  // kalau kelas baru belum ada, buat otomatis
   const kelas = readJsonFile(kelasPath, []);
   if (!kelas.some(k => String(k.id) === kelasId)) {
-    kelas.push({ id: kelasId, nama: kelasId, tingkat: parseInt(angkatan, 10) || 0 });
+    kelas.push({
+      id: kelasId,
+      nama: kelasId,
+      tingkat: parseInt(angkatan, 10) || 0,
+      tingkatSaatIni: computeTingkatSaatIni(angkatan)
+    });
     writeJsonFile(kelasPath, kelas);
   }
 
@@ -2033,6 +2071,56 @@ router.post('/admin/mahasiswa/update/:id', isAuthenticated, isAdmin, (req, res) 
   writeJsonFile(mahasiswaPath, mahasiswa);
 
   return res.redirect('/admin/mahasiswa?updated=1');
+});
+
+// Route untuk admin koreksi manual tingkatSaatIni 1 kelas
+router.post('/admin/kelas/update-tingkat/:id', isAuthenticated, isAdmin, (req, res) => {
+  const kelasId = String(req.params.id || '').trim();
+  const tingkatBaru = parseInt(req.body.tingkatSaatIni, 10);
+
+  if (!kelasId || !Number.isInteger(tingkatBaru) || tingkatBaru < 1 || tingkatBaru > 4) {
+    return res.redirect('/admin/mahasiswa?error=tingkat-invalid');
+  }
+
+  const kelas = readJsonFile(kelasPath, []);
+  const index = kelas.findIndex(k => String(k.id) === kelasId);
+
+  if (index === -1) {
+    return res.redirect('/admin/mahasiswa?error=not-found');
+  }
+
+  kelas[index] = { ...kelas[index], tingkatSaatIni: tingkatBaru };
+  writeJsonFile(kelasPath, kelas);
+
+  return res.redirect('/admin/mahasiswa?tingkat-updated=1');
+});
+
+// Update tingkatSaatIni untuk SEMUA kelas dari satu Angkatan
+router.post('/admin/kelas/update-tingkat-by-angkatan', isAuthenticated, isAdmin, (req, res) => {
+  const angkatan = String(req.body.angkatan || '').trim();
+  const tingkatBaru = parseInt(req.body.tingkatSaatIni, 10);
+
+  if (!angkatan || !Number.isInteger(tingkatBaru) || tingkatBaru < 1 || tingkatBaru > 4) {
+    return res.redirect('/admin/mahasiswa?error=tingkat-invalid');
+  }
+
+  const kelas = readJsonFile(kelasPath, []);
+  let updated = 0;
+
+  kelas.forEach((k, index) => {
+    // tingkat di kelas.json menyimpan tahun angkatan
+    if (String(k.tingkat) === String(angkatan)) {
+      kelas[index] = { ...kelas[index], tingkatSaatIni: tingkatBaru };
+      updated += 1;
+    }
+  });
+
+  if (updated === 0) {
+    return res.redirect('/admin/mahasiswa?error=angkatan-not-found');
+  }
+
+  writeJsonFile(kelasPath, kelas);
+  return res.redirect('/admin/mahasiswa?tingkat-updated=1');
 });
 
 router.post('/admin/mahasiswa/delete/:id', isAuthenticated, isAdmin, (req, res) => {

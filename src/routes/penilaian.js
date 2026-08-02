@@ -51,28 +51,29 @@ function tingkatFromSemester(semester) {
 }
 
 // ambil tahun angkatan dari kelasId, contoh "2025A" -> 2025, "2022B" -> 2022.
-// dipakai krn field "tingkat" di kelas.json sebenarnya nyimpen tahun angkatan
-// (misal 2025), BUKAN level 1-4 yg dihasilkan tingkatFromSemester(). jadi ga
-// bisa dibandingkan langsung, harus dihitung ulang tiap kali dari tahun sekarang.
+// masih dipakai sbg FALLBACK aja (lihat tingkatSaatIniDariKelas di bawah) buat
+// kelas lama yg blm punya field tingkatSaatIni tersimpan di kelas.json.
 function angkatanFromKelasId(kelasId) {
   const match = String(kelasId).match(/^(\d{4})/);
   return match ? parseInt(match[1], 10) : null;
 }
 
 // tahun ajaran yg sedang berjalan sekarang: semester ganjil Agu-Des, genap Jan-Jul.
-// dipakai sbg acuan buat hitung angkatan tsb sekarang ada di tingkat berapa.
+// SAMA PERSIS dgn tahunAjaranSaatIni() di routes/index.js -- kalau salah satu
+// diubah, yg lain juga harus ikut diubah biar ga ketidaksesuain.
 function tahunAjaranSaatIni() {
   const now = new Date();
   const bulan = now.getMonth() + 1; // 1-12
   return bulan >= 8 ? now.getFullYear() : now.getFullYear() - 1;
 }
 
-// tingkat = selisih tahun ajaran skrg dgn tahun angkatan, +1.
-// angkatan 2025 di tahun ajaran 2025 -> tingkat 1, angkatan 2024 -> tingkat 2, dst.
-// di-cap 1-4 (S1 cuma 4 tingkat): angkatan yg lebih tua dari tingkat 4 (misal krn
-// telat lulus/tinggal kelas & belum dipindahkan manual ke kelasId yg baru) tetap
-// dianggap tingkat 4, bukan hilang dari daftar krn angkanya kelewat dari yg
-// dicari tingkatFromSemester() (yg maksimal cuma sampai 4).
+// FALLBACK doang: hitung tingkat dari angkatan+tahun berjalan, di-cap 1-4.
+// dipakai HANYA kalau kelasnya blm punya tingkatSaatIni tersimpan di kelas.json
+// (misal data lama dari sebelum field ini ada). Kelas yg NORMAL (baru dibikin
+// lewat form tambah/edit mahasiswa atau import Excel) udah punya tingkatSaatIni
+// tersimpan permanen sejak awal dibikin -- ga dihitung ulang otomatis tiap request
+// lagi, supaya admin bisa koreksi manual (misal mahasiswa tinggal kelas) tanpa
+// hasil koreksinya ketiban ulang oleh perhitungan tahun berjalan.
 function tingkatFromAngkatan(angkatan) {
   if (!angkatan) return null;
   const tingkat = tahunAjaranSaatIni() - angkatan + 1;
@@ -81,19 +82,27 @@ function tingkatFromAngkatan(angkatan) {
   return tingkat;
 }
 
+// tingkat sebuah kelas SAAT INI: utamakan field tersimpan k.tingkatSaatIni (bisa
+// dikoreksi manual admin lewat /admin/kelas/update-tingkat/:id), fallback hitung
+// dari angkatan kalau kelas itu blm punya field ini tersimpan.
+function tingkatSaatIniDariKelas(kelas) {
+  if (!kelas) return null;
+  if (Number.isInteger(kelas.tingkatSaatIni)) return kelas.tingkatSaatIni;
+  return tingkatFromAngkatan(angkatanFromKelasId(kelas.id));
+}
+
 // ambil huruf kelas (section) dari belakang kelasId, contoh "2025A" -> "A", "2024B" -> "B"
 function letterFromKelasId(kelasId) {
   const match = String(kelasId).match(/[A-Za-z]+$/);
   return match ? match[0] : '';
 }
 
-// label kelas yg ditampilkan ke user, dihitung ulang tiap kali (BUKAN disimpan statis)
-// krn tingkat-nya berubah tiap tahun ajaran baru. angkatan 2025 kelas A -> "1A" di
-// tahun ajaran 2025, tapi jadi "2A" di tahun ajaran 2026, dst.
-function labelKelasSaatIni(kelasId) {
-  const tingkat = tingkatFromAngkatan(angkatanFromKelasId(kelasId));
-  const letter = letterFromKelasId(kelasId);
-  return tingkat ? `${tingkat}${letter}` : (letter || kelasId);
+// label kelas yg ditampilkan ke user. tingkat-nya diambil dari field tersimpan
+// (lihat tingkatSaatIniDariKelas), BUKAN dihitung ulang otomatis tiap request lagi.
+function labelKelasSaatIni(kelas) {
+  const tingkat = tingkatSaatIniDariKelas(kelas);
+  const letter = letterFromKelasId(kelas.id);
+  return tingkat ? `${tingkat}${letter}` : (letter || kelas.id);
 }
 
 // cek: user yg login boleh nilai RPS ini apa tidak. hasilnya true kalau admin, atau
@@ -205,12 +214,34 @@ const BOBOT_PER_HURUF = {
   'B+': 3.25,
   B: 3.00,
   'B-': 2.75,
-  'C+': 2.50,
+  'C+': 2.25,
   C: 2.00,
-  'C-': 1.50,
+  'C-': 1.75,
   D: 1.00,
   E: 0
 };
+
+const SEBUTAN_MUTU = {
+  A: 'Unggul',
+  'A-': 'Kurang Unggul',
+  'B+': 'Sangat baik',
+  B: 'Baik',
+  'B-': 'Kurang Baik',
+  'C+': 'Sangat Cukup',
+  C: 'Cukup',
+  'C-': 'Kurang Cukup',
+  D: 'Kurang',
+  E: 'Gagal (tidak lulus)'
+};
+
+function getSebutanMutu(huruf) {
+  return SEBUTAN_MUTU[huruf] || '-';
+}
+
+function getAngkaMutu(huruf) {
+  return BOBOT_PER_HURUF[huruf] !== undefined ? BOBOT_PER_HURUF[huruf].toFixed(2) : '-';
+}
+
 function getBobot(huruf) {
   return Object.prototype.hasOwnProperty.call(BOBOT_PER_HURUF, huruf) ? BOBOT_PER_HURUF[huruf] : 0;
 }
@@ -272,9 +303,7 @@ function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
       };
     });
 
-    // Nilai Akhir keseluruhan = rata-rata semua nilai Sub-CPMK (CPMK 1..N), dikali 90%.
-    // 90% krn 10% utk absensi yg belum diimplementasikan.
-    // Jika semua Sub-CPMK dapat nilai 100, maka nilai maksimal = 90
+    // Nilai Akhir keseluruhan = rata-rata semua nilai Sub-CPMK (CPMK 1..N).
     const cpmkScores = Object.values(subCpmkScores).map((s) => s.nilaiAkhir);
     const avgCpmk = cpmkScores.length > 0
       ? cpmkScores.reduce((sum, val) => sum + val, 0) / cpmkScores.length
@@ -320,13 +349,13 @@ router.get('/penilaian', isAuthenticated, (req, res) => {
     }));
 
   // semua data kelas, nanti difilter per tingkat di javascript.
-  // tingkatSaatIni & labelSaatIni dihitung ulang dari tahun angkatan (bukan pakai
-  // field "tingkat"/"nama" yg tersimpan statis di kelas.json, krn keduanya harus
-  // berubah tiap tahun ajaran seiring mahasiswa naik tingkat).
+  // tingkatSaatIni diambil dari field tersimpan k.tingkatSaatIni (via
+  // tingkatSaatIniDariKelas), bukan dihitung ulang otomatis tiap request lagi --
+  // lihat komentar di fungsi tingkatSaatIniDariKelas() di atas.
   const kelasData = readJsonFile(kelasPath, []).map(k => ({
     ...k,
-    tingkatSaatIni: tingkatFromAngkatan(angkatanFromKelasId(k.id)),
-    labelSaatIni: labelKelasSaatIni(k.id)
+    tingkatSaatIni: tingkatSaatIniDariKelas(k),
+    labelSaatIni: labelKelasSaatIni(k)
   }));
 
   res.render('penilaian-semester', {
@@ -368,7 +397,7 @@ router.get('/penilaian/mk/:rpsId', isAuthenticated, (req, res) => {
 
   const tingkat = tingkatFromSemester(item.semester);
   const kelasList = readJsonFile(kelasPath, [])
-    .filter(k => tingkatFromAngkatan(angkatanFromKelasId(k.id)) === tingkat);
+    .filter(k => tingkatSaatIniDariKelas(k) === tingkat);
 
   res.render('penilaian-kelas', {
     title: 'Penilaian - Pilih Kelas',
@@ -527,13 +556,15 @@ router.get('/penilaian/mk/:rpsId/kelas/:kelasId', isAuthenticated, (req, res) =>
     user: req.session.user,
     rpsItem: item,
     kelas,
-    kelasLabel: labelKelasSaatIni(kelas.id), // contoh: "1A" (angkatan 2025), dihitung ulang tiap request
+    kelasLabel: labelKelasSaatIni(kelas), // contoh: "1A", diambil dari tingkatSaatIni tersimpan
     mahasiswaList,
     subCpmkList,
     activeSumatifCols,
     rpsListWithSubCpmk,
     allSavedComments,
     rekapDataByMk,
+    getSebutanMutu,
+    getAngkaMutu,
     savedValues, // dipakai di view buat isi ulang nilai yg sudah pernah diinput
     savedComments, // dipakai di view buat isi ulang komentar portofolio yg sudah pernah diinput
     rekapData,
