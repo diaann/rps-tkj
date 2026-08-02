@@ -355,13 +355,11 @@
             <% mahasiswaList.forEach(function(m) { %>
                 <% const rekapItem = (typeof rekapData !== 'undefined' && Array.isArray(rekapData) ? rekapData : []).find(function(r) { return r.nim === m.nim; }); %>
                 <div id="portofolio-modal-<%= m.nim %>" class="portofolio-modal hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-                    <!-- max-height & flex-column lewat inline style (bukan class Tailwind arbitrary-value
-                          kayak "max-h-[85vh]") supaya tetap kepakai walau class itu ga ada di CSS hasil build.
-                          Bagian tengah (isi komentar) yg discroll; header & footer tetap kelihatan. -->
-                    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl" style="max-height: 85vh; display: flex; flex-direction: column;">
+                    <!-- Increased max-width to max-w-4xl for the detailed report table -->
+                    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl" style="max-height: 85vh; display: flex; flex-direction: column;">
                         <div class="flex items-center justify-between p-4 border-b flex-shrink-0">
                             <div>
-                                <div class="font-semibold text-gray-800"><%= m.nama %></div>
+                                <div class="font-semibold text-gray-800 text-lg"><%= m.nama %></div>
                                 <div class="text-sm text-gray-500">NIM <%= m.nim %></div>
                             </div>
                             <button type="button" class="text-gray-400 hover:text-gray-600" onclick="closePortofolio('<%= m.nim %>')">
@@ -369,70 +367,80 @@
                             </button>
                         </div>
 
-                        <div class="p-4" style="overflow-y: auto;">
-                            <div class="mb-4 flex items-center gap-2">
-                                <span class="text-sm text-gray-600">Nilai Akhir (MK Terpilih):</span>
-                                <span id="portofolio-nilai-huruf-<%= m.nim %>" class="px-3 py-1 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm">
-                                    <%= rekapItem ? (rekapItem.nilaiAkhirHuruf || '-') : '-' %>
-                                </span>
-                                <span class="text-sm text-gray-600 ml-2">Bobot:</span>
-                                <span id="portofolio-bobot-<%= m.nim %>" class="px-3 py-1 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm">
-                                    <%= (rekapItem && typeof rekapItem.bobot === 'number') ? rekapItem.bobot.toFixed(2) : '-' %>
-                                </span>
-                            </div>
-
-                            <!-- Course Dropdown Selector -->
-                            <div class="mb-4">
-                                <label class="block text-sm font-semibold text-gray-700 mb-1">Pilih Mata Kuliah:</label>
-                                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500" 
-                                    onchange="switchPortofolioMk('<%= m.nim %>', this.value)">
+                        <div class="p-6 overflow-x-auto" style="flex-grow: 1; overflow-y: auto;">
+                            <h4 class="font-bold text-gray-800 mb-3 text-sm flex items-center gap-1.5">
+                                <i class="fas fa-file-invoice text-blue-600"></i>
+                                Ringkasan Capaian Pembelajaran & Portofolio Mahasiswa
+                            </h4>
+                            
+                            <table class="table-auto w-full border-collapse border border-gray-300 text-xs">
+                                <thead class="bg-gray-100 text-gray-700">
+                                    <tr>
+                                        <th class="px-2 py-2 border border-gray-300 text-center font-bold uppercase w-10">No</th>
+                                        <th class="px-3 py-2 border border-gray-300 text-left font-bold uppercase">Mata Kuliah</th>
+                                        <th class="px-2 py-2 border border-gray-300 text-center font-bold uppercase w-20">Huruf Mutu (HM)</th>
+                                        <th class="px-2 py-2 border border-gray-300 text-center font-bold uppercase w-28">Sebutan Mutu (SM)</th>
+                                        <th class="px-2 py-2 border border-gray-300 text-center font-bold uppercase w-20">Angka Mutu (AM)</th>
+                                        <th class="px-3 py-2 border border-gray-300 text-left font-bold uppercase">Capaian Pembelajaran</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
                                     <% if (typeof rpsListWithSubCpmk !== 'undefined' && typeof rekapDataByMk !== 'undefined') { %>
-                                        <% rpsListWithSubCpmk.forEach(function(mk) { %>
+                                        <% rpsListWithSubCpmk.forEach(function(mk, idx) { %>
                                             <% 
                                                const mkRekap = rekapDataByMk[mk.id] || [];
                                                const studentMkSummary = mkRekap.find(function(r) { return r.nim === m.nim; });
                                                const displayNilai = studentMkSummary ? (studentMkSummary.nilaiAkhirHuruf || '-') : '-';
-                                               const displayBobot = (studentMkSummary && typeof studentMkSummary.bobot === 'number') ? studentMkSummary.bobot.toFixed(2) : '-';
+                                               const displaySebutan = typeof getSebutanMutu === 'function' ? getSebutanMutu(displayNilai) : '-';
+                                               const displayAngka = typeof getAngkaMutu === 'function' ? getAngkaMutu(displayNilai) : '-';
+                                               
+                                               // Helper to get description
+                                               let displayDesc = 'Belum dinilai.';
+                                               if (displayNilai && displayNilai !== '-') {
+                                                   if (displayNilai === 'A' || displayNilai === 'A-') {
+                                                       displayDesc = `Mahasiswa telah unggul dalam menguasai seluruh Capaian Pembelajaran pada mata kuliah ${mk.nama_mk}.`;
+                                                   } else if (displayNilai === 'B+' || displayNilai === 'B' || displayNilai === 'B-') {
+                                                       displayDesc = `Mahasiswa telah baik dalam menguasai sebagian besar Capaian Pembelajaran pada mata kuliah ${mk.nama_mk}.`;
+                                                   } else if (displayNilai === 'C+' || displayNilai === 'C' || displayNilai === 'C-') {
+                                                       displayDesc = `Mahasiswa cukup dalam menguasai standar minimal Capaian Pembelajaran pada mata kuliah ${mk.nama_mk}.`;
+                                                   } else if (displayNilai === 'D') {
+                                                       displayDesc = `Mahasiswa kurang dalam menguasai Capaian Pembelajaran pada mata kuliah ${mk.nama_mk} dan memerlukan bimbingan tambahan.`;
+                                                   } else if (displayNilai === 'E') {
+                                                       displayDesc = `Mahasiswa tidak menguasai standar minimal Capaian Pembelajaran pada mata kuliah ${mk.nama_mk} dan dinyatakan tidak lulus.`;
+                                                   }
+                                               }
                                             %>
-                                            <option value="<%= mk.id %>" 
-                                                    data-nilai-huruf="<%= displayNilai %>" 
-                                                    data-bobot="<%= displayBobot %>"
-                                                    <%= String(mk.id) === String(rpsItem.id) ? 'selected' : '' %>>
-                                                <%= mk.nama_mk %> (<%= mk.kode_mk %>)
-                                            </option>
+                                            <tr class="hover:bg-gray-50">
+                                                <td class="px-2 py-2 border border-gray-200 text-center"><%= idx + 1 %></td>
+                                                <td class="px-3 py-2 border border-gray-200 font-medium text-gray-900">
+                                                    <a href="/penilaian/mk/<%= mk.id %>/kelas/<%= kelas.id %>?activeTab=tb-panel-rekap"
+                                                        class="text-blue-600 hover:text-blue-800 hover:underline"
+                                                        title="Buka Rekap mata kuliah ini">
+                                                        <%= mk.nama_mk %> (<%= mk.kode_mk %>)
+                                                    </a>
+                                                    </td>
+                                                <td class="px-2 py-2 border border-gray-200 text-center font-bold text-blue-700 bg-blue-50"><%= displayNilai %></td>
+                                                <td class="px-2 py-2 border border-gray-200 text-center font-semibold text-gray-800"><%= displaySebutan %></td>
+                                                <td class="px-2 py-2 border border-gray-200 text-center text-gray-600"><%= displayAngka %></td>
+                                                <td class="px-3 py-2 border border-gray-200 text-gray-600 leading-relaxed"><%= displayDesc %></td>
+                                            </tr>
                                         <% }); %>
                                     <% } %>
-                                </select>
-                            </div>
-
-                            <!-- Comment Sections for all Courses -->
-                            <% if (typeof rpsListWithSubCpmk !== 'undefined') { %>
-                                <% rpsListWithSubCpmk.forEach(function(mk) { %>
-                                    <div id="portofolio-mk-<%= m.nim %>-<%= mk.id %>" class="portofolio-mk-section <%= String(mk.id) === String(rpsItem.id) ? '' : 'hidden' %>">
-                                        <% if (mk.subCpmkList.length === 0) { %>
-                                            <p class="text-sm text-gray-500 italic py-4 text-center">Mata kuliah ini belum memiliki data Sub-CPMK.</p>
-                                        <% } else { %>
-                                            <% mk.subCpmkList.forEach(function(sub) { %>
-                                                <div class="mb-4 p-3 bg-gray-50 border rounded-lg">
-                                                    <div class="text-sm font-semibold text-gray-700 mb-1">Sub-CPMK <%= sub.globalNumber %></div>
-                                                    <div class="text-sm text-gray-600 mb-2"><%= sub.deskripsi %></div>
-                                                    <% 
-                                                       const komentarKey = `komentar[${mk.id}][${sub.globalNumber}][${m.nim}]`;
-                                                       const dbKomentarKey = `komentar[${sub.globalNumber}][${m.nim}]`;
-                                                       const savedCommentText = (typeof allSavedComments !== 'undefined' && allSavedComments[mk.id] && allSavedComments[mk.id][dbKomentarKey]) ? allSavedComments[mk.id][dbKomentarKey] : '';
-                                                    %>
-                                                    <textarea name="<%= komentarKey %>" rows="2" placeholder="Tulis komentar untuk Sub-CPMK ini..."
-                                                        class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"><%= savedCommentText %></textarea>
-                                                </div>
-                                            <% }); %>
-                                        <% } %>
-                                    </div>
-                                <% }); %>
-                            <% } %>
+                                </tbody>
+                            </table>
                         </div>
 
-                        <div class="p-4 border-t flex justify-end flex-shrink-0">
-                            <button type="button" class="btn-secondary px-4 py-2 rounded bg-gray-500 text-white hover:bg-gray-600" onclick="closePortofolio('<%= m.nim %>')">Tutup</button>
+                        <div class="p-4 border-t flex justify-end gap-3 flex-shrink-0">
+                        <button type="button" 
+                                class="btn-secondary px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+                                onclick="downloadPortofolioPDF('<%= m.nim %>', '<%= m.nama %>')">
+                            <i class="fas fa-file-pdf"></i> Download PDF
+                        </button>
+                        <button type="button" 
+                                class="btn-secondary px-4 py-2 rounded bg-gray-500 text-white hover:bg-gray-600" 
+                                onclick="closePortofolio('<%= m.nim %>')">
+                            Tutup
+                        </button>
                         </div>
                     </div>
                 </div>
@@ -454,6 +462,9 @@
         <a href="/penilaian" class="btn-secondary mt-4 px-4 py-2 rounded bg-gray-500 text-white hover:bg-gray-600 inline-block">Kembali</a>
         <% } %>
     </div>
+
+    // Library for PDF donwload
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <script>
         // ganti tab Sub-CPMK yg aktif; semua tab tetap 1 <form> yg sama jadi nilai ga hilang pas pindah tab
@@ -478,9 +489,7 @@
             }
         }
 
-        // buka/tutup modal Portofolio per mahasiswa. modal-nya sendiri sudah ada di
-        // HTML (cuma disembunyikan lewat class "hidden"), jadi fungsi ini cuma
-        // gonta-ganti class-nya aja, ga perlu request ke server.
+        // Buka/tutup modal Portofolio per mahasiswa
         function openPortofolio(nim) {
             const modal = document.getElementById('portofolio-modal-' + nim);
             if (modal) modal.classList.remove('hidden');
@@ -490,30 +499,7 @@
             if (modal) modal.classList.add('hidden');
         }
 
-        function switchPortofolioMk(nim, rpsId) {
-            // hide all sections for this specific student's modal
-            document.querySelectorAll('.portofolio-mk-section').forEach(function (sec) {
-                if (sec.id.startsWith('portofolio-mk-' + nim + '-')) {
-                    sec.classList.add('hidden');
-                }
-            });
-            // show the selected course's section
-            const targetSec = document.getElementById('portofolio-mk-' + nim + '-' + rpsId);
-            if (targetSec) targetSec.classList.remove('hidden');
 
-            // update Nilai Akhir and Bobot badge
-            const selectEl = document.querySelector('#portofolio-modal-' + nim + ' select');
-            if (selectEl) {
-                const selectedOpt = selectEl.options[selectEl.selectedIndex];
-                const nilaiHuruf = selectedOpt.getAttribute('data-nilai-huruf') || '-';
-                const bobotVal = selectedOpt.getAttribute('data-bobot') || '-';
-                
-                const nilaiBadge = document.getElementById('portofolio-nilai-huruf-' + nim);
-                const bobotBadge = document.getElementById('portofolio-bobot-' + nim);
-                if (nilaiBadge) nilaiBadge.innerText = nilaiHuruf;
-                if (bobotBadge) bobotBadge.innerText = bobotVal;
-            }
-        }
 
         function toggleRpsMatrix() {
             const container = document.getElementById('rps-matrix-container');
@@ -596,6 +582,64 @@
             const btn = document.getElementById('return-to-top-btn');
             if (btn) btn.classList.toggle('hidden', window.scrollY < 400);
         });
+
+        //Download Portofolio PDF
+       function downloadPortofolioPDF(nim, namaMahasiswa) {
+        const modal = document.getElementById('portofolio-modal-' + nim);
+        if (!modal) return;
+
+        const content = modal.querySelector('.p-6');
+        if (!content) return;
+
+        const element = document.createElement('div');
+        element.style.padding = '0';
+        element.style.margin = '0';
+        element.style.fontFamily = 'Arial, sans-serif';
+        element.style.fontSize = '11px';
+        element.style.lineHeight = '1.3';
+
+        element.innerHTML = `
+            <div style="border-bottom: 1.5px solid #1e40af; padding-bottom: 6px; margin-bottom: 10px;">
+            <h2 style="margin: 0; color: #1e40af; font-size: 15px;">PORTOFOLIO MAHASISWA</h2>
+            <p style="margin: 3px 0 0; font-size: 12px;">
+                <strong>${namaMahasiswa}</strong> | NIM: ${nim}
+            </p>
+            <p style="margin: 2px 0 0; font-size: 10px; color: #555;">
+                Kelas: <%= kelasLabel %> | Mata Kuliah: <%= rpsItem.nama_mk %> (<%= rpsItem.kode_mk %>)
+            </p>
+            </div>
+
+            ${content.innerHTML}
+        `;
+
+        const opt = {
+            margin:       [5, 8, 5, 8],   // top, left, bottom, right (sangat kecil)
+            filename:     `Portofolio_${nim}_${namaMahasiswa.replace(/\s+/g, '_')}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { 
+            scale: 2, 
+            useCORS: true,
+            logging: false,
+            scrollY: 0
+            },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        const btn = event.currentTarget;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Membuat PDF...`;
+        btn.disabled = true;
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }).catch(err => {
+            console.error(err);
+            alert('Gagal membuat PDF. Silakan coba lagi.');
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        });
+        }
     </script>
 
 <!-- Floating Buttons - Side by Side -->
