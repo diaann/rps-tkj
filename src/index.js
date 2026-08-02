@@ -11,7 +11,12 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
 // Body parser middleware
-app.use(bodyParser.urlencoded({ extended: false }));
+// parameterLimit dinaikkan dari default (1000) krn form Tabel Penilaian bisa punya
+// ribuan field sekaligus dalam 1 submit: nilai per mahasiswa x per Sub-CPMK x per
+// komponen, DITAMBAH komentar Portofolio per mahasiswa x per Sub-CPMK x per mata
+// kuliah dalam 1 semester. Tanpa ini, submit gede bakal ditolak dgn error
+// "PayloadTooLargeError: too many parameters" sebelum sempat sampai ke route handler.
+app.use(bodyParser.urlencoded({ extended: false, parameterLimit: 100000 }));
 app.use(bodyParser.json());
 
 // Static folder
