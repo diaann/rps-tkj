@@ -300,9 +300,9 @@
                         <table class="table-auto w-full border-collapse">
                             <thead class="bg-blue-50">
                                 <tr>
-                                    <th class="px-3 py-2 border text-left text-xs font-semibold">No</th>
-                                    <th class="px-3 py-2 border text-left text-xs font-semibold">NIM</th>
-                                    <th class="px-3 py-2 border text-left text-xs font-semibold">Nama Mahasiswa</th>
+                                    <th class="px-3 py-2 border text-center text-xs font-semibold">No</th>
+                                    <th class="px-3 py-2 border text-center text-xs font-semibold">NIM</th>
+                                    <th class="px-3 py-2 border text-center text-xs font-semibold">Nama Mahasiswa</th>
                                     <% (typeof rekapColumns !== 'undefined' && Array.isArray(rekapColumns) ? rekapColumns : []).forEach(function(column) { %>
                                         <th class="px-3 py-2 border text-center text-xs font-semibold"><%= column.label %></th>
                                     <% }); %>
@@ -348,10 +348,8 @@
             </div>
 
             <!-- Modal Portofolio per mahasiswa. Semua modal ini dirender langsung di HTML
-                 (bukan diisi lewat javascript) supaya textarea komentarnya tetap bagian
-                 dari <form> yg sama & ikut kekirim pas tombol "Simpan Nilai" diklik --
-                 sama kayak prinsip tab Sub-CPMK di atas. Disembunyikan pakai class
-                 "hidden" & baru dimunculkan lewat openPortofolio(nim). -->
+                 (bukan diisi lewat javascript), disembunyikan pakai class "hidden" &
+                 baru dimunculkan lewat openPortofolio(nim). -->
             <% mahasiswaList.forEach(function(m) { %>
                 <% const rekapItem = (typeof rekapData !== 'undefined' && Array.isArray(rekapData) ? rekapData : []).find(function(r) { return r.nim === m.nim; }); %>
                 <div id="portofolio-modal-<%= m.nim %>" class="portofolio-modal hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
@@ -377,11 +375,11 @@
                                 <thead class="bg-gray-100 text-gray-700">
                                     <tr>
                                         <th class="px-2 py-2 border border-gray-300 text-center font-bold uppercase w-10">No</th>
-                                        <th class="px-3 py-2 border border-gray-300 text-left font-bold uppercase">Mata Kuliah</th>
+                                        <th class="px-3 py-2 border border-gray-300 text-center font-bold uppercase">Mata Kuliah</th>
                                         <th class="px-2 py-2 border border-gray-300 text-center font-bold uppercase w-20">Huruf Mutu (HM)</th>
                                         <th class="px-2 py-2 border border-gray-300 text-center font-bold uppercase w-28">Sebutan Mutu (SM)</th>
                                         <th class="px-2 py-2 border border-gray-300 text-center font-bold uppercase w-20">Angka Mutu (AM)</th>
-                                        <th class="px-3 py-2 border border-gray-300 text-left font-bold uppercase">Capaian Pembelajaran</th>
+                                        <th class="px-3 py-2 border border-gray-300 text-center font-bold uppercase">Capaian Pembelajaran</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200">
@@ -430,11 +428,66 @@
                             </table>
                         </div>
 
+                        <!-- Layout detail utk PDF "per mata kuliah" -->
+                        <div id="portofolio-detail-<%= m.nim %>" class="hidden">
+                            <% rpsListWithSubCpmk.forEach(function(mk, mkIdx) { %>
+                                <% const mkRekapForDetail = rekapDataByMk[mk.id] || []; %>
+                                <% const studentRowForDetail = mkRekapForDetail.find(function(r) { return r.nim === m.nim; }); %>
+                                <% const detailBlockStyle = mkIdx < rpsListWithSubCpmk.length - 1 ? 'page-break-after: always;' : ''; %>
+                                <div style= <%= detailBlockStyle %> padding: 4px 0 16px;>
+                                    <div style="border-bottom: 1.5px solid #1e40af; padding-bottom: 6px; margin-bottom: 10px;">
+                                        <h2 style="margin:0; color:#1e40af; font-size:15px;"><%= mk.nama_mk %> (<%= mk.kode_mk %>)</h2>
+                                        <p style="margin:3px 0 0; font-size:12px;"><strong><%= m.nama %></strong> | NIM: <%= m.nim %></p>
+                                        <p style="margin:2px 0 0; font-size:10px; color:#555;">Kelas: <%= kelasLabel %></p>
+                                    </div>
+                                    <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                                        <thead>
+                                            <tr style="background:#f3f4f6;">
+                                                <th style="border:1px solid #d1d5db; padding:6px; text-align:center; width:32px;">No</th>
+                                                <th style="border:1px solid #d1d5db; padding:6px; text-align:left; width:90px;">Sub-CPMK</th>
+                                                <th style="border:1px solid #d1d5db; padding:6px; text-align:left;">Deskripsi</th>
+                                                <th style="border:1px solid #d1d5db; padding:6px; text-align:center; width:70px;">Nilai Akhir</th>
+                                                <th style="border:1px solid #d1d5db; padding:6px; text-align:center; width:70px;">Nilai Huruf</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <% (mk.subCpmkList || []).forEach(function(sub, subIdx) { %>
+                                                <% const scKey = 'subcpmk-' + sub.globalNumber; %>
+                                                <% const scoreObj = (studentRowForDetail && studentRowForDetail.subCpmkScores && studentRowForDetail.subCpmkScores[scKey]) ? studentRowForDetail.subCpmkScores[scKey] : null; %>
+                                                <tr>
+                                                    <td style="border:1px solid #d1d5db; padding:6px; text-align:center;"><%= subIdx + 1 %></td>
+                                                    <td style="border:1px solid #d1d5db; padding:6px;">Sub-CPMK <%= sub.globalNumber %></td>
+                                                    <td style="border:1px solid #d1d5db; padding:6px;"><%= sub.deskripsi || '-' %></td>
+                                                    <td style="border:1px solid #d1d5db; padding:6px; text-align:center;"><%= scoreObj ? Math.round(Number(scoreObj.nilaiAkhir || 0) * 100) / 100 : '-' %></td>
+                                                    <td style="border:1px solid #d1d5db; padding:6px; text-align:center; font-weight:bold;"><%= scoreObj ? scoreObj.nilaiHuruf : '-' %></td>
+                                                </tr>
+                                            <% }); %>
+                                            <% if (!mk.subCpmkList || mk.subCpmkList.length === 0) { %>
+                                                <tr><td colspan="5" style="border:1px solid #d1d5db; padding:6px; text-align:center; color:#888;">Belum ada data Sub-CPMK.</td></tr>
+                                            <% } %>
+                                        </tbody>
+                                    </table>
+                                    <% if (studentRowForDetail) { %>
+                                        <p style="margin-top:8px; font-size:11px;">
+                                            <strong>Nilai Akhir Mata Kuliah:</strong> <%= Math.round(Number(studentRowForDetail.nilaiAkhirKeseluruhan || 0) * 100) / 100 %>
+                                            &nbsp;|&nbsp; <strong>Huruf:</strong> <%= studentRowForDetail.nilaiAkhirHuruf || '-' %>
+                                            &nbsp;|&nbsp; <strong>Bobot:</strong> <%= (typeof studentRowForDetail.bobot === 'number') ? studentRowForDetail.bobot.toFixed(2) : '-' %>
+                                        </p>
+                                    <% } %>
+                                </div>
+                            <% }); %>
+                        </div>
+
                         <div class="p-4 border-t flex justify-end gap-3 flex-shrink-0">
                         <button type="button" 
-                                class="btn-secondary px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
-                                onclick="downloadPortofolioPDF('<%= m.nim %>', '<%= m.nama %>')">
+                                class="btn-secondary btn-download-portofolio px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+                                data-nim="<%= m.nim %>" data-nama="<%= m.nama %>">
                             <i class="fas fa-file-pdf"></i> Download PDF
+                        </button>
+                        <button type="button" 
+                                class="btn-secondary btn-download-portofolio-detail px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2"
+                                data-nim="<%= m.nim %>" data-nama="<%= m.nama %>">
+                            <i class="fas fa-file-pdf"></i> Download PDF Detail (Semua Sub-CPMK)
                         </button>
                         <button type="button" 
                                 class="btn-secondary px-4 py-2 rounded bg-gray-500 text-white hover:bg-gray-600" 
@@ -463,8 +516,8 @@
         <% } %>
     </div>
 
-    // Library for PDF donwload
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Library for PDF download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <script>
         // ganti tab Sub-CPMK yg aktif; semua tab tetap 1 <form> yg sama jadi nilai ga hilang pas pindah tab
@@ -518,6 +571,18 @@
             }
         }
 
+        // Download PDF untuk nama mahasiswa dengan kutip (')')
+        document.querySelectorAll('.btn-download-portofolio').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                downloadPortofolioPDF(btn.dataset.nim, btn.dataset.nama, btn);
+            });
+        });
+        document.querySelectorAll('.btn-download-portofolio-detail').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                downloadPortofolioDetailPDF(btn.dataset.nim, btn.dataset.nama, btn);
+            });
+        });
+
         // AJAX Save
         document.getElementById('penilaian-form').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -531,7 +596,7 @@
             // dikirim sbg application/x-www-form-urlencoded (bukan multipart/form-data
             // bawaan FormData), krn route ini cuma pakai body-parser urlencoded standar
             // (ga ada middleware multer terpasang). kalau dikirim sbg FormData mentah,
-            // req.body di server bakal KOSONG - nilai & komentar keliatan "tersimpan"
+            // req.body di server bakal KOSONG - nilai keliatan "tersimpan"
             // di UI (alert sukses tetap muncul krn fetch-nya sendiri berhasil), padahal
             // sebenarnya ga ada satupun field yg nyampe ke server.
             const bodyParams = new URLSearchParams(new FormData(this));
@@ -583,62 +648,413 @@
             if (btn) btn.classList.toggle('hidden', window.scrollY < 400);
         });
 
+        function getTextRowsFromTable(root) {
+            const rows = [];
+            const tables = root ? root.querySelectorAll('table') : [];
+            if (!tables.length) return rows;
+
+            const tbody = tables[0].querySelector('tbody');
+            if (!tbody) return rows;
+
+            Array.from(tbody.querySelectorAll('tr')).forEach(function (row) {
+                const cells = Array.from(row.querySelectorAll('td')).map(function (cell) {
+                    return (cell.textContent || '').replace(/\s+/g, ' ').trim();
+                });
+                if (cells.length) rows.push(cells);
+            });
+            return rows;
+        }
+
+        function addWrappedText(doc, text, x, y, maxWidth, lineHeight) {
+            const lines = doc.splitTextToSize(text || '', maxWidth);
+            doc.text(lines, x, y);
+            return y + (lines.length * lineHeight);
+        }
+
+        function drawPortfolioHeader(doc, title, subtitleLines, marginLeft, pageWidth) {
+            const headerY = 14;
+            const contentWidth = pageWidth - marginLeft * 2 - 12;
+            const titleHeight = 8;
+            const lineHeight = 4.2;
+            const wrappedSubtitleLines = [];
+
+            subtitleLines.forEach(function (line) {
+                const wrapped = doc.splitTextToSize(String(line || ''), contentWidth);
+                wrappedSubtitleLines.push(...wrapped);
+            });
+
+            const headerHeight = Math.max(28, titleHeight + 8 + wrappedSubtitleLines.length * lineHeight + 4);
+            doc.setFillColor(239, 246, 255);
+            doc.setDrawColor(59, 130, 246);
+            doc.roundedRect(marginLeft, headerY, pageWidth - marginLeft * 2, headerHeight, 3, 3, 'FD');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.setTextColor(30, 64, 175);
+            doc.text(title, marginLeft + 6, headerY + 8);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.setTextColor(55, 65, 81);
+            let cursor = headerY + 15;
+            wrappedSubtitleLines.forEach(function (line) {
+                doc.text(line, marginLeft + 6, cursor);
+                cursor += lineHeight;
+            });
+            return headerY + headerHeight + 5;
+        }
+
+        function getWrappedCellLines(doc, text, width, isHeader) {
+            const safeText = String(text || '-');
+            const maxLines = isHeader ? 3 : 6;
+            let lines = doc.splitTextToSize(safeText, width - 2);
+            if (lines.length > maxLines) {
+                lines = lines.slice(0, maxLines - 1);
+                lines[maxLines - 1] = lines[maxLines - 1] + '...';
+            }
+            return lines;
+        }
+
+        function drawCellText(doc, text, x, y, width, height, isHeader, align) {
+            const lines = getWrappedCellLines(doc, text, width, isHeader);
+            const lineHeight = isHeader ? 2.8 : 3.0;
+            const totalTextHeight = lines.length * lineHeight;
+            const startY = y + Math.max(1.2, (height - totalTextHeight) / 2 + 1.2);
+            const textAlign = align || 'center';
+            doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
+            doc.setFontSize(isHeader ? 6.6 : 7.0);
+            doc.setTextColor(15, 23, 42);
+            lines.forEach(function (line, index) {
+                const textWidth = doc.getTextWidth(line);
+                let lineX = x + 1.2;
+                if (textAlign === 'center') {
+                    lineX = x + Math.max(1.2, (width - textWidth) / 2);
+                } else if (textAlign === 'left') {
+                    lineX = x + 1.2;
+                }
+                const lineY = startY + index * lineHeight;
+                doc.text(line, lineX, lineY);
+            });
+        }
+
+        function drawTableRow(doc, x, y, widths, values, isHeader, rowHeight) {
+            const lineColor = isHeader ? [59, 130, 246] : [209, 213, 219];
+            doc.setDrawColor(...lineColor);
+            if (isHeader) {
+                doc.setFillColor(219, 234, 254);
+                doc.rect(x, y, widths.reduce((sum, width) => sum + width, 0), rowHeight, 'F');
+            }
+            let currentX = x;
+            values.forEach(function (value, index) {
+                const width = widths[index];
+                doc.rect(currentX, y, width, rowHeight, 'S');
+                let align = 'center';
+                if (isHeader && (index === 1 || index === 5)) {
+                    align = 'center';
+                } else if (!isHeader && (index === 1 || index === 5)) {
+                    align = 'left';
+                } else {
+                    align = 'center';
+                }
+                drawCellText(doc, value, currentX + 0.8, y, width - 1.2, rowHeight, isHeader, align);
+                currentX += width;
+            });
+            return rowHeight;
+        }
+
+        function drawSummaryTable(doc, rows, marginLeft, startY) {
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const widths = [10, 46, 13, 13, 13, 70];
+            const tableWidth = widths.reduce((sum, width) => sum + width, 0);
+            const x = marginLeft;
+            let y = startY;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(30, 41, 59);
+            const header = ['No', 'Mata Kuliah', 'HM\nHuruf\nMutu', 'SM\nSebutan\nMutu', 'AM\nAngka\nMutu', 'Deskripsi'];
+            const headerHeight = 11;
+            drawTableRow(doc, x, y, widths, header, true, headerHeight);
+            y += headerHeight;
+
+            rows.forEach(function (item) {
+                const content = [
+                    item.no,
+                    item.mataKuliah,
+                    item.huruf,
+                    item.sebutan,
+                    item.angka,
+                    item.desc
+                ];
+                const wrappedLines = content.map(function (value, index) {
+                    return getWrappedCellLines(doc, value, widths[index] - 3, false);
+                });
+                const rowHeight = Math.max(10, 8 + Math.max.apply(null, wrappedLines.map(function (lines) {
+                    return lines.length * 3.0;
+                })));
+                if (y + rowHeight > pageHeight - 16) {
+                    doc.addPage();
+                    y = 18;
+                    drawTableRow(doc, x, y, widths, header, true, headerHeight);
+                    y += headerHeight;
+                }
+                drawTableRow(doc, x, y, widths, content, false, rowHeight);
+                y += rowHeight;
+            });
+
+            return y;
+        }
+
+        function drawDetailTable(doc, section, marginLeft, startY) {
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const widths = [10, 44, 22, 16, 74];
+            const tableWidth = widths.reduce((sum, width) => sum + width, 0);
+            const x = marginLeft;
+            let y = startY;
+            const header = ['No', 'Sub-CPMK', 'Nilai', 'Huruf', 'Deskripsi'];
+            const headerHeight = 8;
+            drawTableRow(doc, x, y, widths, header, true, headerHeight);
+            y += headerHeight;
+            section.rows.forEach(function (row) {
+                const content = [
+                    row.no,
+                    row.subCpmk,
+                    row.nilaiAkhir,
+                    row.huruf,
+                    row.deskripsi
+                ];
+                const wrappedLines = content.map(function (value, index) {
+                    return getWrappedCellLines(doc, value, widths[index] - 3, false);
+                });
+                const rowHeight = Math.max(10, 8 + Math.max.apply(null, wrappedLines.map(function (lines) {
+                    return lines.length * 3.0;
+                })));
+                if (y + rowHeight > pageHeight - 16) {
+                    doc.addPage();
+                    y = 18;
+                    drawTableRow(doc, x, y, widths, header, true, headerHeight);
+                    y += headerHeight;
+                }
+                drawTableRow(doc, x, y, widths, content, false, rowHeight);
+                y += rowHeight;
+            });
+            return y;
+        }
+
+        function getLetterConversion(value) {
+            const rounded = Number(value);
+            if (!Number.isFinite(rounded)) return '-';
+            if (rounded >= 85) return 'A';
+            if (rounded >= 80) return 'A-';
+            if (rounded >= 75) return 'B+';
+            if (rounded >= 70) return 'B';
+            if (rounded >= 65) return 'B-';
+            if (rounded >= 60) return 'C+';
+            if (rounded >= 55) return 'C';
+            if (rounded >= 50) return 'C-';
+            if (rounded >= 40) return 'D';
+            return 'E';
+        }
+
+        function getLetterDescription(huruf) {
+            const map = {
+                A: 'Unggul',
+                'A-': 'Kurang Unggul',
+                'B+': 'Sangat baik',
+                B: 'Baik',
+                'B-': 'Kurang Baik',
+                'C+': 'Sangat Cukup',
+                C: 'Cukup',
+                'C-': 'Kurang Cukup',
+                D: 'Kurang',
+                E: 'Gagal (tidak lulus)'
+            };
+            return map[huruf] || '-';
+        }
+
+        function buildPortfolioSummaryRows(modal, nim) {
+            const rows = [];
+            const section = modal.querySelector('.p-6');
+            if (!section) return rows;
+            const table = section.querySelector('table');
+            if (!table) return rows;
+            const tbody = table.querySelector('tbody');
+            if (!tbody) return rows;
+            Array.from(tbody.querySelectorAll('tr')).forEach(function (row) {
+                const cells = Array.from(row.querySelectorAll('td')).map(function (cell) {
+                    return (cell.textContent || '').replace(/\s+/g, ' ').trim();
+                });
+                if (cells.length) {
+                    const no = cells[0] || '-';
+                    const mataKuliah = cells[1] || '-';
+                    const huruf = cells[2] || '-';
+                    const sebutan = cells[3] || '-';
+                    const angka = cells[4] || '-';
+                    const desc = cells[5] || '-';
+                    rows.push({ no, mataKuliah, huruf, sebutan, angka, desc });
+                }
+            });
+            return rows;
+        }
+
+        function buildDetailRows(source) {
+            const sections = [];
+            Array.from(source ? source.children : []).forEach(function (section) {
+                const title = (section.querySelector('h2') && section.querySelector('h2').textContent) || 'Mata Kuliah';
+                const rows = [];
+                const table = section.querySelector('table');
+                if (table) {
+                    const tbody = table.querySelector('tbody');
+                    if (tbody) {
+                        Array.from(tbody.querySelectorAll('tr')).forEach(function (row) {
+                            const cells = Array.from(row.querySelectorAll('td')).map(function (cell) {
+                                return (cell.textContent || '').replace(/\s+/g, ' ').trim();
+                            });
+                            if (cells.length) {
+                                rows.push({
+                                    no: cells[0] || '-',
+                                    subCpmk: cells[1] || '-',
+                                    deskripsi: cells[2] || '-',
+                                    nilaiAkhir: cells[3] || '-',
+                                    huruf: cells[4] || '-'
+                                });
+                            }
+                        });
+                    }
+                }
+                sections.push({ title, rows });
+            });
+            return sections;
+        }
+
         //Download Portofolio PDF
-       function downloadPortofolioPDF(nim, namaMahasiswa) {
+       function downloadPortofolioPDF(nim, namaMahasiswa, btn) {
         const modal = document.getElementById('portofolio-modal-' + nim);
         if (!modal) return;
 
-        const content = modal.querySelector('.p-6');
-        if (!content) return;
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            alert('Library PDF tidak tersedia. Silakan refresh halaman dan coba lagi.');
+            return;
+        }
 
-        const element = document.createElement('div');
-        element.style.padding = '0';
-        element.style.margin = '0';
-        element.style.fontFamily = 'Arial, sans-serif';
-        element.style.fontSize = '11px';
-        element.style.lineHeight = '1.3';
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const marginLeft = 16;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        let y = 20;
 
-        element.innerHTML = `
-            <div style="border-bottom: 1.5px solid #1e40af; padding-bottom: 6px; margin-bottom: 10px;">
-            <h2 style="margin: 0; color: #1e40af; font-size: 15px;">PORTOFOLIO MAHASISWA</h2>
-            <p style="margin: 3px 0 0; font-size: 12px;">
-                <strong>${namaMahasiswa}</strong> | NIM: ${nim}
-            </p>
-            <p style="margin: 2px 0 0; font-size: 10px; color: #555;">
-                Kelas: <%= kelasLabel %> | Mata Kuliah: <%= rpsItem.nama_mk %> (<%= rpsItem.kode_mk %>)
-            </p>
-            </div>
+        const title = 'PORTOFOLIO MAHASISWA';
+        const subtitleLines = [
+            `Nama: ${namaMahasiswa}`,
+            `NIM: ${nim}`,
+            `Kelas: <%= kelasLabel %>`,
+            `Mata Kuliah: <%= rpsItem.nama_mk %> (<%= rpsItem.kode_mk %>)`
+        ];
+        y = drawPortfolioHeader(doc, title, subtitleLines, marginLeft, pageWidth);
 
-            ${content.innerHTML}
-        `;
+        const rows = buildPortfolioSummaryRows(modal, nim);
+        if (!rows.length) {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(75, 85, 99);
+            doc.text('Tidak ada data untuk ditampilkan.', marginLeft, y);
+        } else {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(15, 23, 42);
+            doc.text('Ringkasan capaian per mata kuliah', marginLeft, y);
+            y += 5;
+            drawSummaryTable(doc, rows, marginLeft, y);
+        }
 
-        const opt = {
-            margin:       [5, 8, 5, 8],   // top, left, bottom, right (sangat kecil)
-            filename:     `Portofolio_${nim}_${namaMahasiswa.replace(/\s+/g, '_')}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { 
-            scale: 2, 
-            useCORS: true,
-            logging: false,
-            scrollY: 0
-            },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        const btn = event.currentTarget;
         const originalHTML = btn.innerHTML;
         btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Membuat PDF...`;
         btn.disabled = true;
 
-        html2pdf().set(opt).from(element).save().then(() => {
-            btn.innerHTML = originalHTML;
-            btn.disabled = false;
-        }).catch(err => {
+        try {
+            const filename = `Portofolio_${nim}_${namaMahasiswa.replace(/\s+/g, '_')}.pdf`;
+            doc.save(filename);
+        } catch (err) {
             console.error(err);
             alert('Gagal membuat PDF. Silakan coba lagi.');
+        } finally {
             btn.innerHTML = originalHTML;
             btn.disabled = false;
-        });
+        }
+        }
+
+        // Download PDF Detail: 1 halaman per mata kuliah, isinya nilai tiap Sub-CPMK
+        function downloadPortofolioDetailPDF(nim, namaMahasiswa, btn) {
+            const source = document.getElementById('portofolio-detail-' + nim);
+            if (!source) return;
+
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                alert('Library PDF tidak tersedia. Silakan refresh halaman dan coba lagi.');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const marginLeft = 16;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            let y = 18;
+
+            const title = 'PORTOFOLIO DETAIL';
+            const subtitleLines = [
+                `Nama: ${namaMahasiswa}`,
+                `NIM: ${nim}`,
+                `Kelas: <%= kelasLabel %>`
+            ];
+            y = drawPortfolioHeader(doc, title, subtitleLines, marginLeft, pageWidth);
+
+            const sections = buildDetailRows(source);
+            if (!sections.length) {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+                doc.setTextColor(75, 85, 99);
+                doc.text('Tidak ada data detail untuk ditampilkan.', marginLeft, y);
+            } else {
+                sections.forEach(function (section, idx) {
+                    if (idx > 0) {
+                        doc.addPage();
+                        y = 18;
+                        y = drawPortfolioHeader(doc, title, subtitleLines, marginLeft, pageWidth);
+                    }
+
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(11);
+                    doc.setTextColor(15, 23, 42);
+                    doc.text(`${idx + 1}. ${section.title}`, marginLeft, y);
+                    y += 6;
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(10);
+                    doc.setTextColor(75, 85, 99);
+                    doc.text('Sub-CPMK, nilai akhir, huruf, dan deskripsi', marginLeft, y);
+                    y += 6;
+                    if (!section.rows.length) {
+                        doc.text('Belum ada data sub-CPMK.', marginLeft + 2, y);
+                    } else {
+                        y = drawDetailTable(doc, section, marginLeft, y);
+                    }
+                });
+            }
+
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Membuat PDF...`;
+            btn.disabled = true;
+
+            try {
+                const filename = `Portofolio_Detail_${nim}_${namaMahasiswa.replace(/\s+/g, '_')}.pdf`;
+                doc.save(filename);
+            } catch (err) {
+                console.error(err);
+                alert('Gagal membuat PDF. Silakan coba lagi.');
+            } finally {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
         }
     </script>
 
