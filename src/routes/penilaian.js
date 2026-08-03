@@ -214,9 +214,9 @@ const BOBOT_PER_HURUF = {
   'B+': 3.25,
   B: 3.00,
   'B-': 2.75,
-  'C+': 2.25,
+  'C+': 2.50,
   C: 2.00,
-  'C-': 1.75,
+  'C-': 1.50,
   D: 1.00,
   E: 0
 };
@@ -299,7 +299,9 @@ function buildRekapData(mahasiswaList, subCpmkList, savedValues) {
 
       subCpmkScores[`subcpmk-${sub.globalNumber}`] = {
         label: `Sub-CPMK ${sub.globalNumber}`,
-        nilaiAkhir
+        nilaiAkhir,
+        // huruf per Sub-CPMK, pakai tabel konversi yg sama dgn nilai akhir keseluruhan
+        nilaiHuruf: totalBobot > 0 ? getNilaiHuruf(nilaiAkhir) : '-'
       };
     });
 
@@ -513,8 +515,6 @@ router.get('/penilaian/mk/:rpsId/kelas/:kelasId', isAuthenticated, (req, res) =>
   const record = penilaianAll.find(p => String(p.rpsId) === String(item.id) && p.kelasId === kelasId);
   // kalau ada, savedValues diisi nilai2 yg pernah diinput, kalau belum pernah, objek kosong
   const savedValues = record ? record.values : {};
-  // komentar portofolio per mahasiswa per Sub-CPMK, disimpan terpisah dari nilai
-  const savedComments = record ? (record.komentar || {}) : {};
   const rekapSummary = buildRekapData(mahasiswaList, subCpmkList, savedValues);
   const rekapData = rekapSummary.rows;
   const rekapColumns = rekapSummary.subCpmkColumns;
@@ -535,14 +535,8 @@ router.get('/penilaian/mk/:rpsId/kelas/:kelasId', isAuthenticated, (req, res) =>
     };
   });
 
-  // Collect all comments from penilaian.json for all courses in this semester for the current class
-  const allSavedComments = {};
-  semesterRpsList.forEach(r => {
-    const rec = penilaianAll.find(p => String(p.rpsId) === String(r.id) && p.kelasId === kelasId);
-    allSavedComments[r.id] = rec ? (rec.komentar || {}) : {};
-  });
-
   // Calculate final grade records (rekap data) for all courses in this semester for all students
+  // (dipakai di tabel "Ringkasan Capaian Pembelajaran" pada modal Portofolio)
   const rekapDataByMk = {};
   rpsListWithSubCpmk.forEach(mk => {
     const rec = penilaianAll.find(p => String(p.rpsId) === String(mk.id) && p.kelasId === kelasId);
@@ -561,12 +555,10 @@ router.get('/penilaian/mk/:rpsId/kelas/:kelasId', isAuthenticated, (req, res) =>
     subCpmkList,
     activeSumatifCols,
     rpsListWithSubCpmk,
-    allSavedComments,
     rekapDataByMk,
     getSebutanMutu,
     getAngkaMutu,
     savedValues, // dipakai di view buat isi ulang nilai yg sudah pernah diinput
-    savedComments, // dipakai di view buat isi ulang komentar portofolio yg sudah pernah diinput
     rekapData,
     rekapColumns,
     activeTab,
@@ -597,37 +589,18 @@ router.post('/penilaian/mk/:rpsId/kelas/:kelasId/save', isAuthenticated, (req, r
     }
   });
 
-  // saring lagi field komentar portofolio, formatnya: komentar[<rpsId>][<subCpmkGlobalNumber>][<nim>]
-  const komentarByRps = {};
-  Object.keys(req.body).forEach(key => {
-    const match = key.match(/^komentar\[(\d+)\]\[(\d+)\]\[([^\]]+)\]$/);
-    if (match) {
-      const rpsIdStr = match[1];
-      const subNum = match[2];
-      const nim = match[3];
-      if (!komentarByRps[rpsIdStr]) {
-        komentarByRps[rpsIdStr] = {};
-      }
-      komentarByRps[rpsIdStr][`komentar[${subNum}][${nim}]`] = req.body[key];
-    }
-  });
-
   const penilaianAll = readJsonFile(penilaianPath, []);
-  
-  // 1. Process active/current course record (including grades/values and comments)
-  const currentRpsIdStr = String(item.id);
-  const currentKomentar = komentarByRps[currentRpsIdStr] || {};
-  const existingIndex = penilaianAll.findIndex(p => String(p.rpsId) === currentRpsIdStr && p.kelasId === kelasId);
+  const existingIndex = penilaianAll.findIndex(p => String(p.rpsId) === String(item.id) && p.kelasId === kelasId);
 
   const currentRecord = {
     id: existingIndex >= 0 ? penilaianAll[existingIndex].id : (penilaianAll.reduce((max, p) => Math.max(max, p.id || 0), 0) + 1),
     rpsId: item.id,
     kelasId,
     values, // replacing current values
-    komentar: {
-      ...(existingIndex >= 0 ? (penilaianAll[existingIndex].komentar || {}) : {}),
-      ...currentKomentar // merging current comments
-    },
+    // "komentar" udah gak ada input-nya di form (fitur komentar per Sub-CPMK sudah
+    // dihapus dari tampilan), tapi kalau record lama masih punya data komentar dari
+    // sebelumnya, dipertahankan aja di sini biar data lama ga hilang pas nilai disave ulang
+    ...(existingIndex >= 0 && penilaianAll[existingIndex].komentar ? { komentar: penilaianAll[existingIndex].komentar } : {}),
     updated_at: new Date().toISOString(),
     updated_by: req.session.user.id
   };
@@ -637,34 +610,6 @@ router.post('/penilaian/mk/:rpsId/kelas/:kelasId/save', isAuthenticated, (req, r
   } else {
     penilaianAll.push(currentRecord);
   }
-
-  // 2. Process other courses comments in the same semester (only updating comments, not overriding other fields)
-  Object.keys(komentarByRps).forEach(otherRpsIdStr => {
-    if (otherRpsIdStr === currentRpsIdStr) return; // already updated above
-    const otherRpsId = parseInt(otherRpsIdStr, 10);
-    const otherKomentar = komentarByRps[otherRpsIdStr];
-    
-    const otherIndex = penilaianAll.findIndex(p => String(p.rpsId) === otherRpsIdStr && p.kelasId === kelasId);
-    if (otherIndex >= 0) {
-      penilaianAll[otherIndex].komentar = {
-        ...(penilaianAll[otherIndex].komentar || {}),
-        ...otherKomentar
-      };
-      penilaianAll[otherIndex].updated_at = new Date().toISOString();
-      penilaianAll[otherIndex].updated_by = req.session.user.id;
-    } else {
-      const newRecord = {
-        id: penilaianAll.reduce((max, p) => Math.max(max, p.id || 0), 0) + 1,
-        rpsId: otherRpsId,
-        kelasId,
-        values: {},
-        komentar: otherKomentar,
-        updated_at: new Date().toISOString(),
-        updated_by: req.session.user.id
-      };
-      penilaianAll.push(newRecord);
-    }
-  });
 
   writeJsonFile(penilaianPath, penilaianAll);
 
