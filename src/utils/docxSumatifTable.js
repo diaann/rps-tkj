@@ -261,4 +261,5 @@ module.exports = {
   splitTopLevel,
   makeCellFromProto,
   applyDynamicSumatifColumns,
+  SUMATIF_GRID_START,
 };

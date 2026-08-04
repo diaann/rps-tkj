@@ -6,6 +6,8 @@ const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
 const { buildSumatifRenderData, buildSumatifRowValues } = require('../utils/sumatifColumns');
 const { applyDynamicSumatifColumns } = require('../utils/docxSumatifTable');
+const { computeFormatifMergeGroups, applyFormatifVMerge } = require('../utils/docxFormatifMerge');
+const { cleanTextFields } = require('../utils/textCleanup');
 
 const rpsPath = path.join(__dirname, '..', 'database', 'rps.json');
 
@@ -312,26 +314,40 @@ function renderAndSendDocx(res, data, item, templateFilename, versionSuffix = ''
   }
 }
 
-// Sama seperti renderAndSendDocx, tapi khusus template_cekdinamis.docx: tabel
-// SUMATIF-nya dibangun ulang (jumlah kolom fisik) sesuai data.sumatif_columns
-// sebelum diisi docxtemplater. Kalau proses ini gagal di titik manapun
-// (misal template berubah struktur di masa depan), fallback ke template.docx
-// statis yang lama supaya user tidak pernah menerima file corrupt.
+// Sama seperti renderAndSendDocx, tapi khusus template_cekdinamis.docx:
+// - tabel SUMATIF dibangun ulang (jumlah kolom fisik) sesuai data.sumatif_columns
+//   SEBELUM diisi docxtemplater (mengubah baris template loop, dipakai berulang)
+// - baris kosong berlebih di field teks multi-baris dibersihkan sebelum render
+// - kolom FORMATIF yang nilainya sama persis di baris-baris berurutan
+//   digabung (vertical merge) SETELAH diisi docxtemplater (butuh teks hasil
+//   akhir tiap baris konkret, baru ada setelah loop di-unroll)
+// Kalau proses ini gagal di titik manapun (misal template berubah struktur di
+// masa depan), fallback ke template.docx statis yang lama supaya user tidak
+// pernah menerima file corrupt.
 function renderDynamicWord1(res, data, item) {
   const templatePath = path.join(__dirname, '../templates', 'template_cekdinamis.docx');
   try {
+    const cleanedData = cleanTextFields(data);
+    const mergeFlags = computeFormatifMergeGroups(cleanedData.sub_cpmk);
+
     const content = fs.readFileSync(templatePath, 'binary');
     const zip = new PizZip(content);
     let xml = zip.file('word/document.xml').asText();
-    xml = applyDynamicSumatifColumns(xml, data.sumatif_columns || []);
+    xml = applyDynamicSumatifColumns(xml, cleanedData.sumatif_columns || []);
     zip.file('word/document.xml', xml);
 
     const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
-    doc.render(data);
-    const buf = doc.getZip().generate({ type: 'nodebuffer' });
+    doc.render(cleanedData);
+
+    const renderedZip = doc.getZip();
+    let renderedXml = renderedZip.file('word/document.xml').asText();
+    renderedXml = applyFormatifVMerge(renderedXml, mergeFlags);
+    renderedZip.file('word/document.xml', renderedXml);
+
+    const buf = renderedZip.generate({ type: 'nodebuffer' });
     sendDocxBuffer(res, buf, item, 'v1d');
   } catch (err) {
-    console.error('[word-1-dinamis] gagal membangun tabel sumatif dinamis, fallback ke template statis:', err.message);
+    console.error('[word-1-dinamis] gagal membangun tabel dinamis, fallback ke template statis:', err.message);
     renderAndSendDocx(res, data, item, 'template.docx', 'v1');
   }
 }
