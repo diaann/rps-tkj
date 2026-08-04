@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
+const { buildSumatifRenderData, buildSumatifRowValues } = require('../utils/sumatifColumns');
+const { applyDynamicSumatifColumns } = require('../utils/docxSumatifTable');
 
 const rpsPath = path.join(__dirname, '..', 'database', 'rps.json');
 
@@ -230,6 +232,14 @@ function buildDataFromItem(item) {
 
   data.sub_cpmk = (data.sub_cpmk || []).map(sub => Object.assign({}, sub, buildAsesmenDisplay(sub)));
 
+  // Data untuk tabel SUMATIF dinamis (dipakai route /export/word-1-dinamis/:id):
+  // kolomnya menyesuaikan kategori sumatif yang benar-benar dipakai RPS ini,
+  // bukan 5 kolom tetap Kuis/Tugas/Ujian/PjBL/Lainnya seperti template.docx lama.
+  const { columns: sumatifColumns, headerData: sumatifHeaderData } = buildSumatifRenderData(data.sub_cpmk);
+  Object.assign(data, sumatifHeaderData);
+  data.sumatif_columns = sumatifColumns;
+  data.sub_cpmk = data.sub_cpmk.map(sub => Object.assign({}, sub, buildSumatifRowValues(sub, sumatifColumns)));
+
   // Build helper rows for MP (materi pelajaran) if needed by templates
   data.subMateriRows = (data.sub_cpmk || []).map(s => {
     const materi = s.materi || s['materi_pelajaran'] || s.deskripsi || '';
@@ -264,6 +274,24 @@ function buildDataFromItem(item) {
   return { data, item };
 }
 
+function sendDocxBuffer(res, buf, item, versionSuffix = '') {
+  // Build a safe filename using tanggal_penyusunan and nama_mk
+  const rawDate = item.tanggal_penyusunan || item.tanggal || '';
+  const datePart = String(rawDate).replace(/\//g, '-');
+  const namePart = item.nama_mk ? String(item.nama_mk) : `RPS-${item.id}`;
+  let baseFilename = datePart ? `${datePart} ${namePart}` : namePart;
+  // Remove characters invalid in Windows filenames and control chars
+  baseFilename = baseFilename.replace(/[<>:"/\\|?*\x00-\x1F]/g, '-').replace(/\s+/g, ' ').trim();
+  if (baseFilename.length > 120) baseFilename = baseFilename.slice(0, 120);
+  const versionTag = versionSuffix ? `_${versionSuffix}` : '';
+  const filename = `RPS${versionTag} ${baseFilename}.docx`;
+
+  // Set Content-Disposition with both regular filename and UTF-8 encoded filename*
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  res.send(buf);
+}
+
 function renderAndSendDocx(res, data, item, templateFilename, versionSuffix = '') {
   const templatePath = path.join(__dirname, '../templates', templateFilename);
   let content;
@@ -278,25 +306,43 @@ function renderAndSendDocx(res, data, item, templateFilename, versionSuffix = ''
     const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
     doc.render(data);
     const buf = doc.getZip().generate({ type: 'nodebuffer' });
-
-    // Build a safe filename using tanggal_penyusunan and nama_mk
-    const rawDate = item.tanggal_penyusunan || item.tanggal || '';
-    const datePart = String(rawDate).replace(/\//g, '-');
-    const namePart = item.nama_mk ? String(item.nama_mk) : `RPS-${item.id}`;
-    let baseFilename = datePart ? `${datePart} ${namePart}` : namePart;
-    // Remove characters invalid in Windows filenames and control chars
-    baseFilename = baseFilename.replace(/[<>:"/\\|?*\x00-\x1F]/g, '-').replace(/\s+/g, ' ').trim();
-    if (baseFilename.length > 120) baseFilename = baseFilename.slice(0, 120);
-    const versionTag = versionSuffix ? `_${versionSuffix}` : '';
-    const filename = `RPS${versionTag} ${baseFilename}.docx`;
-
-    // Set Content-Disposition with both regular filename and UTF-8 encoded filename*
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.send(buf);
+    sendDocxBuffer(res, buf, item, versionSuffix);
   } catch (err) {
     res.status(500).send('Gagal generate Word: ' + err.message);
   }
+}
+
+// Sama seperti renderAndSendDocx, tapi khusus template_cekdinamis.docx: tabel
+// SUMATIF-nya dibangun ulang (jumlah kolom fisik) sesuai data.sumatif_columns
+// sebelum diisi docxtemplater. Kalau proses ini gagal di titik manapun
+// (misal template berubah struktur di masa depan), fallback ke template.docx
+// statis yang lama supaya user tidak pernah menerima file corrupt.
+function renderDynamicWord1(res, data, item) {
+  const templatePath = path.join(__dirname, '../templates', 'template_cekdinamis.docx');
+  try {
+    const content = fs.readFileSync(templatePath, 'binary');
+    const zip = new PizZip(content);
+    let xml = zip.file('word/document.xml').asText();
+    xml = applyDynamicSumatifColumns(xml, data.sumatif_columns || []);
+    zip.file('word/document.xml', xml);
+
+    const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+    doc.render(data);
+    const buf = doc.getZip().generate({ type: 'nodebuffer' });
+    sendDocxBuffer(res, buf, item, 'v1d');
+  } catch (err) {
+    console.error('[word-1-dinamis] gagal membangun tabel sumatif dinamis, fallback ke template statis:', err.message);
+    renderAndSendDocx(res, data, item, 'template.docx', 'v1');
+  }
+}
+
+function findRpsItem(req, rpsId) {
+  const rawData = fs.readFileSync(rpsPath);
+  const rps = JSON.parse(rawData);
+  if (req.session.user && req.session.user.role === 'admin') {
+    return rps.find(r => String(r.id) === String(rpsId));
+  }
+  return rps.find(r => String(r.id) === String(rpsId) && r.userId === req.session.user.id);
 }
 
 // // existing route kept for backward compatibility using template.docx
@@ -320,15 +366,7 @@ function renderAndSendDocx(res, data, item, templateFilename, versionSuffix = ''
 
 // New: export with template.docx (alias Word-1)
 router.get('/export/word-1/:id', isAuthenticated, (req, res) => {
-  const rpsId = req.params.id;
-  const rawData = fs.readFileSync(rpsPath);
-  const rps = JSON.parse(rawData);
-  let item;
-  if (req.session.user && req.session.user.role === 'admin') {
-    item = rps.find(r => String(r.id) === String(rpsId));
-  } else {
-    item = rps.find(r => String(r.id) === String(rpsId) && r.userId === req.session.user.id);
-  }
+  const item = findRpsItem(req, req.params.id);
   if (!item) {
     return res.status(404).send('RPS tidak ditemukan');
   }
@@ -337,20 +375,23 @@ router.get('/export/word-1/:id', isAuthenticated, (req, res) => {
 });
 
 router.get('/export/word-2/:id', isAuthenticated, (req, res) => {
-  const rpsId = req.params.id;
-  const rawData = fs.readFileSync(rpsPath);
-  const rps = JSON.parse(rawData);
-  let item;
-  if (req.session.user && req.session.user.role === 'admin') {
-    item = rps.find(r => String(r.id) === String(rpsId));
-  } else {
-    item = rps.find(r => String(r.id) === String(rpsId) && r.userId === req.session.user.id);
-  }
+  const item = findRpsItem(req, req.params.id);
   if (!item) {
     return res.status(404).send('RPS tidak ditemukan');
   }
   const { data } = buildDataFromItem(item);
   renderAndSendDocx(res, data, item, 'template-1.docx', 'v2');
+});
+
+// Word-1 dengan kolom SUMATIF dinamis (percobaan, sejajar dengan Word-1/Word-2
+// lama yang tetap tidak berubah). Lihat renderDynamicWord1() soal fallback.
+router.get('/export/word-1-dinamis/:id', isAuthenticated, (req, res) => {
+  const item = findRpsItem(req, req.params.id);
+  if (!item) {
+    return res.status(404).send('RPS tidak ditemukan');
+  }
+  const { data } = buildDataFromItem(item);
+  renderDynamicWord1(res, data, item);
 });
 
 module.exports = router;
