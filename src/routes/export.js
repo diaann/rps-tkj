@@ -314,7 +314,7 @@ function renderAndSendDocx(res, data, item, templateFilename, versionSuffix = ''
   }
 }
 
-// Sama seperti renderAndSendDocx, tapi khusus template_cekdinamis.docx:
+// Sama seperti renderAndSendDocx, tapi khusus template_dinamis.docx:
 // - tabel SUMATIF dibangun ulang (jumlah kolom fisik) sesuai data.sumatif_columns
 //   SEBELUM diisi docxtemplater (mengubah baris template loop, dipakai berulang)
 // - baris kosong berlebih di field teks multi-baris dibersihkan sebelum render
@@ -325,7 +325,7 @@ function renderAndSendDocx(res, data, item, templateFilename, versionSuffix = ''
 // masa depan), fallback ke template.docx statis yang lama supaya user tidak
 // pernah menerima file corrupt.
 function renderDynamicWord1(res, data, item) {
-  const templatePath = path.join(__dirname, '../templates', 'template_cekdinamis.docx');
+  const templatePath = path.join(__dirname, '../templates', 'template_dinamis.docx');
   try {
     const cleanedData = cleanTextFields(data);
     const mergeFlags = computeFormatifMergeGroups(cleanedData.sub_cpmk);
