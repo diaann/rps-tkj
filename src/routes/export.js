@@ -203,15 +203,16 @@ function buildDataFromItem(item) {
     const tugasDisplay = withPercent(sub.sumatif_tugas_nama, sub.sumatif_tugas_bobot);
     const ujianDisplay = withPercent(sub.sumatif_ujian_nama, sub.sumatif_ujian_bobot);
     const pjblDisplay = withPercent(sub.sumatif_pjbl_nama, sub.sumatif_pjbl_bobot);
+    const presentasiDisplay = withPercent(sub.sumatif_presentasi_nama, sub.sumatif_presentasi_bobot);
     const lainnyaDisplay = lainnyaItems.map(item => withPercent(item.nama, item.bobot)).filter(Boolean).join('\n');
 
-    const hasNewFormat = formatifDisplay || kuisDisplay || tugasDisplay || ujianDisplay || pjblDisplay || lainnyaDisplay;
+    const hasNewFormat = formatifDisplay || kuisDisplay || tugasDisplay || ujianDisplay || pjblDisplay || presentasiDisplay || lainnyaDisplay;
 
     // Fallback untuk RPS lama yang masih memakai field tunggal 'asesmen'
     const legacyAsesmen = (sub.asesmen || '').toString().trim();
 
     const gabungan = hasNewFormat
-      ? [formatifDisplay, kuisDisplay, tugasDisplay, ujianDisplay, pjblDisplay, lainnyaDisplay].filter(Boolean).join(', ')
+      ? [formatifDisplay, kuisDisplay, tugasDisplay, ujianDisplay, pjblDisplay, presentasiDisplay, lainnyaDisplay].filter(Boolean).join(', ')
       : legacyAsesmen;
 
     return {
@@ -221,6 +222,7 @@ function buildDataFromItem(item) {
       tugas_display: tugasDisplay,
       ujian_display: ujianDisplay,
       pjbl_display: pjblDisplay,
+      presentasi_display: presentasiDisplay,
       lainnya_display: lainnyaDisplay,
       asesmen: gabungan
     };
