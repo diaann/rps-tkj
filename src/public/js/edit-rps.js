@@ -165,6 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         generateSubCpmkFields();
+        if (window.initRealtimeValidation) window.initRealtimeValidation(cpmkContainer);
     }
 
     // Add a new CPMK for a specific CPL
@@ -188,6 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (g.querySelector('h3') && g.querySelector('h3').textContent.trim() === cplCode) {
                 const list = g.querySelector('.cpmk-list');
                 list.appendChild(div);
+                if (window.initRealtimeValidation) window.initRealtimeValidation(div);
                 // Focus textarea
                 setTimeout(()=> div.querySelector('textarea')?.focus(), 50);
                 break;
@@ -212,6 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // append to container directly (as manual block)
         cpmkContainer.appendChild(div);
+        if (window.initRealtimeValidation) window.initRealtimeValidation(div);
         setTimeout(()=> div.querySelector('textarea')?.focus(), 50);
         generateSubCpmkFields();
     }
@@ -295,6 +298,8 @@ document.addEventListener('DOMContentLoaded', function() {
             subCpmkDiv.appendChild(addButton);
             subCpmkContainer.appendChild(subCpmkDiv);
         });
+
+        if (window.initRealtimeValidation) window.initRealtimeValidation(subCpmkContainer);
     }
 
     function createLainnyaHtml(cpmkId, index, data = {}) {
@@ -366,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="md:col-span-2">
                         <label class="label">Modalitas (Pilih minimal satu)</label>
-                        <div class="mb-3">
+                        <div class="mb-3" data-require-group="modalitas-${cpmkId}-${index}" data-require-group-min="1" data-require-group-label="Modalitas">
                             <div class="flex items-center space-x-6 mb-2">
                                 <label class="flex items-center">
                                     <input id="modalitas-checkbox-luring-${cpmkId}-${index}" type="checkbox" name="sub_cpmk[${cpmkId}][${index}][modalitas][]" value="luring" class="modalitas-checkbox mr-2" onchange="toggleModalitasInput('${cpmkId}', '${index}')" ${hasLuring ? 'checked' : ''}>
@@ -558,10 +563,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (el) {
             el.setAttribute('data-subcpmk-index', newIndex);
             list.appendChild(el);
+            if (window.initRealtimeValidation) window.initRealtimeValidation(el);
             return;
         }
 
         list.appendChild(wrapper);
+        if (window.initRealtimeValidation) window.initRealtimeValidation(wrapper);
     };
 
     cplCheckboxes.forEach(cb => {
@@ -597,6 +604,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (typeof syncCplDescriptionsForSubmit === 'function') {
                 syncCplDescriptionsForSubmit(editForm);
+            }
+
+            // Disable tombol submit selama request berlangsung supaya klik dobel
+            // ga bikin request update nyasar dobel.
+            const submitBtn = editForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.dataset.originalText = submitBtn.textContent;
+                submitBtn.textContent = 'Menyimpan...';
             }
 
             // Show saving indicator
@@ -655,6 +671,12 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 if (saveIndicator && saveIndicator.parentNode) {
                     saveIndicator.remove();
+                }
+
+                // Gagal simpan: aktifkan lagi tombolnya biar user bisa coba ulang
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = submitBtn.dataset.originalText || 'Update RPS';
                 }
 
                 console.error('Error updating RPS:', error);

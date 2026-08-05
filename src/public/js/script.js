@@ -684,7 +684,7 @@ function restoreDynamicFields() {
                     const newDiv = document.createElement('div');
                     newDiv.className = 'flex items-start mb-2';
                     newDiv.innerHTML = `
-                        <textarea class="input" name="pustaka_pendukung[]" rows="2" required>${value}</textarea>
+                        <textarea class="input" name="pustaka_pendukung[]" rows="2">${value}</textarea>
                         <button type="button" class="ml-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" onclick="removeElementAndSave(this)">-</button>
                     `;
                     container.appendChild(newDiv);
@@ -692,6 +692,8 @@ function restoreDynamicFields() {
             });
         }
     }
+
+    if (window.initRealtimeValidation) window.initRealtimeValidation(document);
 }
 
 // --- Storage Management ---
@@ -869,6 +871,7 @@ function addDosenPengampu() {
             <button type="button" class="ml-2 btn-primary" style="padding:0.5rem 1rem;min-width:2.5rem;" onclick="addDosenPengampu()">+</button>
         `;
         container.appendChild(firstDiv);
+        if (window.initRealtimeValidation) window.initRealtimeValidation(firstDiv);
         return;
     }
 
@@ -888,6 +891,7 @@ function addDosenPengampu() {
         <button type="button" class="ml-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" onclick="removeElementAndSave(this)">-</button>
     `;
     container.insertBefore(newDiv, lastRow.nextSibling);
+    if (window.initRealtimeValidation) window.initRealtimeValidation(newDiv);
     saveFormState(); // Save state after adding
 
     const newInput = newDiv.querySelector('input[name="dosen_pengampu[]"]');
@@ -978,6 +982,7 @@ function addPustakaUtama() {
         // Insert newDiv SETELAH lastInputDiv
         const lastTextAreaDiv = lastTextarea.closest('.flex.items-start');
         container.insertBefore(newDiv, lastTextAreaDiv.nextSibling);
+        if (window.initRealtimeValidation) window.initRealtimeValidation(newDiv);
         lastTextarea.value = "";
         saveFormState(); // Save state after adding
     } else {
@@ -994,7 +999,7 @@ function addPustakaPendukung() {
         const newDiv = document.createElement('div');
         newDiv.className = 'flex items-start mb-2';
         newDiv.innerHTML = `
-            <textarea class="input" name="pustaka_pendukung[]" rows="2" required>${value}</textarea>
+            <textarea class="input" name="pustaka_pendukung[]" rows="2">${value}</textarea>
             <button type="button" class="ml-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" onclick="removeElementAndSave(this)">-</button>
         `;
         const lastTextAreaDiv = lastTextarea.closest('.flex.items-start');
@@ -1175,6 +1180,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             syncCplDescriptionsForSubmit(rpsForm);
 
+            // Disable tombol submit selama request berlangsung supaya klik dobel
+            // (mis. koneksi lambat) ga bikin 2 RPS kesimpen sekaligus.
+            const submitBtn = rpsForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.dataset.originalText = submitBtn.textContent;
+                submitBtn.textContent = 'Menyimpan...';
+            }
+
             // Show saving indicator
             showAutoSaveIndicator();
 
@@ -1258,6 +1272,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 .catch(error => {
                     // Remove auto-save indicator and show small error indicator
                     showSaveError();
+
+                    // Gagal simpan: aktifkan lagi tombolnya biar user bisa coba ulang
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = submitBtn.dataset.originalText || 'Save RPS';
+                    }
 
                     // Show error message
                     const errorIndicator = document.createElement('div');
@@ -1369,6 +1389,10 @@ function addCPMK(cplValue, cplDescription, cpmkId = null, deskripsi = '') {
         <div id="sub-cpmk-list-${cpmkId}"></div>
     `;
     subCpmkContainer.appendChild(newSubCpmkSection);
+    if (window.initRealtimeValidation) {
+        window.initRealtimeValidation(newCpmkDiv);
+        window.initRealtimeValidation(newSubCpmkSection);
+    }
     saveFormState();
 }
 
@@ -1602,7 +1626,7 @@ function addSubCPMK(cpmkId, predefinedIndex = null) {
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-gray-700 text-sm font-bold mb-2">Modalitas (Pilih minimal satu)</label>
-                    <div class="mb-3">
+                    <div class="mb-3" data-require-group="modalitas-${uniqueId}" data-require-group-min="1" data-require-group-label="Modalitas">
                         <div class="flex items-center space-x-6 mb-2">
                             <label class="flex items-center">
                                 <input id="modalitas-checkbox-luring-${uniqueId}" type="checkbox" name="sub_cpmk[${cpmkId}][${nextIndex}][modalitas][]" value="luring" class="modalitas-checkbox mr-2" onchange="toggleModalitasInput('${cpmkId}', '${nextIndex}')">
@@ -1717,6 +1741,7 @@ function addSubCPMK(cpmkId, predefinedIndex = null) {
         </div>
     `;
     subCpmkList.appendChild(newSubCpmkDiv);
+    if (window.initRealtimeValidation) window.initRealtimeValidation(newSubCpmkDiv);
 
     // Populate CPL checkboxes for this Sub-CPMK using CPLs selected in Step 3
     (function populateCplTercakup() {

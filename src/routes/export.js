@@ -234,7 +234,7 @@ function buildDataFromItem(item) {
 
   data.sub_cpmk = (data.sub_cpmk || []).map(sub => Object.assign({}, sub, buildAsesmenDisplay(sub)));
 
-  // Data untuk tabel SUMATIF dinamis (dipakai route /export/word-1-dinamis/:id):
+  // Data untuk tabel SUMATIF dinamis (dipakai route /export/word-1/:id):
   // kolomnya menyesuaikan kategori sumatif yang benar-benar dipakai RPS ini,
   // bukan 5 kolom tetap Kuis/Tugas/Ujian/PjBL/Lainnya seperti template.docx lama.
   const { columns: sumatifColumns, headerData: sumatifHeaderData } = buildSumatifRenderData(data.sub_cpmk);
@@ -347,7 +347,7 @@ function renderDynamicWord1(res, data, item) {
     const buf = renderedZip.generate({ type: 'nodebuffer' });
     sendDocxBuffer(res, buf, item, 'v1d');
   } catch (err) {
-    console.error('[word-1-dinamis] gagal membangun tabel dinamis, fallback ke template statis:', err.message);
+    console.error('[word-1] gagal membangun tabel dinamis, fallback ke template statis:', err.message);
     renderAndSendDocx(res, data, item, 'template.docx', 'v1');
   }
 }
@@ -380,8 +380,9 @@ function findRpsItem(req, rpsId) {
 //   renderAndSendDocx(res, data, item, 'template.docx');
 // });
 
-// New: export with template.docx (alias Word-1)
-router.get('/export/word-1/:id', isAuthenticated, (req, res) => {
+// New: export with template.docx (alias Word-1, versi lama -- disimpan sbg cadangan,
+// tombol UI sekarang nunjuk ke /export/word-1/:id yg versi dinamis di bawah)
+router.get('/export/word-old/:id', isAuthenticated, (req, res) => {
   const item = findRpsItem(req, req.params.id);
   if (!item) {
     return res.status(404).send('RPS tidak ditemukan');
@@ -399,9 +400,10 @@ router.get('/export/word-2/:id', isAuthenticated, (req, res) => {
   renderAndSendDocx(res, data, item, 'template-1.docx', 'v2');
 });
 
-// Word-1 dengan kolom SUMATIF dinamis (percobaan, sejajar dengan Word-1/Word-2
-// lama yang tetap tidak berubah). Lihat renderDynamicWord1() soal fallback.
-router.get('/export/word-1-dinamis/:id', isAuthenticated, (req, res) => {
+// Word-1 dengan kolom SUMATIF dinamis -- ini yg sekarang aktif dipakai tombol "Word-1"
+// di UI. Versi lama (5 kolom tetap) masih ada, dipindah ke /export/word-old/:id.
+// Lihat renderDynamicWord1() soal fallback ke template statis kalau gagal.
+router.get('/export/word-1/:id', isAuthenticated, (req, res) => {
   const item = findRpsItem(req, req.params.id);
   if (!item) {
     return res.status(404).send('RPS tidak ditemukan');

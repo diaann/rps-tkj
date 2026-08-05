@@ -188,6 +188,7 @@ function addCplItem(button) {
   newDesc.value = '';
   // Insert after current item
   item.parentNode.insertBefore(newItem, item.nextSibling);
+  if (window.initRealtimeValidation) window.initRealtimeValidation(newItem);
   // Update buttons state
   updateCplButtons(container);
 }

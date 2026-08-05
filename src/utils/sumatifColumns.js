@@ -1,5 +1,5 @@
 // Menentukan daftar kolom "Bentuk Asesmen Sumatif" yang dinamis per RPS,
-// dipakai oleh export.js (route /export/word-1-dinamis/:id) dan
+// dipakai oleh export.js (route /export/word-1/:id) dan
 // docxSumatifTable.js untuk membangun ulang tabel Word sesuai kategori
 // yang benar-benar dipakai RPS tsb (bukan 5 kolom tetap Kuis/Tugas/Ujian/PjBL/Lainnya).
 

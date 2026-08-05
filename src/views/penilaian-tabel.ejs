@@ -175,7 +175,7 @@
              Sub-CPMK sekaligus (tab-tab-nya cuma ditampilkan menggunakan css). 
              jadi walau user cuma keliatan cuma mengisi 1 tab , setelah tombol 
              "Simpan Nilai" diklik, NILAI DARI SEMUA TAB ikut terkirim ke server. -->
-        <form id="penilaian-form" method="POST" action="/penilaian/mk/<%= rpsItem.id %>/kelas/<%= kelas.id %>/save">
+        <form id="penilaian-form" method="POST" action="/penilaian/mk/<%= rpsItem.id %>/kelas/<%= kelas.id %>/save" data-no-realtime-validation>
             <input type="hidden" name="activeTab" id="active-tab-input" value="<%= (typeof activeTab !== 'undefined' && activeTab) ? activeTab : 'tb-panel-1' %>">
 
             <!-- Tab navigation -->

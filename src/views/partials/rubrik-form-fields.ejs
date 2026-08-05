@@ -59,7 +59,7 @@ const kriteriaList = rubrik && rubrik.kriteria.length ? rubrik.kriteria : [{ asp
                 <div class="rubrik-kriteria-row">
                     <div class="rubrik-kriteria-head">
                         <label class="label text-xs">Aspek / Kriteria</label>
-                        <input type="text" class="input rubrik-aspek-input" value="<%= kr.aspek %>" placeholder="mis. Kelengkapan Jawaban">
+                        <input type="text" class="input rubrik-aspek-input" value="<%= kr.aspek %>" placeholder="mis. Kelengkapan Jawaban" required>
                         <button type="button" class="btn-danger px-3 py-1 rounded text-sm" onclick="removeKriteriaRow(this)">
                             <i class="fas fa-trash"></i>
                         </button>

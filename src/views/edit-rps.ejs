@@ -249,7 +249,7 @@
                 <!-- Capaian Pembelajaran Lulusan -->
                 <fieldset class="border p-4 rounded-md mb-6">
                     <legend class="text-lg font-semibold px-2">Capaian Pembelajaran Lulusan (CPL)</legend>
-                    <div class="grid grid-cols-1 gap-2">
+                    <div class="grid grid-cols-1 gap-2" data-require-group="cpl" data-require-group-min="1" data-require-group-label="CPL">
                         <% // Use injected 'cpls' if provided; otherwise fallback to built-in list const
                             serverCpls=(typeof cpls !=='undefined' && Array.isArray(cpls)) ? cpls : [ { code: 'CPL01' ,
                             desc: 'Menunjukkan sikap profesional yang berlandaskan ketakwaan, etika, integritas, nasionalisme, dan kepedulian sosial dalam menjalankan tugas di bidang teknik komputer dan jaringan'

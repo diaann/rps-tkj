@@ -127,6 +127,17 @@ textarea.input {
   resize: vertical;
   min-height: 2.5rem;
 }
+
+/* Pesan validasi real-time per-field, lihat public/js/realtime-validation.js.
+   Class text-xs/text-red-600/mt-1 dari Tailwind CDN yang jadi sumber utama styling-nya;
+   aturan ini cuma fallback kalau Tailwind CDN-nya gagal ke-load. */
+.field-error-message {
+  display: block;
+  margin-top: 0.25rem;
+  color: #dc2626;
+  font-size: 0.75rem;
+}
+
 .label {
   display: block;
   color: #374151;
