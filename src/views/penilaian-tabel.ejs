@@ -393,18 +393,41 @@
                                                const displayAngka = typeof getAngkaMutu === 'function' ? getAngkaMutu(displayNilai) : '-';
                                                
                                                // Helper to get description
+                                               // Klausa "Mahasiswa [telah] [sebutan mutu]" dibangun dari Sebutan Mutu
+                                               // langsung, biar deskripsi selalu konsisten sama kolom Sebutan Mutu di
+                                               // sebelahnya. "telah" cuma dipakai kalau Sebutan Mutu-nya 1 kata (misal
+                                               // "Unggul" -> "telah unggul"), kalau 2 kata (misal "Kurang Unggul")
+                                               // "telah"-nya dibuang jadi langsung "Mahasiswa kurang unggul dalam...".
+                                               // C- & D punya aturan sendiri: pakai "Masih" (bukan telah/tanpa prefix)
+                                               // & TANPA kata "dalam" sblm "menguasai". E juga beda: ga pakai prefix
+                                               // apa2, & cuma pakai kata pertama dari Sebutan Mutu-nya (misal
+                                               // "Gagal (tidak lulus)" -> "gagal" doang, bukan teks dalam kurungnya).
                                                let displayDesc = 'Belum dinilai.';
                                                if (displayNilai && displayNilai !== '-') {
+                                                   const sebutanWords = String(displaySebutan || '').trim().split(/\s+/).filter(Boolean);
+                                                   const sebutanLower = String(displaySebutan || '').toLowerCase();
+                                                   const adjectiveClause = sebutanWords.length > 1
+                                                       ? `Mahasiswa ${sebutanLower}`
+                                                       : `Mahasiswa telah ${sebutanLower}`;
+
                                                    if (displayNilai === 'A' || displayNilai === 'A-') {
-                                                       displayDesc = `Mahasiswa telah unggul dalam menguasai seluruh Capaian Pembelajaran pada mata kuliah ${mk.nama_mk}.`;
-                                                   } else if (displayNilai === 'B+' || displayNilai === 'B' || displayNilai === 'B-') {
-                                                       displayDesc = `Mahasiswa telah baik dalam menguasai sebagian besar Capaian Pembelajaran pada mata kuliah ${mk.nama_mk}.`;
-                                                   } else if (displayNilai === 'C+' || displayNilai === 'C' || displayNilai === 'C-') {
-                                                       displayDesc = `Mahasiswa cukup dalam menguasai standar minimal Capaian Pembelajaran pada mata kuliah ${mk.nama_mk}.`;
+                                                       displayDesc = `${adjectiveClause} dalam menguasai seluruh Capaian Pembelajaran pada mata kuliah ${mk.nama_mk}.`;
+                                                   } else if (displayNilai === 'B+' || displayNilai === 'B-') {
+                                                       displayDesc = `${adjectiveClause} dalam menguasai sebagian besar Capaian Pembelajaran pada mata kuliah ${mk.nama_mk}.`;
+                                                   } else if (displayNilai === 'B') {
+                                                       // B dibikin netral: tetap "telah" & tetap qualifier "sebagian besar"
+                                                       // (biar bedanya sama A -- yg kuasai SELURUH -- tetap kebaca), tapi
+                                                       // TANPA kata sifat "baik"-nya, krn B itu nilai tengah/netral
+                                                       displayDesc = `Mahasiswa telah menguasai sebagian besar Capaian Pembelajaran pada mata kuliah ${mk.nama_mk}.`;
+                                                   } else if (displayNilai === 'C+' || displayNilai === 'C') {
+                                                       displayDesc = `${adjectiveClause} dalam menguasai standar minimal Capaian Pembelajaran pada mata kuliah ${mk.nama_mk}.`;
+                                                   } else if (displayNilai === 'C-') {
+                                                       displayDesc = `Mahasiswa masih ${sebutanLower} menguasai standar minimal Capaian Pembelajaran pada mata kuliah ${mk.nama_mk}.`;
                                                    } else if (displayNilai === 'D') {
-                                                       displayDesc = `Mahasiswa kurang dalam menguasai Capaian Pembelajaran pada mata kuliah ${mk.nama_mk} dan memerlukan bimbingan tambahan.`;
+                                                       displayDesc = `Mahasiswa masih ${sebutanLower} menguasai Capaian Pembelajaran pada mata kuliah ${mk.nama_mk} dan memerlukan bimbingan tambahan.`;
                                                    } else if (displayNilai === 'E') {
-                                                       displayDesc = `Mahasiswa tidak menguasai standar minimal Capaian Pembelajaran pada mata kuliah ${mk.nama_mk} dan dinyatakan tidak lulus.`;
+                                                       const sebutanFirstWord = (sebutanWords[0] || 'gagal').toLowerCase();
+                                                       displayDesc = `Mahasiswa ${sebutanFirstWord} menguasai standar minimal Capaian Pembelajaran pada mata kuliah ${mk.nama_mk} dan dinyatakan tidak lulus.`;
                                                    }
                                                }
                                             %>
