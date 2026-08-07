@@ -1,6 +1,6 @@
 <%- include('partials/header') %>
 
-    <div class="container-custom">
+    <div class="container-custom penilaian-tabel-page">
         <div class="card mb-6">
             <h1 class="text-2xl font-bold text-gray-800 mb-2">Tabel Penilaian</h1>
             <p class="text-gray-600">
@@ -38,7 +38,7 @@
             </div>
             
             <div id="rps-matrix-container" class="transition-all duration-300 hidden">
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto penilaian-scroll-table matrix-scroll-table">
                     <table class="table-auto w-full border-collapse border border-gray-200">
                         <thead class="bg-blue-50 text-gray-700">
                             <tr>
@@ -180,7 +180,7 @@
 
             <!-- Tab navigation -->
             <div class="card">
-                <div class="flex flex-wrap gap-2 -mb-px">
+                <div class="flex flex-wrap gap-2 -mb-px penilaian-tabs-bar">
                     <% subCpmkList.forEach(function(sub, idx) { %>
                         <button type="button"
                             class="penilaian-tab-btn px-4 py-2 text-sm font-medium rounded-t-lg border border-b-0 <%= (typeof activeTab !== 'undefined' && activeTab === 'tb-panel-' + sub.globalNumber) ? 'bg-white border-blue-500 text-blue-700' : 'bg-gray-50 border-transparent text-gray-500 hover:text-blue-600' %>"
@@ -234,8 +234,8 @@
                             </div>
                         </div>
 
-                        <div class="overflow-x-auto">
-                            <table class="table-auto w-full border-collapse">
+                        <div class="overflow-x-auto penilaian-scroll-table">
+                            <table class="table-auto w-full border-collapse sticky-id-table">
                                 <thead class="bg-blue-50">
                                     <tr>
                                         <th class="px-3 py-2 border text-left text-xs font-semibold">No</th>
@@ -296,8 +296,8 @@
                         <div class="text-gray-800">Ringkasan nilai akhir per Sub-CPMK berdasarkan data yang sudah di input di setiap tab.</div>
                     </div>
 
-                    <div class="overflow-x-auto">
-                        <table class="table-auto w-full border-collapse">
+                    <div class="overflow-x-auto penilaian-scroll-table">
+                        <table class="table-auto w-full border-collapse sticky-id-table">
                             <thead class="bg-blue-50">
                                 <tr>
                                     <th class="px-3 py-2 border text-center text-xs font-semibold">No</th>
@@ -365,7 +365,7 @@
                             </button>
                         </div>
 
-                        <div class="p-6 overflow-x-auto" style="flex-grow: 1; overflow-y: auto;">
+                        <div class="p-6 overflow-x-auto portofolio-modal-body" style="flex-grow: 1; overflow-y: auto;">
                             <h4 class="font-bold text-gray-800 mb-3 text-sm flex items-center gap-1.5">
                                 <i class="fas fa-file-invoice text-blue-600"></i>
                                 Ringkasan Capaian Pembelajaran & Portofolio Mahasiswa
@@ -478,7 +478,7 @@
                             <% }); %>
                         </div>
 
-                        <div class="p-4 border-t flex justify-end gap-3 flex-shrink-0">
+                        <div class="p-4 border-t flex justify-end gap-3 flex-shrink-0 portofolio-modal-footer">
                         <button type="button" 
                                 class="btn-secondary btn-download-portofolio px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
                                 data-nim="<%= m.nim %>" data-nama="<%= m.nama %>">

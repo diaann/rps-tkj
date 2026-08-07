@@ -128,6 +128,37 @@ textarea.input {
   min-height: 2.5rem;
 }
 
+/* Input file (mis. "Import dari Excel" di Kelola Mahasiswa) -- tombol
+   "Choose File" bawaannya dirender browser pakai style sistem (abu-abu,
+   kotak, font OS) yang beda sendiri dari tema web ini. Disamain warnanya
+   dgn .btn-primary/.btn-secondary supaya nyatu sama tombol2 lain. */
+.file-input-styled {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.5rem;
+  cursor: pointer;
+}
+.file-input-styled::file-selector-button,
+.file-input-styled::-webkit-file-upload-button {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+  font-family: inherit;
+  font-size: 0.875rem;
+  border: none;
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  margin-right: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.file-input-styled:hover::file-selector-button,
+.file-input-styled:hover::-webkit-file-upload-button {
+  background: #1d4ed8;
+}
+
 /* Pesan validasi real-time per-field, lihat public/js/realtime-validation.js.
    Class text-xs/text-red-600/mt-1 dari Tailwind CDN yang jadi sumber utama styling-nya;
    aturan ini cuma fallback kalau Tailwind CDN-nya gagal ke-load. */
@@ -887,4 +918,162 @@ textarea.input {
     max-height: 0;
     margin: 0;
     padding: 0;
+}
+
+/* ============================================================
+   Halaman Tabel Penilaian (termasuk tab Rekap) -- responsif di
+   HP/tablet. Semua rule di bawah discope ke .penilaian-tabel-page
+   / class turunannya supaya TIDAK mempengaruhi .card atau tabel
+   di halaman lain.
+   ============================================================ */
+
+/* Tombol mengambang (jump-to-bottom / scroll-to-top, fixed di kanan-bawah
+   layar) sebelumnya nutupin tombol "Simpan Nilai" begitu user scroll penuh
+   ke bawah, krn keduanya sama2 nangkring di pojok kanan-bawah. Kasih ruang
+   kosong ekstra di ujung bawah halaman ini supaya tombol mengambang selalu
+   kebagian tempat sendiri, di semua ukuran layar (HP/tablet/desktop). */
+.penilaian-tabel-page {
+  padding-bottom: 6rem;
+}
+
+/* Tombol tab Sub-CPMK 1..N + Rekap: di layar sempit kalau ditumpuk
+   pakai flex-wrap biasa jadi 3-4 baris tombol (makan banyak ruang
+   vertikal). Ubah jadi 1 baris yg discroll horizontal (swipe),
+   pola umum tab bar di aplikasi mobile. */
+@media (max-width: 768px) {
+  .penilaian-tabs-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-bottom: 0.25rem;
+  }
+  .penilaian-tabs-bar .penilaian-tab-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
+/* Card jadi lebih ramping khusus di halaman ini pas mobile, supaya
+   tabel di dalamnya dapat lebih banyak lebar sebelum perlu discroll. */
+@media (max-width: 640px) {
+  .penilaian-tabel-page .card {
+    padding: 1rem;
+  }
+}
+
+/* Wrapper overflow-x-auto tabel penilaian: scrollbar tipis + touch-scroll
+   (pola yg sama dipakai .subcpmk-content di atas). */
+.penilaian-scroll-table {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.penilaian-scroll-table::-webkit-scrollbar {
+  height: 6px;
+}
+.penilaian-scroll-table::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+.penilaian-scroll-table::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+.penilaian-scroll-table::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Tabel input nilai per Sub-CPMK & tabel Rekap: bekukan 3 kolom identitas
+   (No/NIM/Nama) supaya pas discroll ke kanan buat lihat kolom nilai,
+   pengguna tetap tau ini baris data punya siapa -- tanpa ini, di layar HP
+   NIM/Nama gampang ke-scroll hilang duluan sebelum kolom nilainya kelihatan. */
+.sticky-id-table th:nth-child(1),
+.sticky-id-table td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  min-width: 34px;
+  width: 34px;
+}
+.sticky-id-table th:nth-child(2),
+.sticky-id-table td:nth-child(2) {
+  position: sticky;
+  left: 34px;
+  min-width: 88px;
+  width: 88px;
+}
+.sticky-id-table th:nth-child(3),
+.sticky-id-table td:nth-child(3) {
+  position: sticky;
+  left: 122px;
+  min-width: 130px;
+  max-width: 130px;
+}
+.sticky-id-table th:nth-child(1),
+.sticky-id-table th:nth-child(2),
+.sticky-id-table th:nth-child(3) {
+  z-index: 3;
+  background-color: #eff6ff; /* samain dgn bg-blue-50 punya thead */
+}
+.sticky-id-table td:nth-child(1),
+.sticky-id-table td:nth-child(2),
+.sticky-id-table td:nth-child(3) {
+  z-index: 1;
+  background-color: #fff;
+}
+.sticky-id-table tbody tr:hover td:nth-child(1),
+.sticky-id-table tbody tr:hover td:nth-child(2),
+.sticky-id-table tbody tr:hover td:nth-child(3) {
+  background-color: #f9fafb; /* samain efek hover:bg-gray-50 bawaan Tailwind */
+}
+/* Garis pemisah biar keliatan jelas ini kolom "beku", bukan glitch rendering */
+.sticky-id-table th:nth-child(3),
+.sticky-id-table td:nth-child(3) {
+  box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 640px) {
+  .sticky-id-table th,
+  .sticky-id-table td {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  .sticky-id-table th {
+    white-space: nowrap;
+  }
+}
+
+/* Tabel Matriks Asesmen RPS: kolomnya banyak & sebagian pakai rowspan,
+   jadi kolom beku (sticky) ga aman diterapkan di sini -- cukup dirapikan
+   ukuran font/padding-nya di layar sempit supaya scroll horizontalnya
+   lebih singkat. */
+@media (max-width: 640px) {
+  .matrix-scroll-table table {
+    font-size: 0.75rem;
+  }
+  .matrix-scroll-table th,
+  .matrix-scroll-table td {
+    padding: 0.4rem 0.5rem;
+  }
+}
+
+/* Modal Portofolio per mahasiswa (dibuka dari tombol "Portofolio" di tabel
+   Rekap): sebelumnya di layar sempit, 3 tombol footer (Download PDF /
+   Download PDF Detail / Tutup) dipaksa sebaris tanpa wrap sehingga masing2
+   cuma kebagian ~110px lebar -- teks tombol yg panjang jadi membungkus
+   banyak baris dan tombolnya jadi sangat tinggi/tidak enak disentuh.
+   Tumpuk penuh-lebar di mobile supaya jadi tombol besar yg mudah di-tap. */
+@media (max-width: 640px) {
+  .portofolio-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .portofolio-modal-footer button {
+    width: 100%;
+  }
+  .portofolio-modal-body {
+    padding: 1rem;
+  }
+  .portofolio-modal-body table {
+    font-size: 0.65rem;
+  }
 }
