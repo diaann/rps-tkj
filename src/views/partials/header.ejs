@@ -43,10 +43,12 @@
                         class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
                         <i class="fas fa-file-upload mr-1"></i>Upload RPS
                     </a>
-                    <a href="/admin/mahasiswa"
-                        class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
-                        <i class="fas fa-user-plus mr-1"></i>Daftar Mahasiswa
-                    </a>
+                    <% if (typeof user !=='undefined' && user.role !=='admin' ) { %>
+                        <a href="/admin/mahasiswa"
+                            class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
+                            <i class="fas fa-user-plus mr-1"></i>Daftar Mahasiswa
+                        </a>
+                    <% } %>
                     <div class="header-dropdown">
                         <button type="button" id="penilaian-dropdown-btn"
                             class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap inline-flex items-center"
@@ -60,10 +62,18 @@
                         </div>
                     </div>
                     <% if (typeof user !=='undefined' && user.role==='admin' ) { %>
-                        <a href="/admin"
-                            class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">
-                            <i class="fas fa-users mr-1"></i>Daftar User
-                        </a>
+                        <div class="header-dropdown">
+                            <button type="button" id="user-dropdown-btn"
+                                class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap inline-flex items-center"
+                                aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-users mr-1"></i>Kelola User
+                                <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                            </button>
+                            <div id="user-dropdown-menu" class="header-dropdown-menu hidden">
+                                <a href="/admin"><i class="fas fa-users mr-1"></i>Daftar User</a>
+                                <a href="/admin/mahasiswa"><i class="fas fa-user-plus mr-1"></i>Daftar Mahasiswa</a>
+                            </div>
+                        </div>
 
                         <a href="/admin/cpl"
                             class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 whitespace-nowrap">

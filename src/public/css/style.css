@@ -1077,3 +1077,57 @@ textarea.input {
     font-size: 0.65rem;
   }
 }
+
+/* ============================================================
+   Halaman Daftar Mahasiswa & Kelola User -- responsif di HP/tablet.
+   ============================================================ */
+
+/* Card jadi lebih ramping khusus di halaman ini pas mobile, supaya
+   filter form & tabel di dalamnya dapat lebih banyak lebar sebelum
+   perlu discroll (pola sama seperti .penilaian-tabel-page). */
+@media (max-width: 640px) {
+  .admin-mahasiswa-page .card,
+  .admin-users-page .card {
+    padding: 1rem;
+  }
+}
+
+/* Tombol bulat (+) buat expand-row di tabel Daftar Mahasiswa & Kelola
+   User -- kolom sekunder (Angkatan/Kelas/Manajemen atau
+   Nama/Role/Status/Aksi) disembunyikan dari baris utama & baru
+   ditampilkan di panel di bawahnya begitu tombol ini ditekan, supaya
+   di HP/tablet tidak perlu geser horizontal buat menjangkau kolom
+   atau tombol aksi yang letaknya di ujung kanan tabel. */
+.row-expand-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background: #2563eb;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.row-expand-btn:hover {
+  background: #1d4ed8;
+}
+.row-expand-btn.expanded {
+  background: #dc2626;
+}
+.row-expand-btn.expanded:hover {
+  background: #b91c1c;
+}
+.row-detail-panel dt {
+  font-weight: 600;
+  color: #4b5563;
+  display: inline;
+}
+.row-detail-panel dd {
+  display: inline;
+  margin: 0 0 0 0.25rem;
+}

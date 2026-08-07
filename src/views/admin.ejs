@@ -1,6 +1,6 @@
 <%- include('partials/header') %>
 
-<div class="container-custom">
+<div class="container-custom admin-users-page">
     <!-- Admin Navigation -->
     <div class="card mb-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
@@ -34,7 +34,74 @@
             <div class="p-3 bg-red-100 text-red-800 rounded mb-4">User tidak ditemukan.</div>
         <% } %>
 
-        <div class="overflow-x-auto">
+        <% const currentUserId = user.id; %>
+
+        <!-- Versi compact (tombol + expand-row) -- HP saja, <768px -->
+        <div class="overflow-x-auto md:hidden">
+        <table class="min-w-full bg-white rounded-lg">
+            <thead>
+                <tr>
+                    <th class="px-2 py-2 w-10"></th>
+                    <th class="px-4 py-2 text-left">Email</th>
+                    <th class="px-4 py-2 text-left">Username</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (users.length === 0) { %>
+                    <tr><td colspan="3" class="text-center py-4 text-gray-500">Tidak ada user pending validasi.</td></tr>
+                <% } %>
+                <% users.forEach(function(user) { %>
+                    <tr class="border-t">
+                        <td class="px-2 py-2 text-center">
+                            <button type="button" class="row-expand-btn" id="user-expand-btn-<%= user.id %>"
+                                    onclick="toggleUserRow('<%= user.id %>')"
+                                    aria-expanded="false" aria-controls="user-detail-<%= user.id %>">
+                                <i class="fas fa-plus" id="user-expand-icon-<%= user.id %>"></i>
+                            </button>
+                        </td>
+                        <td class="px-4 py-2"><%= user.email %></td>
+                        <td class="px-4 py-2"><%= user.username %></td>
+                    </tr>
+                    <tr id="user-detail-<%= user.id %>" class="hidden bg-gray-50 border-t">
+                        <td colspan="3" class="px-4 py-3">
+                            <dl class="row-detail-panel text-sm space-y-1 mb-3">
+                                <div><dt>Nama:</dt> <dd><%= user.nama_lengkap || '-' %></dd></div>
+                                <div><dt>Status:</dt> <dd><span class="inline-block px-2 py-1 rounded-full <%= user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' %>"><%= user.status %></span></dd></div>
+                            </dl>
+                            <div class="mb-3">
+                                <span class="font-semibold text-gray-600 text-sm block mb-1">Role:</span>
+                                <form action="/admin/change-role/<%= user.id %>" method="POST" class="flex items-center gap-2 text-xs role-change-form" data-user-id="<%= user.id %>">
+                                    <select name="role" class="border rounded px-2 py-1 focus:outline-none focus:ring role-select">
+                                        <option value="dosen" <%= user.role === 'dosen' ? 'selected' : '' %>>dosen</option>
+                                        <option value="admin" <%= user.role === 'admin' ? 'selected' : '' %>>admin</option>
+                                    </select>
+                                    <input type="hidden" name="ajax" value="1">
+                                    <button type="submit" class="btn-secondary px-2 py-1">Ubah</button>
+                                </form>
+                            </div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <% if (user.status === 'pending') { %>
+                                    <form action="/admin/validate/<%= user.id %>" method="POST" class="inline">
+                                        <button class="btn-primary text-xs" type="submit">Validasi</button>
+                                    </form>
+                                <% } else { %>
+                                    <span class="text-green-600 font-semibold text-xs">Tervalidasi</span>
+                                <% } %>
+                                <% if (user.id !== currentUserId) { %>
+                                    <form action="/admin/users/delete/<%= user.id %>" method="POST" class="inline" onsubmit="return confirm('Hapus user ini?')">
+                                        <button class="btn-danger text-xs" type="submit">Delete</button>
+                                    </form>
+                                <% } %>
+                            </div>
+                        </td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+        </div>
+
+        <!-- Versi klasik (semua kolom sekaligus) -- tablet & desktop, >=768px -->
+        <div class="overflow-x-auto hidden md:block">
         <table class="min-w-full bg-white rounded-lg">
             <thead>
                 <tr>
@@ -50,7 +117,6 @@
                 <% if (users.length === 0) { %>
                     <tr><td colspan="6" class="text-center py-4 text-gray-500">Tidak ada user pending validasi.</td></tr>
                 <% } %>
-                <% const currentUserId = user.id; %>
                 <% users.forEach(function(user) { %>
                     <tr class="border-t">
                         <td class="px-4 py-2"><%= user.email %></td>
@@ -130,6 +196,21 @@ document.querySelectorAll('.role-change-form').forEach(form => {
         }
     });
 });
+
+// buka/tutup panel detail (Nama/Status/Role/Aksi) per baris user di tabel,
+// dipicu tombol bulat (+) supaya di HP/tablet tidak perlu geser horizontal
+function toggleUserRow(id) {
+    const row = document.getElementById('user-detail-' + id);
+    const btn = document.getElementById('user-expand-btn-' + id);
+    const icon = document.getElementById('user-expand-icon-' + id);
+    if (!row || !btn || !icon) return;
+    const isHidden = row.classList.contains('hidden');
+    row.classList.toggle('hidden', !isHidden);
+    btn.classList.toggle('expanded', isHidden);
+    btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+    icon.classList.toggle('fa-plus', !isHidden);
+    icon.classList.toggle('fa-minus', isHidden);
+}
 
 function showToast(msg, type='info') {
     const existing = document.getElementById('toast-role');

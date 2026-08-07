@@ -1,6 +1,6 @@
 <%- include('partials/header') %>
 
-<div class="container-custom">
+<div class="container-custom admin-mahasiswa-page">
   <div class="card">
     <h2 class="card-title">Input Data Mahasiswa</h2>
     <p class="text-gray-600 mb-4">Form ini menambahkan dan mengelola data mahasiswa di database.</p>
@@ -156,38 +156,28 @@
 
     <!-- Filter berdasarkan Angkatan, Kelas, Nama & NIM -->
     <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-6">
-      <form action="/admin/mahasiswa" method="GET" class="flex flex-wrap items-center gap-4 text-sm">
-        
-        <div class="flex items-center gap-2">
-          <label class="font-semibold text-gray-700 whitespace-nowrap">Angkatan:</label>
-          <select class="border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:border-blue-500 h-9 text-sm" name="tingkat" onchange="this.form.submit()">
+      <form action="/admin/mahasiswa" method="GET" class="flex flex-col lg:flex-row lg:items-start gap-3 text-sm">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
+          <input class="input" type="text" name="nama" placeholder="Cari nama..." value="<%= (typeof namaFilter !== 'undefined' && namaFilter) ? namaFilter : '' %>">
+          <input class="input" type="text" name="nim" placeholder="Cari NIM..." value="<%= (typeof nimFilter !== 'undefined' && nimFilter) ? nimFilter : '' %>">
+        </div>
+
+        <div class="filter-select-group">
+          <select class="input" name="tingkat" onchange="this.form.submit()">
             <option value="">Semua Angkatan</option>
             <% const tingkatOptionsList = (typeof tingkatOptions !== 'undefined' && Array.isArray(tingkatOptions)) ? tingkatOptions : []; %>
             <% tingkatOptionsList.forEach(function(t) { %>
               <option value="<%= t %>" <%= (typeof tingkatFilter !== 'undefined' && tingkatFilter === t) ? 'selected' : '' %>>Angkatan <%= t %></option>
             <% }); %>
           </select>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <label class="font-semibold text-gray-700 whitespace-nowrap">Kelas:</label>
-          <select class="border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:border-blue-500 h-9 text-sm" name="huruf" onchange="this.form.submit()">
+          <select class="input" name="huruf" onchange="this.form.submit()">
             <option value="">Semua Kelas</option>
             <% const hurufOptionsList = (typeof hurufOptions !== 'undefined' && Array.isArray(hurufOptions)) ? hurufOptions : []; %>
             <% hurufOptionsList.forEach(function(h) { %>
               <option value="<%= h %>" <%= (typeof hurufFilter !== 'undefined' && hurufFilter === h) ? 'selected' : '' %>>Kelas <%= h %></option>
             <% }); %>
           </select>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <label class="font-semibold text-gray-700 whitespace-nowrap">Nama:</label>
-          <input class="border border-gray-300 rounded px-3 py-1 focus:outline-none focus:border-blue-500 h-9 text-sm w-40" type="text" name="nama" placeholder="Cari nama..." value="<%= (typeof namaFilter !== 'undefined' && namaFilter) ? namaFilter : '' %>">
-        </div>
-
-        <div class="flex items-center gap-2">
-          <label class="font-semibold text-gray-700 whitespace-nowrap">NIM:</label>
-          <input class="border border-gray-300 rounded px-3 py-1 focus:outline-none focus:border-blue-500 h-9 text-sm w-32" type="text" name="nim" placeholder="Cari NIM..." value="<%= (typeof nimFilter !== 'undefined' && nimFilter) ? nimFilter : '' %>">
         </div>
 
         <div class="flex gap-2">
@@ -272,7 +262,112 @@
       </div>
     <% } %>
 
-    <div class="overflow-x-auto">
+    <!-- Versi compact (tombol + expand-row) -- HP saja, <768px -->
+    <div class="overflow-x-auto md:hidden">
+      <table class="min-w-full bg-white rounded-lg overflow-hidden">
+        <thead>
+          <tr class="bg-gray-100 text-left">
+            <th class="px-2 py-2 w-10"></th>
+            <th class="px-4 py-2">NIM</th>
+            <th class="px-4 py-2">Nama</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (mahasiswa.length === 0) { %>
+            <tr>
+              <td colspan="3" class="px-4 py-4 text-center text-gray-500">Belum ada data mahasiswa.</td>
+            </tr>
+          <% } else { %>
+            <% mahasiswa.forEach(function(item) { %>
+              <% const kelasMatch = String(item.kelasId || '').match(/^(\d+)([A-Za-z]+)$/); %>
+              <% const kelasRecord = (typeof kelas !== 'undefined' && Array.isArray(kelas)) ? kelas.find(function(k) { return k.id === item.kelasId; }) : null; %>
+              <% const kelasFullLabel = (kelasRecord && Number.isInteger(kelasRecord.tingkatSaatIni) && kelasMatch)
+                    ? `${kelasRecord.tingkatSaatIni}${kelasMatch[2]}`
+                    : (item.kelasId || '-'); %>
+              <tr class="border-t">
+                <td class="px-2 py-2 text-center">
+                  <button type="button" class="row-expand-btn" id="mhs-expand-btn-<%= item.id %>"
+                          onclick="toggleMahasiswaRow('<%= item.id %>')"
+                          aria-expanded="false" aria-controls="mhs-detail-<%= item.id %>">
+                    <i class="fas fa-plus" id="mhs-expand-icon-<%= item.id %>"></i>
+                  </button>
+                </td>
+                <td class="px-4 py-2"><%= item.nim %></td>
+                <td class="px-4 py-2"><%= item.nama %></td>
+              </tr>
+              <tr id="mhs-detail-<%= item.id %>" class="hidden bg-gray-50 border-t">
+                <td colspan="3" class="px-4 py-3">
+                  <dl class="row-detail-panel text-sm space-y-1 mb-3">
+                    <div><dt>Angkatan:</dt> <dd><%= kelasMatch ? kelasMatch[1] : item.kelasId %></dd></div>
+                    <div><dt>Kelas:</dt> <dd><%= kelasFullLabel %></dd></div>
+                  </dl>
+                  <div class="flex flex-wrap gap-2">
+                    <button class="btn-secondary text-xs" type="button" onclick="toggleEdit('m-<%= item.id %>')">Edit</button>
+                    <form action="/admin/mahasiswa/delete/<%= item.id %>" method="POST" class="inline" onsubmit="return confirm('Hapus data mahasiswa ini?')">
+                      <button class="btn-danger text-xs" type="submit">Delete</button>
+                    </form>
+                  </div>
+                  <div id="edit-form-m-<%= item.id %>" class="mt-3" style="display:none;">
+                    <form action="/admin/mahasiswa/update/<%= item.id %>" method="POST" class="space-y-3">
+                      <div class="grid md:grid-cols-2 gap-3">
+                        <div>
+                          <label class="label">NIM</label>
+                          <input class="input" name="nim" value="<%= item.nim %>" required>
+                        </div>
+                        <div>
+                          <label class="label">Nama Mahasiswa</label>
+                          <input class="input" name="nama" value="<%= item.nama %>" required>
+                        </div>
+                        <div>
+                          <label class="label">Angkatan</label>
+                          <input class="input" type="number" name="angkatan"
+                                value="<%= kelasMatch ? kelasMatch[1] : '' %>"
+                                min="2000" max="2099" required>
+                        </div>
+                        <div>
+                          <label class="label">Kelas</label>
+                          <select class="input" name="huruf" required>
+                            <option value="">-- Pilih Kelas --</option>
+                            <%
+                              const hurufKelasChoicesEdit = (typeof hurufKelasChoices !== 'undefined' && Array.isArray(hurufKelasChoices))
+                                ? hurufKelasChoices
+                                : ['A', 'B', 'C', 'D'];
+
+                              // Cari tingkatSaatIni dari kelas yang sedang diedit (jika ada)
+                              const currentKelasRecord = (typeof kelas !== 'undefined' && Array.isArray(kelas))
+                                ? kelas.find(k => k.id === item.kelasId)
+                                : null;
+                              const currentTingkat = currentKelasRecord && Number.isInteger(currentKelasRecord.tingkatSaatIni)
+                                ? currentKelasRecord.tingkatSaatIni
+                                : null;
+                            %>
+                            <% hurufKelasChoicesEdit.forEach(function(h) { %>
+                              <%
+                                // Tampilkan dengan tingkat jika memungkinkan
+                                const displayLabel = currentTingkat ? `${currentTingkat}${h}` : h;
+                              %>
+                              <option value="<%= h %>" <%= (kelasMatch && kelasMatch[2] === h) ? 'selected' : '' %>>
+                                <%= displayLabel %>
+                              </option>
+                            <% }); %>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="flex justify-end">
+                        <button class="btn-primary text-xs" type="submit">Simpan Perubahan</button>
+                      </div>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Versi klasik (semua kolom sekaligus) -- tablet & desktop, >=768px -->
+    <div class="overflow-x-auto hidden md:block">
       <table class="min-w-full bg-white rounded-lg overflow-hidden">
         <thead>
           <tr class="bg-gray-100 text-left">
@@ -286,7 +381,7 @@
         <tbody>
           <% if (mahasiswa.length === 0) { %>
             <tr>
-              <td colspan="6" class="px-4 py-4 text-center text-gray-500">Belum ada data mahasiswa.</td>
+              <td colspan="5" class="px-4 py-4 text-center text-gray-500">Belum ada data mahasiswa.</td>
             </tr>
           <% } else { %>
             <% mahasiswa.forEach(function(item) { %>
@@ -320,34 +415,32 @@
                         </div>
                         <div>
                           <label class="label">Angkatan</label>
-                          <input class="input" type="number" name="angkatan" 
-                                value="<%= kelasMatch ? kelasMatch[1] : '' %>" 
+                          <input class="input" type="number" name="angkatan"
+                                value="<%= kelasMatch ? kelasMatch[1] : '' %>"
                                 min="2000" max="2099" required>
                         </div>
                         <div>
                           <label class="label">Kelas</label>
                           <select class="input" name="huruf" required>
                             <option value="">-- Pilih Kelas --</option>
-                            <% 
-                              const hurufKelasChoicesEdit = (typeof hurufKelasChoices !== 'undefined' && Array.isArray(hurufKelasChoices)) 
-                                ? hurufKelasChoices 
-                                : ['A', 'B', 'C', 'D']; 
-                              
-                              // Cari tingkatSaatIni dari kelas yang sedang diedit (jika ada)
-                              const currentKelasRecord = (typeof kelas !== 'undefined' && Array.isArray(kelas)) 
-                                ? kelas.find(k => k.id === item.kelasId) 
+                            <%
+                              const hurufKelasChoicesEditKlasik = (typeof hurufKelasChoices !== 'undefined' && Array.isArray(hurufKelasChoices))
+                                ? hurufKelasChoices
+                                : ['A', 'B', 'C', 'D'];
+
+                              const currentKelasRecordKlasik = (typeof kelas !== 'undefined' && Array.isArray(kelas))
+                                ? kelas.find(k => k.id === item.kelasId)
                                 : null;
-                              const currentTingkat = currentKelasRecord && Number.isInteger(currentKelasRecord.tingkatSaatIni) 
-                                ? currentKelasRecord.tingkatSaatIni 
+                              const currentTingkatKlasik = currentKelasRecordKlasik && Number.isInteger(currentKelasRecordKlasik.tingkatSaatIni)
+                                ? currentKelasRecordKlasik.tingkatSaatIni
                                 : null;
                             %>
-                            <% hurufKelasChoicesEdit.forEach(function(h) { %>
-                              <% 
-                                // Tampilkan dengan tingkat jika memungkinkan
-                                const displayLabel = currentTingkat ? `${currentTingkat}${h}` : h;
+                            <% hurufKelasChoicesEditKlasik.forEach(function(h) { %>
+                              <%
+                                const displayLabelKlasik = currentTingkatKlasik ? `${currentTingkatKlasik}${h}` : h;
                               %>
                               <option value="<%= h %>" <%= (kelasMatch && kelasMatch[2] === h) ? 'selected' : '' %>>
-                                <%= displayLabel %>
+                                <%= displayLabelKlasik %>
                               </option>
                             <% }); %>
                           </select>
@@ -433,5 +526,20 @@ function toggleEdit(id) {
   const area = document.getElementById('edit-form-' + id);
   if (!area) return;
   area.style.display = (area.style.display === 'block') ? 'none' : 'block';
+}
+
+// buka/tutup panel detail (Angkatan/Kelas/Edit/Delete) per baris mahasiswa di tabel,
+// dipicu tombol bulat (+) supaya di HP/tablet tidak perlu geser horizontal
+function toggleMahasiswaRow(id) {
+  const row = document.getElementById('mhs-detail-' + id);
+  const btn = document.getElementById('mhs-expand-btn-' + id);
+  const icon = document.getElementById('mhs-expand-icon-' + id);
+  if (!row || !btn || !icon) return;
+  const isHidden = row.classList.contains('hidden');
+  row.classList.toggle('hidden', !isHidden);
+  btn.classList.toggle('expanded', isHidden);
+  btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+  icon.classList.toggle('fa-plus', !isHidden);
+  icon.classList.toggle('fa-minus', isHidden);
 }
 </script>
