@@ -1755,7 +1755,10 @@ router.post('/upload-rps', isAuthenticated, (req, res) => {
 });
 
 // Admin: manage mahasiswa page
-router.get('/admin/mahasiswa', isAuthenticated, isAdmin, (req, res) => {
+// GET ini sengaja CUMA isAuthenticated (ga isAdmin) -- daftar mahasiswa boleh diliat
+// user biasa juga (linknya di header udah dimunculin ke semua user), tapi nambah/edit/
+// hapus mahasiswa & kelola tingkat kelas TETAP admin-only (lihat route2 POST di bawah).
+router.get('/admin/mahasiswa', isAuthenticated, (req, res) => {
   const mahasiswa = readJsonFile(mahasiswaPath, []);
   const kelas = readJsonFile(kelasPath, []);
   const page = Math.max(1, parseInt(req.query.page || '1', 10));
