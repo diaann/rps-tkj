@@ -211,7 +211,7 @@
                             </div>
 
                             <% if (rStatus === 'ditolak' && r.rejection_note) { %>
-                                <p class="text-xs text-red-600 bg-red-50 rounded p-2 mb-3">
+                                <p class="text-xs text-red-600 bg-red-50 rounded p-2 mb-3 truncate" title="Ditolak: <%= r.rejection_note %>">
                                     <i class="fas fa-circle-exclamation mr-1"></i>Ditolak: <%= r.rejection_note %>
                                 </p>
                             <% } %>
