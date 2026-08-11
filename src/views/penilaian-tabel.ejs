@@ -235,7 +235,7 @@
                         </div>
 
                         <div class="overflow-x-auto penilaian-scroll-table">
-                            <table class="table-auto w-full border-collapse sticky-id-table">
+                            <table class="table-auto w-full border-collapse">
                                 <thead class="bg-blue-50">
                                     <tr>
                                         <th class="px-3 py-2 border text-left text-xs font-semibold">No</th>
@@ -297,7 +297,7 @@
                     </div>
 
                     <div class="overflow-x-auto penilaian-scroll-table">
-                        <table class="table-auto w-full border-collapse sticky-id-table">
+                        <table class="table-auto w-full border-collapse">
                             <thead class="bg-blue-50">
                                 <tr>
                                     <th class="px-3 py-2 border text-center text-xs font-semibold">No</th>
@@ -503,17 +503,17 @@
 
                         <div class="p-4 border-t flex justify-end gap-3 flex-shrink-0 portofolio-modal-footer">
                         <button type="button" 
-                                class="btn-secondary btn-download-portofolio px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+                                class="btn-secondary btn-download-portofolio px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center gap-2"
                                 data-nim="<%= m.nim %>" data-nama="<%= m.nama %>">
                             <i class="fas fa-file-pdf"></i> Download PDF
                         </button>
                         <button type="button" 
-                                class="btn-secondary btn-download-portofolio-detail px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2"
+                                class="btn-secondary btn-download-portofolio-detail px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 flex items-center justify-center gap-2"
                                 data-nim="<%= m.nim %>" data-nama="<%= m.nama %>">
                             <i class="fas fa-file-pdf"></i> Download PDF Detail (Semua Sub-CPMK)
                         </button>
                         <button type="button" 
-                                class="btn-secondary px-4 py-2 rounded bg-gray-500 text-white hover:bg-gray-600" 
+                                class="btn-secondary px-4 py-2 rounded bg-gray-500 text-white hover:bg-gray-600 flex items-center justify-center" 
                                 onclick="closePortofolio('<%= m.nim %>')">
                             Tutup
                         </button>

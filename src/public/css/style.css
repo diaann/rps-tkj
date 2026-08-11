@@ -177,9 +177,14 @@ textarea.input {
   margin-bottom: 0.5rem;
 }
 .container-custom {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
+}
+.container-custom-nav {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 2rem;
 }
 
 /* Collapse/Expand functionality styles */
@@ -425,6 +430,9 @@ textarea.input {
 @media (max-width: 768px) {
   .container-custom {
     padding: 1rem;
+  }
+  .container-custom-nav {
+    padding: 0 1rem;
   }
 }
 
@@ -981,65 +989,6 @@ textarea.input {
 }
 .penilaian-scroll-table::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
-}
-
-/* Tabel input nilai per Sub-CPMK & tabel Rekap: bekukan 3 kolom identitas
-   (No/NIM/Nama) supaya pas discroll ke kanan buat lihat kolom nilai,
-   pengguna tetap tau ini baris data punya siapa -- tanpa ini, di layar HP
-   NIM/Nama gampang ke-scroll hilang duluan sebelum kolom nilainya kelihatan. */
-.sticky-id-table th:nth-child(1),
-.sticky-id-table td:nth-child(1) {
-  position: sticky;
-  left: 0;
-  min-width: 34px;
-  width: 34px;
-}
-.sticky-id-table th:nth-child(2),
-.sticky-id-table td:nth-child(2) {
-  position: sticky;
-  left: 34px;
-  min-width: 88px;
-  width: 88px;
-}
-.sticky-id-table th:nth-child(3),
-.sticky-id-table td:nth-child(3) {
-  position: sticky;
-  left: 122px;
-  min-width: 130px;
-  max-width: 130px;
-}
-.sticky-id-table th:nth-child(1),
-.sticky-id-table th:nth-child(2),
-.sticky-id-table th:nth-child(3) {
-  z-index: 3;
-  background-color: #eff6ff; /* samain dgn bg-blue-50 punya thead */
-}
-.sticky-id-table td:nth-child(1),
-.sticky-id-table td:nth-child(2),
-.sticky-id-table td:nth-child(3) {
-  z-index: 1;
-  background-color: #fff;
-}
-.sticky-id-table tbody tr:hover td:nth-child(1),
-.sticky-id-table tbody tr:hover td:nth-child(2),
-.sticky-id-table tbody tr:hover td:nth-child(3) {
-  background-color: #f9fafb; /* samain efek hover:bg-gray-50 bawaan Tailwind */
-}
-/* Garis pemisah biar keliatan jelas ini kolom "beku", bukan glitch rendering */
-.sticky-id-table th:nth-child(3),
-.sticky-id-table td:nth-child(3) {
-  box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15);
-}
-
-@media (max-width: 640px) {
-  .sticky-id-table th,
-  .sticky-id-table td {
-    padding: 0.4rem 0.5rem;
-    font-size: 0.75rem;
-  }
-  .sticky-id-table th {
-    white-space: nowrap;
-  }
 }
 
 /* Tabel Matriks Asesmen RPS: kolomnya banyak & sebagian pakai rowspan,
